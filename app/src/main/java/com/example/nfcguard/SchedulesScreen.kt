@@ -1,0 +1,774 @@
+package com.example.nfcguard
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.PI
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SchedulesScreen(
+    viewModel: GuardianViewModel,
+    onBack: () -> Unit
+) {
+    val appState by viewModel.appState.collectAsState()
+    var showAddDialog by remember { mutableStateOf(false) }
+    var editingSchedule by remember { mutableStateOf<Schedule?>(null) }
+    var showDeleteDialog by remember { mutableStateOf<Schedule?>(null) }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.ArrowBack, null, tint = Color.White)
+                }
+                Text(
+                    "SCHEDULES",
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp,
+                    fontSize = 24.sp,
+                    color = Color.White,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            if (appState.schedules.isEmpty()) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "NO SCHEDULES",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF404040),
+                            letterSpacing = 2.sp
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Button(
+                            onClick = { showAddDialog = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White,
+                                contentColor = Color.Black
+                            ),
+                            shape = RoundedCornerShape(0.dp),
+                            modifier = Modifier.height(48.dp)
+                        ) {
+                            Text(
+                                "CREATE SCHEDULE",
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(appState.schedules.size) { index ->
+                        ScheduleCard(
+                            schedule = appState.schedules[index],
+                            modes = appState.modes,
+                            onEdit = { editingSchedule = appState.schedules[index] },
+                            onDelete = { showDeleteDialog = appState.schedules[index] }
+                        )
+                    }
+
+                    item {
+                        Button(
+                            onClick = { showAddDialog = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF0A0A0A),
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(0.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                        ) {
+                            Text(
+                                "+ NEW SCHEDULE",
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        ScheduleEditorDialog(
+            modes = appState.modes,
+            onDismiss = { showAddDialog = false },
+            onSave = { name, timeSlot, linkedModeIds, hasEndTime ->
+                viewModel.addSchedule(name, timeSlot, linkedModeIds, hasEndTime)
+                showAddDialog = false
+            }
+        )
+    }
+
+    editingSchedule?.let { schedule ->
+        ScheduleEditorDialog(
+            existingSchedule = schedule,
+            modes = appState.modes,
+            onDismiss = { editingSchedule = null },
+            onSave = { name, timeSlot, linkedModeIds, hasEndTime ->
+                viewModel.updateSchedule(schedule.id, name, timeSlot, linkedModeIds, hasEndTime)
+                editingSchedule = null
+            }
+        )
+    }
+
+    showDeleteDialog?.let { schedule ->
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteSchedule(schedule.id)
+                    showDeleteDialog = null
+                }) {
+                    Text("DELETE", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = null }) {
+                    Text("CANCEL", color = Color(0xFF808080))
+                }
+            },
+            title = {
+                Text(
+                    "DELETE SCHEDULE?",
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            },
+            text = {
+                Text(
+                    "This cannot be undone.",
+                    color = Color(0xFF808080)
+                )
+            },
+            containerColor = Color(0xFF0A0A0A),
+            shape = RoundedCornerShape(0.dp)
+        )
+    }
+}
+
+@Composable
+fun ScheduleCard(
+    schedule: Schedule,
+    modes: List<Mode>,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(0.dp),
+        color = Color(0xFF0A0A0A)
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                schedule.name.uppercase(),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                letterSpacing = 1.sp
+            )
+            Spacer(Modifier.height(8.dp))
+
+            // Show each day's time
+            schedule.timeSlot.dayTimes.sortedBy { it.day }.forEach { dayTime ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(vertical = 2.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = Color(0xFF808080),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        buildString {
+                            append("${getDayName(dayTime.day).take(3)} ")
+                            append(String.format("%02d:%02d", dayTime.startHour, dayTime.startMinute))
+                            if (schedule.hasEndTime) {
+                                append(" - ${String.format("%02d:%02d", dayTime.endHour, dayTime.endMinute)}")
+                            }
+                        },
+                        fontSize = 11.sp,
+                        color = Color(0xFF808080),
+                        letterSpacing = 1.sp
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            if (schedule.linkedModeIds.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    schedule.linkedModeIds.forEach { modeId ->
+                        modes.find { it.id == modeId }?.let { mode ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = Color(0xFF606060),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    mode.name.uppercase(),
+                                    fontSize = 10.sp,
+                                    color = Color(0xFF606060),
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text(
+                    "NO MODES LINKED",
+                    fontSize = 10.sp,
+                    color = Color(0xFF404040),
+                    letterSpacing = 1.sp
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                TextButton(onClick = onEdit) {
+                    Text("EDIT", fontSize = 11.sp, color = Color.White, letterSpacing = 1.sp)
+                }
+                TextButton(onClick = onDelete) {
+                    Text("DELETE", fontSize = 11.sp, color = Color(0xFF808080), letterSpacing = 1.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ScheduleEditorDialog(
+    existingSchedule: Schedule? = null,
+    modes: List<Mode>,
+    onDismiss: () -> Unit,
+    onSave: (String, TimeSlot, List<String>, Boolean) -> Unit
+) {
+    var name by remember { mutableStateOf(existingSchedule?.name ?: "") }
+    var selectedDays by remember { mutableStateOf(existingSchedule?.timeSlot?.days?.toSet() ?: setOf<Int>()) }
+    var dayTimes by remember {
+        mutableStateOf<MutableMap<Int, Pair<Int, Int>>>(
+            if (existingSchedule != null) {
+                existingSchedule.timeSlot.dayTimes.associate {
+                    it.day to Pair(it.startHour, it.startMinute)
+                }.toMutableMap()
+            } else {
+                mutableMapOf()
+            }
+        )
+    }
+    var dayEndTimes by remember {
+        mutableStateOf<MutableMap<Int, Pair<Int, Int>>>(
+            if (existingSchedule != null) {
+                existingSchedule.timeSlot.dayTimes.associate {
+                    it.day to Pair(it.endHour, it.endMinute)
+                }.toMutableMap()
+            } else {
+                mutableMapOf()
+            }
+        )
+    }
+    var hasEndTime by remember { mutableStateOf(existingSchedule?.hasEndTime ?: false) }
+    var selectedModeIds by remember { mutableStateOf(existingSchedule?.linkedModeIds?.toSet() ?: setOf<String>()) }
+    var showTimePickerForDay by remember { mutableStateOf<Int?>(null) }
+    var showEndTimePickerForDay by remember { mutableStateOf<Int?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (name.isNotBlank() && selectedDays.isNotEmpty() && selectedModeIds.isNotEmpty()) {
+                        val dayTimesList = selectedDays.sorted().map { day ->
+                            val (startH, startM) = dayTimes[day] ?: (9 to 0)
+                            val (endH, endM) = dayEndTimes[day] ?: (23 to 59)
+                            DayTime(day, startH, startM, endH, endM)
+                        }
+                        val timeSlot = TimeSlot(dayTimesList)
+                        onSave(name, timeSlot, selectedModeIds.toList(), hasEndTime)
+                    }
+                },
+                enabled = name.isNotBlank() && selectedDays.isNotEmpty() && selectedModeIds.isNotEmpty()
+            ) {
+                Text(if (existingSchedule != null) "SAVE" else "CREATE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCEL", color = Color(0xFF808080), letterSpacing = 1.sp)
+            }
+        },
+        title = {
+            Text(
+                if (existingSchedule != null) "EDIT SCHEDULE" else "NEW SCHEDULE",
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp
+            )
+        },
+        text = {
+            Box(modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp)) {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    item {
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            placeholder = { Text("SCHEDULE NAME", fontSize = 12.sp, letterSpacing = 1.sp) },
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Black,
+                                unfocusedContainerColor = Color.Black,
+                                focusedIndicatorColor = Color.White,
+                                unfocusedIndicatorColor = Color(0xFF404040),
+                                cursorColor = Color.White,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(0.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    item {
+                        Column {
+                            Text("DAYS & TIMES", fontSize = 11.sp, color = Color(0xFF808080), letterSpacing = 1.sp)
+                            Spacer(Modifier.height(8.dp))
+                            (1..7).forEach { day ->
+                                Surface(
+                                    onClick = {
+                                        if (selectedDays.contains(day)) {
+                                            selectedDays = selectedDays - day
+                                            dayTimes = dayTimes.toMutableMap().apply { remove(day) }
+                                            dayEndTimes = dayEndTimes.toMutableMap().apply { remove(day) }
+                                        } else {
+                                            selectedDays = selectedDays + day
+                                            dayTimes = dayTimes.toMutableMap().apply {
+                                                this[day] = Pair(9, 0)
+                                            }
+                                            dayEndTimes = dayEndTimes.toMutableMap().apply {
+                                                this[day] = Pair(23, 59)
+                                            }
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(0.dp),
+                                    color = if (selectedDays.contains(day)) Color.White else Color.Black,
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                ) {
+                                    Column(Modifier.padding(12.dp)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                getDayName(day),
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (selectedDays.contains(day)) Color.Black else Color.White,
+                                                letterSpacing = 1.sp,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            if (selectedDays.contains(day)) {
+                                                TextButton(
+                                                    onClick = { showTimePickerForDay = day },
+                                                    colors = ButtonDefaults.textButtonColors(
+                                                        contentColor = Color.Black
+                                                    )
+                                                ) {
+                                                    val (h, m) = dayTimes[day] ?: (9 to 0)
+                                                    Text(
+                                                        String.format("%02d:%02d", h, m),
+                                                        fontSize = 16.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        letterSpacing = 1.sp
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        if (selectedDays.contains(day) && hasEndTime) {
+                                            Spacer(Modifier.height(4.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Text(
+                                                    "UNTIL",
+                                                    fontSize = 10.sp,
+                                                    color = Color(0xFF606060),
+                                                    letterSpacing = 1.sp,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                TextButton(
+                                                    onClick = { showEndTimePickerForDay = day },
+                                                    colors = ButtonDefaults.textButtonColors(
+                                                        contentColor = Color.Black
+                                                    )
+                                                ) {
+                                                    val (h, m) = dayEndTimes[day] ?: (23 to 59)
+                                                    Text(
+                                                        String.format("%02d:%02d", h, m),
+                                                        fontSize = 14.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        letterSpacing = 1.sp
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "CUSTOM END TIMES",
+                                fontSize = 11.sp,
+                                color = Color(0xFF808080),
+                                letterSpacing = 1.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Switch(
+                                checked = hasEndTime,
+                                onCheckedChange = {
+                                    hasEndTime = it
+                                    if (it) {
+                                        dayEndTimes = dayEndTimes.toMutableMap().apply {
+                                            selectedDays.forEach { day ->
+                                                if (!this.containsKey(day)) {
+                                                    this[day] = Pair(23, 59)
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.Black,
+                                    checkedTrackColor = Color.White
+                                )
+                            )
+                        }
+                        if (hasEndTime) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "Set custom end time for each day above",
+                                fontSize = 10.sp,
+                                color = Color(0xFF606060),
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+
+                    item {
+                        Column {
+                            Text("LINKED MODES", fontSize = 11.sp, color = Color(0xFF808080), letterSpacing = 1.sp)
+                            Spacer(Modifier.height(8.dp))
+                            if (modes.isEmpty()) {
+                                Text(
+                                    "No modes created yet",
+                                    fontSize = 10.sp,
+                                    color = Color(0xFF606060),
+                                    letterSpacing = 1.sp
+                                )
+                            } else {
+                                modes.forEach { mode ->
+                                    Surface(
+                                        onClick = {
+                                            selectedModeIds = if (selectedModeIds.contains(mode.id)) {
+                                                selectedModeIds - mode.id
+                                            } else {
+                                                selectedModeIds + mode.id
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(0.dp),
+                                        color = if (selectedModeIds.contains(mode.id)) Color.White else Color.Black,
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                mode.name.uppercase(),
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (selectedModeIds.contains(mode.id)) Color.Black else Color.White,
+                                                letterSpacing = 1.sp,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            if (selectedModeIds.contains(mode.id)) {
+                                                Icon(Icons.Default.Check, null, tint = Color.Black)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = Color(0xFF0A0A0A),
+        shape = RoundedCornerShape(0.dp)
+    )
+
+    showTimePickerForDay?.let { day ->
+        val (currentH, currentM) = dayTimes[day] ?: (9 to 0)
+        ModernTimePickerDialog(
+            initialHour = currentH,
+            initialMinute = currentM,
+            onDismiss = { showTimePickerForDay = null },
+            onConfirm = { h, m ->
+                dayTimes = dayTimes.toMutableMap().apply {
+                    this[day] = Pair(h, m)
+                }
+                showTimePickerForDay = null
+            }
+        )
+    }
+
+    showEndTimePickerForDay?.let { day ->
+        val (currentH, currentM) = dayEndTimes[day] ?: (23 to 59)
+        ModernTimePickerDialog(
+            initialHour = currentH,
+            initialMinute = currentM,
+            onDismiss = { showEndTimePickerForDay = null },
+            onConfirm = { h, m ->
+                dayEndTimes = dayEndTimes.toMutableMap().apply {
+                    this[day] = Pair(h, m)
+                }
+                showEndTimePickerForDay = null
+            }
+        )
+    }
+}
+
+@Composable
+fun ModernTimePickerDialog(
+    initialHour: Int,
+    initialMinute: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int, Int) -> Unit
+) {
+    var hour by remember { mutableStateOf(initialHour) }
+    var minute by remember { mutableStateOf(initialMinute) }
+    var selectingHour by remember { mutableStateOf(true) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onConfirm(hour, minute) }) {
+                Text("SET", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCEL", color = Color(0xFF808080), letterSpacing = 1.sp)
+            }
+        },
+        title = {
+            Text(
+                if (selectingHour) "SELECT HOUR" else "SELECT MINUTE",
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp
+            )
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        onClick = { selectingHour = true },
+                        color = if (selectingHour) Color.White else Color.Black,
+                        shape = RoundedCornerShape(0.dp)
+                    ) {
+                        Text(
+                            String.format("%02d", hour),
+                            fontSize = 48.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (selectingHour) Color.Black else Color.White,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+                    Text(":", fontSize = 48.sp, modifier = Modifier.padding(horizontal = 8.dp))
+                    Surface(
+                        onClick = { selectingHour = false },
+                        color = if (!selectingHour) Color.White else Color.Black,
+                        shape = RoundedCornerShape(0.dp)
+                    ) {
+                        Text(
+                            String.format("%02d", minute),
+                            fontSize = 48.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (!selectingHour) Color.Black else Color.White,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+
+                if (selectingHour) {
+                    ClockFace(
+                        value = hour,
+                        maxValue = 23,
+                        onValueChange = { hour = it }
+                    )
+                } else {
+                    ClockFace(
+                        value = minute,
+                        maxValue = 59,
+                        onValueChange = { minute = it },
+                        displayStep = 5
+                    )
+                }
+            }
+        },
+        containerColor = Color(0xFF0A0A0A),
+        shape = RoundedCornerShape(0.dp)
+    )
+}
+
+@Composable
+fun ClockFace(
+    value: Int,
+    maxValue: Int,
+    onValueChange: (Int) -> Unit,
+    displayStep: Int = 1
+) {
+    Box(
+        modifier = Modifier
+            .size(220.dp)
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { },
+                    onDragEnd = { },
+                    onDragCancel = { }
+                ) { change, _ ->
+                    val centerX = size.width / 2f
+                    val centerY = size.height / 2f
+                    val x = change.position.x - centerX
+                    val y = change.position.y - centerY
+
+                    var angle = atan2(y, x) * 180 / PI + 90
+                    if (angle < 0) angle += 360
+
+                    val newValue = ((angle / 360.0) * (maxValue + 1)).toInt() % (maxValue + 1)
+                    onValueChange(newValue)
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(220.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF1A1A1A))
+        )
+
+        (0..maxValue step displayStep).forEach { num ->
+            val angle = (num.toDouble() / (maxValue + 1)) * 360 - 90
+            val radius = 90.0
+            val x = (cos(angle * PI / 180) * radius).toFloat()
+            val y = (sin(angle * PI / 180) * radius).toFloat()
+
+            Box(
+                modifier = Modifier.offset(x.dp, y.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    num.toString(),
+                    fontSize = 14.sp,
+                    color = if (num == value) Color.White else Color(0xFF606060),
+                    fontWeight = if (num == value) FontWeight.Bold else FontWeight.Normal
+                )
+            }
+        }
+
+        val selectedAngle = (value.toDouble() / (maxValue + 1)) * 360 - 90
+        val indicatorRadius = 80.0
+        val indicatorX = (cos(selectedAngle * PI / 180) * indicatorRadius).toFloat()
+        val indicatorY = (sin(selectedAngle * PI / 180) * indicatorRadius).toFloat()
+
+        Box(
+            modifier = Modifier
+                .offset(indicatorX.dp, indicatorY.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                value.toString(),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+        }
+    }
+}
+
+fun getDayName(day: Int): String = when (day) {
+    1 -> "MONDAY"
+    2 -> "TUESDAY"
+    3 -> "WEDNESDAY"
+    4 -> "THURSDAY"
+    5 -> "FRIDAY"
+    6 -> "SATURDAY"
+    7 -> "SUNDAY"
+    else -> "UNKNOWN"
+}
