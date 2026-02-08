@@ -1,6 +1,9 @@
 package com.example.nfcguard
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -10,9 +13,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.vector.ImageVector
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.clickable
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,6 +33,7 @@ fun HomeScreen(
     onNavigate: (Screen) -> Unit
 ) {
     val appState by viewModel.appState.collectAsState()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -29,44 +42,66 @@ fun HomeScreen(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header
-        Column {
-            Text(
-                "GUARDIAN",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Black,
-                color = Color.White,
-                letterSpacing = 2.sp
-            )
-            if (appState.activeModes.isNotEmpty()) {
-                Spacer(Modifier.height(4.dp))
+        // Header with Info icon
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
                 Text(
-                    "${appState.activeModes.size} MODE${if (appState.activeModes.size > 1) "S" else ""} ACTIVE",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF808080),
-                    letterSpacing = 1.sp
+                    "GUARDIAN",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White,
+                    letterSpacing = 2.sp
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Nfc,
-                        contentDescription = null,
-                        tint = Color(0xFF808080),
-                        modifier = Modifier.size(14.dp)
-                    )
+                if (appState.activeModes.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
                     Text(
-                        "TAP NFC TO UNLOCK",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
+                        "${appState.activeModes.size} MODE${if (appState.activeModes.size > 1) "S" else ""} ACTIVE",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
                         color = Color(0xFF808080),
                         letterSpacing = 1.sp
                     )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Nfc,
+                            contentDescription = null,
+                            tint = Color(0xFF808080),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            "TAP NFC TO UNLOCK",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF808080),
+                            letterSpacing = 1.sp
+                        )
+                    }
                 }
             }
+
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = "Info",
+                tint = Color.White,
+                modifier = Modifier
+                    .size(20.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        onNavigate(Screen.INFO)
+                    }
+            )
+
+
         }
 
         Spacer(Modifier.height(8.dp))
