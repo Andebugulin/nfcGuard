@@ -226,6 +226,15 @@ class GuardianViewModel : ViewModel() {
         }
     }
 
+    fun deactivateMode(modeId: String) {
+        viewModelScope.launch {
+            _appState.value = _appState.value.copy(
+                activeModes = _appState.value.activeModes - modeId
+            )
+            saveState()
+        }
+    }
+
     fun addSchedule(name: String, timeSlot: TimeSlot, linkedModeIds: List<String>, hasEndTime: Boolean) {
         viewModelScope.launch {
             val newSchedule = Schedule(

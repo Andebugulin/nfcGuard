@@ -35,6 +35,13 @@ fun HomeScreen(
     val appState by viewModel.appState.collectAsState()
     val context = LocalContext.current
 
+    var showEmergencyDialog by remember { mutableStateOf(false) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    var showTagSelectionDialog by remember { mutableStateOf(false) }
+    var confirmText by remember { mutableStateOf("") }
+    var countdown by remember { mutableStateOf(60) }
+    var selectedTagsToDelete by remember { mutableStateOf(setOf<String>()) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -87,19 +94,38 @@ fun HomeScreen(
                 }
             }
 
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = "Info",
-                tint = Color.White,
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        onNavigate(Screen.INFO)
-                    }
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Emergency Reset",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            showEmergencyDialog = true
+                        }
+                )
+
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = "Info",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            onNavigate(Screen.INFO)
+                        }
+                )
+            }
 
 
         }
@@ -173,6 +199,69 @@ fun HomeScreen(
             }
         }
     }
+
+    // Emergency Reset Dialogs
+    if (showEmergencyDialog) {
+        EmergencyWarningDialog(
+            onDismiss = { showEmergencyDialog = false },
+            onConfirm = {
+                showEmergencyDialog = false
+                showConfirmDialog = true
+            }
+        )
+    }
+
+    if (showConfirmDialog) {
+        EmergencyConfirmDialog(
+            confirmText = confirmText,
+            onConfirmTextChange = { confirmText = it },
+            countdown = countdown,
+            onCountdownTick = { countdown = it },
+            onDismiss = {
+                showConfirmDialog = false
+                confirmText = ""
+                countdown = 60
+            },
+            onConfirm = {
+                showConfirmDialog = false
+                showTagSelectionDialog = true
+                confirmText = ""
+                countdown = 60
+            }
+        )
+    }
+
+    if (showTagSelectionDialog) {
+        TagSelectionDialog(
+            nfcTags = appState.nfcTags,
+            selectedTags = selectedTagsToDelete,
+            onTagToggle = { tagId ->
+                selectedTagsToDelete = if (selectedTagsToDelete.contains(tagId)) {
+                    selectedTagsToDelete - tagId
+                } else {
+                    selectedTagsToDelete + tagId
+                }
+            },
+            onDismiss = {
+                showTagSelectionDialog = false
+                selectedTagsToDelete = emptySet()
+            },
+            onConfirm = {
+                // Deactivate all modes
+                appState.activeModes.forEach { modeId ->
+                    viewModel.deactivateMode(modeId)
+                }
+
+                // Delete selected NFC tags
+                selectedTagsToDelete.forEach { tagId ->
+                    viewModel.deleteNfcTag(tagId)
+                }
+
+                showTagSelectionDialog = false
+                selectedTagsToDelete = emptySet()
+            }
+        )
+    }
 }
 
 @Composable
@@ -221,4 +310,337 @@ fun NavigationCard(
             )
         }
     }
+}
+
+@Composable
+fun EmergencyWarningDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.Black,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = Color(0xFFFF4444),
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    "LOST NFC TAG?",
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp,
+                    color = Color(0xFFFF4444)
+                )
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    "This will help you:",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    letterSpacing = 0.5.sp
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "• Deactivate all active modes",
+                        fontSize = 13.sp,
+                        color = Color(0xFFCCCCCC),
+                        letterSpacing = 0.5.sp
+                    )
+                    Text(
+                        "• Delete lost NFC tags",
+                        fontSize = 13.sp,
+                        color = Color(0xFFCCCCCC),
+                        letterSpacing = 0.5.sp
+                    )
+                }
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(0.dp),
+                    color = Color(0xFF1A0000)
+                ) {
+                    Text(
+                        "Your modes and schedules will NOT be deleted",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4CAF50),
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = Color(0xFFFF4444)
+                )
+            ) {
+                Text("CONTINUE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = Color(0xFF808080)
+                )
+            ) {
+                Text("CANCEL", letterSpacing = 1.sp)
+            }
+        },
+        shape = RoundedCornerShape(0.dp)
+    )
+}
+
+@Composable
+fun EmergencyConfirmDialog(
+    confirmText: String,
+    onConfirmTextChange: (String) -> Unit,
+    countdown: Int,
+    onCountdownTick: (Int) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(countdown) {
+        if (countdown > 0) {
+            kotlinx.coroutines.delay(1000)
+            onCountdownTick(countdown - 1)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.Black,
+        title = {
+            Text(
+                "FINAL CONFIRMATION",
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                color = Color(0xFFFF4444)
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                if (countdown > 0) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(0.dp),
+                        color = Color.Black
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                countdown.toString(),
+                                fontSize = 48.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFFFF4444)
+                            )
+                            Text(
+                                "Waiting...",
+                                fontSize = 11.sp,
+                                color = Color(0xFF808080),
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        "Type exactly:  RESET ALL DATA",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        letterSpacing = 0.5.sp
+                    )
+
+                    OutlinedTextField(
+                        value = confirmText,
+                        onValueChange = onConfirmTextChange,
+                        placeholder = {
+                            Text(
+                                "Type here...",
+                                fontSize = 12.sp,
+                                letterSpacing = 1.sp
+                            )
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF0A0A0A),
+                            unfocusedContainerColor = Color(0xFF0A0A0A),
+                            focusedIndicatorColor = if (confirmText == "RESET ALL DATA") Color(0xFFFF4444) else Color.White,
+                            unfocusedIndicatorColor = Color(0xFF404040),
+                            cursorColor = Color.White,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(0.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    if (confirmText.isNotEmpty() && confirmText != "RESET ALL DATA") {
+                        Text(
+                            "Text doesn't match",
+                            fontSize = 11.sp,
+                            color = Color(0xFFFF4444),
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = countdown == 0 && confirmText == "RESET ALL DATA",
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = Color(0xFFFF4444),
+                    disabledContentColor = Color(0xFF404040)
+                )
+            ) {
+                Text("NEXT", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = Color(0xFF808080)
+                )
+            ) {
+                Text("CANCEL", letterSpacing = 1.sp)
+            }
+        },
+        shape = RoundedCornerShape(0.dp)
+    )
+}
+
+@Composable
+fun TagSelectionDialog(
+    nfcTags: List<NfcTag>,
+    selectedTags: Set<String>,
+    onTagToggle: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.Black,
+        title = {
+            Text(
+                "SELECT LOST TAGS",
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                color = Color.White
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    "Select which NFC tags you lost:",
+                    fontSize = 13.sp,
+                    color = Color(0xFFCCCCCC),
+                    letterSpacing = 0.5.sp
+                )
+
+                if (nfcTags.isEmpty()) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(0.dp),
+                        color = Color(0xFF0A0A0A)
+                    ) {
+                        Text(
+                            "No NFC tags registered",
+                            fontSize = 12.sp,
+                            color = Color(0xFF808080),
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        nfcTags.forEach { tag ->
+                            Surface(
+                                onClick = { onTagToggle(tag.id) },
+                                shape = RoundedCornerShape(0.dp),
+                                color = if (selectedTags.contains(tag.id)) Color.White else Color(0xFF0A0A0A)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        tag.name.uppercase(),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (selectedTags.contains(tag.id)) Color.Black else Color.White,
+                                        letterSpacing = 1.sp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (selectedTags.contains(tag.id)) {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = Color.Black
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(0.dp),
+                    color = Color(0xFF001A00)
+                ) {
+                    Text(
+                        "This will deactivate ALL modes and delete selected tags only",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4CAF50),
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = Color(0xFFFF4444)
+                )
+            ) {
+                Text("CONFIRM", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = Color(0xFF808080)
+                )
+            ) {
+                Text("CANCEL", letterSpacing = 1.sp)
+            }
+        },
+        shape = RoundedCornerShape(0.dp)
+    )
 }
