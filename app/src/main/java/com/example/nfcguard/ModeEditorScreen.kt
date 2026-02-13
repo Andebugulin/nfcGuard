@@ -27,6 +27,35 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+// CRITICAL: Apps that must NEVER be blocked
+private val CRITICAL_SYSTEM_APPS = setOf(
+    "com.android.settings",
+    "com.android.systemui",
+    "com.google.android.gms",
+    "com.google.android.gsf",
+    "com.android.providers.settings",
+    "com.android.keychain",
+    "android",
+    "com.android.packageinstaller",
+    "com.android.permissioncontroller",
+    "com.google.android.packageinstaller",
+    "com.android.phone",
+    "com.android.contacts",
+    "com.android.dialer",
+    "com.google.android.dialer",
+    "com.android.emergency",
+    "com.android.inputmethod.latin",
+    "com.google.android.inputmethod.latin",
+    "com.samsung.android.honeyboard",
+    "com.example.nfcguard",  // Guardian itself (hardcoded)
+    // Lock screen / Security apps
+    "com.android.settings.lockscreen",
+    "com.android.security",
+    "com.miui.securitycenter",
+    "com.samsung.android.lool",
+    "com.coloros.lockscreen"
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModeEditorScreen(
@@ -273,6 +302,55 @@ fun ModeEditorScreen(
                     contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Selected apps section at top
+                    if (selectedApps.isNotEmpty()) {
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    "SELECTED (${selectedApps.size})",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF808080),
+                                    letterSpacing = 1.sp,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+
+                                // Show selected apps
+                                selectedApps.forEach { packageName ->
+                                    val app = filteredApps.find { it.packageName == packageName }
+                                    if (app != null) {
+                                        AppItem(
+                                            app = app,
+                                            isSelected = true,
+                                            onToggle = {
+                                                selectedApps = selectedApps - packageName
+                                            }
+                                        )
+                                    }
+                                }
+
+                                // Separator
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    color = Color(0xFF0A0A0A),
+                                    shape = RoundedCornerShape(0.dp)
+                                ) {
+                                    Text(
+                                        "ALL APPS",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF606060),
+                                        letterSpacing = 1.sp,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // All apps (in original order, with selection indicator)
                     items(filteredApps.size, key = { filteredApps[it].packageName }) { index ->
                         AppItem(
                             app = filteredApps[index],
@@ -355,6 +433,12 @@ fun loadInstalledApps(context: Context): List<AppInfo> {
         val apps = resolveInfos.mapNotNull { resolveInfo ->
             try {
                 val packageName = resolveInfo.activityInfo?.packageName ?: return@mapNotNull null
+
+                // Filter out critical system apps - they should never be selectable
+                if (CRITICAL_SYSTEM_APPS.contains(packageName)) {
+                    return@mapNotNull null
+                }
+
                 val appName = resolveInfo.loadLabel(pm)?.toString() ?: packageName
                 val drawable = resolveInfo.loadIcon(pm)
                 val bitmap = drawable.toBitmap(96, 96)
