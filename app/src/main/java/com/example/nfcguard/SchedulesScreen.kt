@@ -1,6 +1,7 @@
 package com.example.nfcguard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -222,6 +223,11 @@ fun SchedulesScreen(
             containerColor = GuardianTheme.ButtonSecondary,
             tonalElevation = 0.dp,
             shape = RoundedCornerShape(0.dp),
+            modifier = Modifier.border(
+                width = GuardianTheme.DialogBorderWidth,
+                color = GuardianTheme.DialogBorderDelete,
+                shape = RoundedCornerShape(0.dp)
+            ),
             title = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -542,6 +548,14 @@ fun ScheduleEditorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = GuardianTheme.BackgroundSurface,
+        tonalElevation = 0.dp,
+        shape = RoundedCornerShape(0.dp),
+        modifier = Modifier.border(
+            width = GuardianTheme.DialogBorderWidth,
+            color = GuardianTheme.DialogBorderEdit,
+            shape = RoundedCornerShape(0.dp)
+        ),
         confirmButton = {
             TextButton(
                 onClick = {
@@ -805,9 +819,6 @@ fun ScheduleEditorDialog(
                 }
             }
         },
-        containerColor = GuardianTheme.BackgroundSurface,
-        tonalElevation = 0.dp,
-        shape = RoundedCornerShape(0.dp)
     )
 
     showTimePickerForDay?.let { day ->

@@ -3,6 +3,7 @@ package com.example.nfcguard
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -321,6 +322,12 @@ fun EmergencyWarningDialog(
         onDismissRequest = onDismiss,
         containerColor = GuardianTheme.ButtonSecondary,
         tonalElevation = 0.dp,
+        shape = RoundedCornerShape(0.dp),
+        modifier = Modifier.border(
+            width = GuardianTheme.DialogBorderWidth,
+            color = GuardianTheme.DialogBorderWarning,
+            shape = RoundedCornerShape(0.dp)
+        ),
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -399,7 +406,6 @@ fun EmergencyWarningDialog(
                 Text("CANCEL", letterSpacing = 1.sp)
             }
         },
-        shape = RoundedCornerShape(0.dp)
     )
 }
 
@@ -425,6 +431,12 @@ fun EmergencyConfirmDialog(
         onDismissRequest = onDismiss,
         containerColor = GuardianTheme.ButtonSecondary,
         tonalElevation = 0.dp,
+        shape = RoundedCornerShape(0.dp),
+        modifier = Modifier.border(
+            width = GuardianTheme.DialogBorderWidth,
+            color = GuardianTheme.DialogBorderDelete,
+            shape = RoundedCornerShape(0.dp)
+        ),
         title = {
             Text(
                 "FINAL CONFIRMATION",
@@ -526,7 +538,6 @@ fun EmergencyConfirmDialog(
                 Text("CANCEL", letterSpacing = 1.sp)
             }
         },
-        shape = RoundedCornerShape(0.dp)
     )
 }
 
@@ -542,6 +553,12 @@ fun TagSelectionDialog(
         onDismissRequest = onDismiss,
         containerColor = GuardianTheme.ButtonSecondary,
         tonalElevation = 0.dp,
+        shape = RoundedCornerShape(0.dp),
+        modifier = Modifier.border(
+            width = GuardianTheme.DialogBorderWidth,
+            color = GuardianTheme.DialogBorderWarning,
+            shape = RoundedCornerShape(0.dp)
+        ),
         title = {
             Text(
                 "SELECT LOST TAGS",
@@ -644,6 +661,5 @@ fun TagSelectionDialog(
                 Text("CANCEL", letterSpacing = 1.sp)
             }
         },
-        shape = RoundedCornerShape(0.dp)
     )
 }

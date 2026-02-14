@@ -1,6 +1,7 @@
 package com.example.nfcguard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -139,6 +140,11 @@ fun ModesScreen(
             containerColor = GuardianTheme.ButtonSecondary,
             tonalElevation = 0.dp,
             shape = RoundedCornerShape(0.dp),
+            modifier = Modifier.border(
+                width = GuardianTheme.DialogBorderWidth,
+                color = GuardianTheme.DialogBorderDelete,
+                shape = RoundedCornerShape(0.dp)
+            ),
             title = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -349,6 +355,12 @@ fun ModeNameDialog(
         onDismissRequest = onDismiss,
         containerColor = GuardianTheme.BackgroundSurface,
         tonalElevation = 0.dp,
+        shape = RoundedCornerShape(0.dp),
+        modifier = Modifier.border(
+            width = GuardianTheme.DialogBorderWidth,
+            color = GuardianTheme.DialogBorderInfo,
+            shape = RoundedCornerShape(0.dp)
+        ),
         title = {
             Text(
                 "NEW MODE",
@@ -386,6 +398,5 @@ fun ModeNameDialog(
                 Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
-        shape = RoundedCornerShape(0.dp)
     )
 }

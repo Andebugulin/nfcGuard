@@ -1,6 +1,7 @@
 package com.example.nfcguard
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
 /**
  * Guardian App Theme - Centralized color definitions
@@ -54,6 +55,13 @@ object GuardianTheme {
     val WarningBackground = Color(0xFF1A1A00)     // Dark yellow - warning backgrounds
     val Success = Color(0xFF4CAF50)               // Green - success states
     val SuccessBackground = Color(0xFF001A00)     // Dark green - success backgrounds
+
+    // ============ DIALOG BORDERS (sexy & professional) ============
+    val DialogBorderDelete = Color(0xFF340000)    // Dark red - delete/destructive dialogs
+    val DialogBorderEdit = Color(0xFF2A1C00)      // Dark yellow/amber - edit/modify dialogs
+    val DialogBorderWarning = Color(0xFF340000)   // Dark orange - warning/permission dialogs
+    val DialogBorderInfo = Color(0xFF1F1F1F)      // White - info/create dialogs
+    val DialogBorderWidth = 2.dp                  // Border thickness
 
     // ============ ICONS ============
     val IconPrimary = Color(0xFFFFFFFF)           // White - primary icons

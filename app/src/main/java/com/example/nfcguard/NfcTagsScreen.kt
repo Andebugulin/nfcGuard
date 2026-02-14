@@ -1,6 +1,7 @@
 package com.example.nfcguard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -227,6 +228,11 @@ fun NfcTagsScreen(
             containerColor = GuardianTheme.ButtonSecondary,
             tonalElevation = 0.dp,
             shape = RoundedCornerShape(0.dp),
+            modifier = Modifier.border(
+                width = GuardianTheme.DialogBorderWidth,
+                color = GuardianTheme.DialogBorderDelete,
+                shape = RoundedCornerShape(0.dp)
+            ),
             title = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -381,6 +387,11 @@ fun NfcTagsScreen(
             containerColor = GuardianTheme.ButtonSecondary,
             tonalElevation = 0.dp,
             shape = RoundedCornerShape(0.dp),
+            modifier = Modifier.border(
+                width = GuardianTheme.DialogBorderWidth,
+                color = GuardianTheme.DialogBorderDelete,
+                shape = RoundedCornerShape(0.dp)
+            ),
             title = {
                 Text(
                     "FINAL CONFIRMATION",
@@ -789,6 +800,12 @@ fun NfcTagEditDialog(
         onDismissRequest = onDismiss,
         containerColor = GuardianTheme.BackgroundSurface,
         tonalElevation = 0.dp,
+        shape = RoundedCornerShape(0.dp),
+        modifier = Modifier.border(
+            width = GuardianTheme.DialogBorderWidth,
+            color = GuardianTheme.DialogBorderEdit,
+            shape = RoundedCornerShape(0.dp)
+        ),
         title = {
             Text(
                 "RENAME NFC TAG",
@@ -831,6 +848,5 @@ fun NfcTagEditDialog(
                 Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
-        shape = RoundedCornerShape(0.dp)
     )
 }
