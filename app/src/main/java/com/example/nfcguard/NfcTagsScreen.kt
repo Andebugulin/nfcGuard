@@ -27,6 +27,9 @@ fun NfcTagsScreen(
     var pendingTagId by remember { mutableStateOf<String?>(null) }
     var editingTag by remember { mutableStateOf<NfcTag?>(null) }
     var showDeleteDialog by remember { mutableStateOf<NfcTag?>(null) }
+    var showDeleteConfirmDialog by remember { mutableStateOf<NfcTag?>(null) }
+    var deleteConfirmText by remember { mutableStateOf("") }
+    var deleteCountdown by remember { mutableStateOf(30) }
 
     LaunchedEffect(scannedNfcTagId.value) {
         val scannedId = scannedNfcTagId.value
@@ -154,6 +157,7 @@ fun NfcTagsScreen(
                         NfcTagCard(
                             tag = appState.nfcTags[index],
                             modes = appState.modes,
+                            activeModes = appState.activeModes,
                             onEdit = { editingTag = appState.nfcTags[index] },
                             onDelete = { showDeleteDialog = appState.nfcTags[index] }
                         )
@@ -215,38 +219,283 @@ fun NfcTagsScreen(
     }
 
     showDeleteDialog?.let { tag ->
+        val linkedModes = appState.modes.filter { it.nfcTagId == tag.id }
+        val hasActiveMode = linkedModes.any { appState.activeModes.contains(it.id) }
+
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
-            containerColor = Color(0xFF0A0A0A),
+            containerColor = Color.Black,
+            shape = RoundedCornerShape(0.dp),
             title = {
-                Text(
-                    "DELETE NFC TAG?",
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-            },
-            text = {
-                Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = Color(0xFFFF4444),
+                        modifier = Modifier.size(24.dp)
+                    )
                     Text(
-                        "This will remove the tag and unlink it from all modes.",
-                        color = Color(0xFF808080)
+                        "DELETE NFC TAG?",
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp,
+                        color = Color.White
                     )
                 }
             },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(0.dp),
+                        color = Color(0xFF0A0A0A)
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(
+                                tag.name.uppercase(),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                letterSpacing = 1.sp
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "${linkedModes.size} linked mode${if (linkedModes.size != 1) "s" else ""}",
+                                fontSize = 11.sp,
+                                color = Color(0xFF808080),
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+
+                    if (hasActiveMode) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(0.dp),
+                            color = Color(0xFF1A1A00)
+                        ) {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    "ANTI-CHEAT PROTECTION:",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFFFFDD88),
+                                    letterSpacing = 1.sp
+                                )
+                                Text(
+                                    "This tag has active modes. Extra confirmation required to prevent cheating.",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFFFDD88),
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(0.dp),
+                        color = Color(0xFF1A0000)
+                    ) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                "This will:",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFF8888),
+                                letterSpacing = 0.5.sp
+                            )
+                            Text(
+                                "• Remove the NFC tag",
+                                fontSize = 11.sp,
+                                color = Color(0xFFFF8888),
+                                letterSpacing = 0.5.sp
+                            )
+                            Text(
+                                "• Unlink from all modes",
+                                fontSize = 11.sp,
+                                color = Color(0xFFFF8888),
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                }
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteNfcTag(tag.id)
-                    showDeleteDialog = null
-                }) {
-                    Text("DELETE", fontWeight = FontWeight.Bold, color = Color.White)
+                Button(
+                    onClick = {
+                        if (hasActiveMode) {
+                            showDeleteDialog = null
+                            showDeleteConfirmDialog = tag
+                            deleteCountdown = 30
+                        } else {
+                            viewModel.deleteNfcTag(tag.id)
+                            showDeleteDialog = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF4444),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(0.dp)
+                ) {
+                    Text(
+                        if (hasActiveMode) "CONTINUE" else "DELETE",
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("CANCEL", color = Color(0xFF808080))
+                TextButton(
+                    onClick = { showDeleteDialog = null },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = Color(0xFF808080)
+                    )
+                ) {
+                    Text("CANCEL", letterSpacing = 1.sp)
                 }
             },
-            shape = RoundedCornerShape(0.dp)
+        )
+    }
+
+    // Confirmation dialog for active tags (anti-cheat)
+    showDeleteConfirmDialog?.let { tag ->
+        val scope = rememberCoroutineScope()
+
+        LaunchedEffect(deleteCountdown) {
+            if (deleteCountdown > 0) {
+                kotlinx.coroutines.delay(1000)
+                deleteCountdown--
+            }
+        }
+
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteConfirmDialog = null
+                deleteConfirmText = ""
+                deleteCountdown = 30
+            },
+            containerColor = Color.Black,
+            shape = RoundedCornerShape(0.dp),
+            title = {
+                Text(
+                    "FINAL CONFIRMATION",
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp,
+                    color = Color(0xFFFF4444)
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    if (deleteCountdown > 0) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(0.dp),
+                            color = Color(0xFF0A0A0A)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    deleteCountdown.toString(),
+                                    fontSize = 48.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFFFF4444)
+                                )
+                                Text(
+                                    "Waiting...",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF808080),
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                    } else {
+                        Text(
+                            "Type exactly:  DELETE TAG",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            letterSpacing = 0.5.sp
+                        )
+
+                        OutlinedTextField(
+                            value = deleteConfirmText,
+                            onValueChange = { deleteConfirmText = it },
+                            placeholder = {
+                                Text(
+                                    "Type here...",
+                                    fontSize = 12.sp,
+                                    letterSpacing = 1.sp
+                                )
+                            },
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color(0xFF0A0A0A),
+                                unfocusedContainerColor = Color(0xFF0A0A0A),
+                                focusedIndicatorColor = if (deleteConfirmText == "DELETE TAG") Color(0xFFFF4444) else Color.White,
+                                unfocusedIndicatorColor = Color(0xFF404040),
+                                cursorColor = Color.White,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(0.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+
+                        if (deleteConfirmText.isNotEmpty() && deleteConfirmText != "DELETE TAG") {
+                            Text(
+                                "Text doesn't match",
+                                fontSize = 11.sp,
+                                color = Color(0xFFFF4444),
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteNfcTag(tag.id)
+                        showDeleteConfirmDialog = null
+                        deleteConfirmText = ""
+                        deleteCountdown = 30
+                    },
+                    enabled = deleteCountdown == 0 && deleteConfirmText == "DELETE TAG",
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF4444),
+                        contentColor = Color.White,
+                        disabledContainerColor = Color(0xFF404040),
+                        disabledContentColor = Color(0xFF808080)
+                    ),
+                    shape = RoundedCornerShape(0.dp)
+                ) {
+                    Text(
+                        "DELETE NOW",
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmDialog = null
+                        deleteConfirmText = ""
+                        deleteCountdown = 30
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = Color(0xFF808080)
+                    )
+                ) {
+                    Text("CANCEL", letterSpacing = 1.sp)
+                }
+            },
         )
     }
 }
@@ -255,33 +504,73 @@ fun NfcTagsScreen(
 fun NfcTagCard(
     tag: NfcTag,
     modes: List<Mode>,
+    activeModes: Set<String>,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val linkedModes = modes.filter { it.nfcTagId == tag.id }
+    val hasActiveMode = linkedModes.any { activeModes.contains(it.id) }
+    val backgroundColor = if (hasActiveMode) Color.White else Color(0xFF0A0A0A)
+    val textColor = if (hasActiveMode) Color.Black else Color.White
+    val iconColor = if (hasActiveMode) Color.Black else Color.White
+    val subtleColor = if (hasActiveMode) Color(0xFF606060) else Color(0xFF606060)
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(0.dp),
-        color = Color(0xFF0A0A0A)
+        color = backgroundColor
     ) {
         Column(Modifier.padding(20.dp)) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(
-                    Icons.Default.Nfc,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    tag.name.uppercase(),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    letterSpacing = 1.sp,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.weight(1f)
-                )
+                ) {
+                    Icon(
+                        Icons.Default.Nfc,
+                        contentDescription = null,
+                        tint = iconColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        tag.name.uppercase(),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor,
+                        letterSpacing = 1.sp
+                    )
+                }
+
+                if (hasActiveMode) {
+                    Surface(
+                        shape = RoundedCornerShape(0.dp),
+                        color = Color.Black
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                        .background(Color.White)
+                            )
+                            Text(
+                                "ACTIVE",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -289,7 +578,7 @@ fun NfcTagCard(
             Text(
                 "ID: ${tag.id.take(16)}...",
                 fontSize = 9.sp,
-                color = Color(0xFF606060),
+                color = subtleColor,
                 letterSpacing = 0.5.sp,
                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
             )
@@ -297,13 +586,12 @@ fun NfcTagCard(
             Spacer(Modifier.height(12.dp))
 
             // Linked modes
-            val linkedModes = modes.filter { it.nfcTagId == tag.id }
             if (linkedModes.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         "UNLOCKS:",
                         fontSize = 10.sp,
-                        color = Color(0xFF808080),
+                        color = subtleColor,
                         letterSpacing = 1.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -315,13 +603,13 @@ fun NfcTagCard(
                             Icon(
                                 Icons.Default.LockOpen,
                                 contentDescription = null,
-                                tint = Color(0xFF606060),
+                                tint = subtleColor,
                                 modifier = Modifier.size(12.dp)
                             )
                             Text(
                                 mode.name.uppercase(),
                                 fontSize = 10.sp,
-                                color = Color(0xFF606060),
+                                color = subtleColor,
                                 letterSpacing = 1.sp
                             )
                         }

@@ -70,7 +70,9 @@ data class AppState(
     val modes: List<Mode> = emptyList(),
     val schedules: List<Schedule> = emptyList(),
     val nfcTags: List<NfcTag> = emptyList(),
-    val activeModes: Set<String> = emptySet()
+    val activeModes: Set<String> = emptySet(),
+    val activeSchedules: Set<String> = emptySet(), // Schedules that activated their modes
+    val deactivatedSchedules: Set<String> = emptySet() // Schedules manually deactivated by user
 )
 
 class GuardianViewModel : ViewModel() {
@@ -235,6 +237,24 @@ class GuardianViewModel : ViewModel() {
         }
     }
 
+    fun markScheduleDeactivated(scheduleId: String) {
+        viewModelScope.launch {
+            _appState.value = _appState.value.copy(
+                deactivatedSchedules = _appState.value.deactivatedSchedules + scheduleId
+            )
+            saveState()
+        }
+    }
+
+    fun clearScheduleDeactivation(scheduleId: String) {
+        viewModelScope.launch {
+            _appState.value = _appState.value.copy(
+                deactivatedSchedules = _appState.value.deactivatedSchedules - scheduleId
+            )
+            saveState()
+        }
+    }
+
     fun addSchedule(name: String, timeSlot: TimeSlot, linkedModeIds: List<String>, hasEndTime: Boolean) {
         viewModelScope.launch {
             val newSchedule = Schedule(
@@ -336,6 +356,7 @@ class GuardianViewModel : ViewModel() {
             val currentTime = currentHour * 60 + currentMinute
 
             val modesToDeactivate = mutableSetOf<String>()
+            val schedulesToDeactivate = mutableSetOf<String>()
 
             _appState.value.activeModes.forEach { modeId ->
                 val mode = _appState.value.modes.find { it.id == modeId }
@@ -351,6 +372,10 @@ class GuardianViewModel : ViewModel() {
                                     if (dayTime != null) {
                                         val startTime = dayTime.startHour * 60 + dayTime.startMinute
                                         if (currentTime >= startTime) {
+                                            // Mark schedule as deactivated
+                                            if (_appState.value.activeSchedules.contains(schedule.id)) {
+                                                schedulesToDeactivate.add(schedule.id)
+                                            }
                                             val scheduleKey = "disabled_${schedule.id}_${currentDayOfWeek}_${dayTime.startHour}_${dayTime.startMinute}_$today"
                                             prefs.edit().putBoolean(scheduleKey, true).apply()
                                         }
@@ -367,6 +392,10 @@ class GuardianViewModel : ViewModel() {
                                 if (dayTime != null) {
                                     val startTime = dayTime.startHour * 60 + dayTime.startMinute
                                     if (currentTime >= startTime) {
+                                        // Mark schedule as deactivated
+                                        if (_appState.value.activeSchedules.contains(schedule.id)) {
+                                            schedulesToDeactivate.add(schedule.id)
+                                        }
                                         val scheduleKey = "disabled_${schedule.id}_${currentDayOfWeek}_${dayTime.startHour}_${dayTime.startMinute}_$today"
                                         prefs.edit().putBoolean(scheduleKey, true).apply()
                                     }
@@ -377,9 +406,11 @@ class GuardianViewModel : ViewModel() {
                 }
             }
 
-            if (modesToDeactivate.isNotEmpty()) {
+            if (modesToDeactivate.isNotEmpty() || schedulesToDeactivate.isNotEmpty()) {
                 _appState.value = _appState.value.copy(
-                    activeModes = _appState.value.activeModes - modesToDeactivate
+                    activeModes = _appState.value.activeModes - modesToDeactivate,
+                    activeSchedules = _appState.value.activeSchedules - schedulesToDeactivate,
+                    deactivatedSchedules = _appState.value.deactivatedSchedules + schedulesToDeactivate
                 )
                 saveState()
             }

@@ -23,7 +23,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             ACTION_ACTIVATE_SCHEDULE -> {
                 val scheduleId = intent.getStringExtra(EXTRA_SCHEDULE_ID) ?: return
                 val day = intent.getIntExtra(EXTRA_DAY, -1)
-                android.util.Log.d("SCHEDULE_ALARM", "🔥 ACTIVATE alarm fired")
+                android.util.Log.d("SCHEDULE_ALARM", "ðŸ”¥ ACTIVATE alarm fired")
                 android.util.Log.d("SCHEDULE_ALARM", "Schedule ID: $scheduleId, Day: $day")
                 if (day != -1) {
                     activateSpecificSchedule(context, scheduleId, day)
@@ -34,7 +34,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             ACTION_DEACTIVATE_SCHEDULE -> {
                 val scheduleId = intent.getStringExtra(EXTRA_SCHEDULE_ID) ?: return
                 val day = intent.getIntExtra(EXTRA_DAY, -1)
-                android.util.Log.d("SCHEDULE_ALARM", "🔥 DEACTIVATE alarm fired")
+                android.util.Log.d("SCHEDULE_ALARM", "ðŸ”¥ DEACTIVATE alarm fired")
                 android.util.Log.d("SCHEDULE_ALARM", "Schedule ID: $scheduleId, Day: $day")
                 if (day != -1) {
                     deactivateSpecificSchedule(context, scheduleId)
@@ -75,13 +75,20 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             android.util.Log.d("SCHEDULE_ALARM", "Linked modes: ${schedule.linkedModeIds}")
 
             val newActiveModes = appState.activeModes + schedule.linkedModeIds
+            val newActiveSchedules = appState.activeSchedules + scheduleId
+            val newDeactivatedSchedules = appState.deactivatedSchedules - scheduleId
 
-            val newState = appState.copy(activeModes = newActiveModes)
+            val newState = appState.copy(
+                activeModes = newActiveModes,
+                activeSchedules = newActiveSchedules,
+                deactivatedSchedules = newDeactivatedSchedules
+            )
             val newStateJson = json.encodeToString(newState)
             prefs.edit().putString("app_state", newStateJson).apply()
 
             android.util.Log.d("SCHEDULE_ALARM", "✓ Active modes updated to: $newActiveModes")
 
+            android.util.Log.d("SCHEDULE_ALARM", "✓ Active schedules: $newActiveSchedules")
             updateBlockerService(context, newState)
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error activating schedule: ${e.message}", e)
@@ -110,8 +117,14 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             android.util.Log.d("SCHEDULE_ALARM", "Deactivating modes: ${schedule.linkedModeIds}")
 
             val newActiveModes = appState.activeModes - schedule.linkedModeIds.toSet()
+            val newActiveSchedules = appState.activeSchedules - scheduleId
+            val newDeactivatedSchedules = appState.deactivatedSchedules - scheduleId
 
-            val newState = appState.copy(activeModes = newActiveModes)
+            val newState = appState.copy(
+                activeModes = newActiveModes,
+                activeSchedules = newActiveSchedules,
+                deactivatedSchedules = newDeactivatedSchedules
+            )
             val newStateJson = json.encodeToString(newState)
             prefs.edit().putString("app_state", newStateJson).apply()
 

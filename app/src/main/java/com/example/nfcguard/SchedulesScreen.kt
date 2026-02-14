@@ -22,6 +22,68 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.PI
+import java.util.Calendar
+
+enum class ScheduleState {
+    NONE,        // Not in schedule time OR schedule ended
+    ACTIVE,      // Schedule activated modes (currently running)
+    DEACTIVATED  // User deactivated during schedule time
+}
+
+// Get current schedule state
+private fun isInScheduleTime(schedule: Schedule): Boolean {
+    val calendar = Calendar.getInstance()
+    val currentDay = calendar.get(Calendar.DAY_OF_WEEK) - 1
+    val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
+    val currentMinute = calendar.get(Calendar.MINUTE)
+    val currentTimeInMinutes = currentHour * 60 + currentMinute
+
+    val dayTime = schedule.timeSlot.getTimeForDay(currentDay) ?: return false
+    val startTimeInMinutes = dayTime.startHour * 60 + dayTime.startMinute
+
+    return if (schedule.hasEndTime) {
+        val endTimeInMinutes = dayTime.endHour * 60 + dayTime.endMinute
+        currentTimeInMinutes in startTimeInMinutes..endTimeInMinutes
+    } else {
+        currentTimeInMinutes >= startTimeInMinutes
+    }
+}
+
+
+private fun getScheduleState(schedule: Schedule, appState: AppState): ScheduleState {
+    val calendar = Calendar.getInstance()
+    val currentDay = calendar.get(Calendar.DAY_OF_WEEK) - 1 // 0 = Sunday
+    val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
+    val currentMinute = calendar.get(Calendar.MINUTE)
+    val currentTimeInMinutes = currentHour * 60 + currentMinute
+
+    val dayTime = schedule.timeSlot.getTimeForDay(currentDay) ?: return ScheduleState.NONE
+    val startTimeInMinutes = dayTime.startHour * 60 + dayTime.startMinute
+
+    // Check if we're in schedule time
+    val inScheduleTime = if (schedule.hasEndTime) {
+        val endTimeInMinutes = dayTime.endHour * 60 + dayTime.endMinute
+        currentTimeInMinutes in startTimeInMinutes..endTimeInMinutes
+    } else {
+        currentTimeInMinutes >= startTimeInMinutes
+    }
+
+    if (!inScheduleTime) {
+        return ScheduleState.NONE
+    }
+
+    // In schedule time - check if deactivated by user
+    if (appState.deactivatedSchedules.contains(schedule.id)) {
+        return ScheduleState.DEACTIVATED
+    }
+
+    // In schedule time and not deactivated - check if THIS SCHEDULE is active
+    return if (appState.activeSchedules.contains(schedule.id)) {
+        ScheduleState.ACTIVE
+    } else {
+        ScheduleState.NONE
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,6 +160,7 @@ fun SchedulesScreen(
                         ScheduleCard(
                             schedule = appState.schedules[index],
                             modes = appState.modes,
+                            scheduleState = getScheduleState(appState.schedules[index], appState),
                             onEdit = { editingSchedule = appState.schedules[index] },
                             onDelete = { showDeleteDialog = appState.schedules[index] }
                         )
@@ -151,36 +214,124 @@ fun SchedulesScreen(
     }
 
     showDeleteDialog?.let { schedule ->
+        val scheduleState = getScheduleState(schedule, appState)
+        val scheduleIsActive = scheduleState == ScheduleState.ACTIVE
+
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
+            containerColor = Color.Black,
+            shape = RoundedCornerShape(0.dp),
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = Color(0xFFFF4444),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        "DELETE SCHEDULE?",
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp,
+                        color = Color.White
+                    )
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(0.dp),
+                        color = Color(0xFF0A0A0A)
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(
+                                schedule.name.uppercase(),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                letterSpacing = 1.sp
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "${schedule.linkedModeIds.size} linked mode${if (schedule.linkedModeIds.size != 1) "s" else ""}",
+                                fontSize = 11.sp,
+                                color = Color(0xFF808080),
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+
+                    if (scheduleIsActive && schedule.linkedModeIds.isNotEmpty()) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(0.dp),
+                            color = Color(0xFF1A1A00)
+                        ) {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    "IMPORTANT:",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFFFFDD88),
+                                    letterSpacing = 1.sp
+                                )
+                                Text(
+                                    "Linked modes will stay ACTIVE and switch to manual state",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFFFDD88),
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(0.dp),
+                        color = Color(0xFF1A0000)
+                    ) {
+                        Text(
+                            "This action cannot be undone",
+                            fontSize = 12.sp,
+                            color = Color(0xFFFF8888),
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteSchedule(schedule.id)
-                    showDeleteDialog = null
-                }) {
-                    Text("DELETE", fontWeight = FontWeight.Bold, color = Color.White)
+                Button(
+                    onClick = {
+                        viewModel.deleteSchedule(schedule.id)
+                        showDeleteDialog = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF4444),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(0.dp)
+                ) {
+                    Text(
+                        "DELETE",
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("CANCEL", color = Color(0xFF808080))
+                TextButton(
+                    onClick = { showDeleteDialog = null },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = Color(0xFF808080)
+                    )
+                ) {
+                    Text("CANCEL", letterSpacing = 1.sp)
                 }
-            },
-            title = {
-                Text(
-                    "DELETE SCHEDULE?",
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-            },
-            text = {
-                Text(
-                    "This cannot be undone.",
-                    color = Color(0xFF808080)
-                )
-            },
-            containerColor = Color(0xFF0A0A0A),
-            shape = RoundedCornerShape(0.dp)
+            }
         )
     }
 }
@@ -189,6 +340,7 @@ fun SchedulesScreen(
 fun ScheduleCard(
     schedule: Schedule,
     modes: List<Mode>,
+    scheduleState: ScheduleState,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -198,13 +350,79 @@ fun ScheduleCard(
         color = Color(0xFF0A0A0A)
     ) {
         Column(Modifier.padding(20.dp)) {
-            Text(
-                schedule.name.uppercase(),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                letterSpacing = 1.sp
-            )
+            // Title with state indicator
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    schedule.name.uppercase(),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.weight(1f)
+                )
+
+                when (scheduleState) {
+                    ScheduleState.ACTIVE -> {
+                        Surface(
+                            shape = RoundedCornerShape(0.dp),
+                            color = Color.White
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black)
+                                )
+                                Text(
+                                    "ACTIVE",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.Black,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                    }
+                    ScheduleState.DEACTIVATED -> {
+                        Surface(
+                            shape = RoundedCornerShape(0.dp),
+                            color = Color(0xFF404040)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White)
+                                )
+                                Text(
+                                    "DEACTIVATED",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                    }
+                    ScheduleState.NONE -> {
+                        // No badge
+                    }
+                }
+            }
             Spacer(Modifier.height(8.dp))
 
             // Show each day's time
@@ -358,6 +576,32 @@ fun ScheduleEditorDialog(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    // Warning if editing active schedule
+                    if (existingSchedule != null && isInScheduleTime(existingSchedule)) {
+                        item {
+                            Surface(
+                                shape = RoundedCornerShape(0.dp),
+                                color = Color(0xFF1A1A00)
+                            ) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        "NOTICE:",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color(0xFFFFDD88),
+                                        letterSpacing = 1.sp
+                                    )
+                                    Text(
+                                        "This schedule is currently active. Changes will apply immediately.",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFFFFDD88),
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     item {
                         OutlinedTextField(
                             value = name,

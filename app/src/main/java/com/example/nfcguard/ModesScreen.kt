@@ -136,34 +136,95 @@ fun ModesScreen(
     showDeleteDialog?.let { mode ->
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
-            containerColor = Color(0xFF0A0A0A),
+            containerColor = Color.Black,
+            shape = RoundedCornerShape(0.dp),
             title = {
-                Text(
-                    "DELETE MODE?",
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = Color(0xFFFF4444),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        "DELETE MODE?",
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp,
+                        color = Color.White
+                    )
+                }
             },
             text = {
-                Text(
-                    "This cannot be undone.",
-                    color = Color(0xFF808080)
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(0.dp),
+                        color = Color(0xFF0A0A0A)
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(
+                                mode.name.uppercase(),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                letterSpacing = 1.sp
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "${mode.blockedApps.size} app${if (mode.blockedApps.size != 1) "s" else ""}",
+                                fontSize = 11.sp,
+                                color = Color(0xFF808080),
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(0.dp),
+                        color = Color(0xFF1A0000)
+                    ) {
+                        Text(
+                            "This action cannot be undone",
+                            fontSize = 12.sp,
+                            color = Color(0xFFFF8888),
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteMode(mode.id)
-                    showDeleteDialog = null
-                }) {
-                    Text("DELETE", fontWeight = FontWeight.Bold, color = Color.White)
+                Button(
+                    onClick = {
+                        viewModel.deleteMode(mode.id)
+                        showDeleteDialog = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF4444),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(0.dp)
+                ) {
+                    Text(
+                        "DELETE",
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("CANCEL", color = Color(0xFF808080))
+                TextButton(
+                    onClick = { showDeleteDialog = null },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = Color(0xFF808080)
+                    )
+                ) {
+                    Text("CANCEL", letterSpacing = 1.sp)
                 }
             },
-            shape = RoundedCornerShape(0.dp)
         )
     }
 
