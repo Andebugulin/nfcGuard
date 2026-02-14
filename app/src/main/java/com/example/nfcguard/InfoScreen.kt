@@ -52,7 +52,7 @@ fun InfoScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(24.dp),
@@ -64,14 +64,14 @@ fun InfoScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, null, tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
                     }
                     Text(
                         "ABOUT",
                         fontWeight = FontWeight.Black,
                         letterSpacing = 2.sp,
                         fontSize = 24.sp,
-                        color = Color.White
+                        color = GuardianTheme.TextPrimary
                     )
                 }
             }
@@ -79,7 +79,7 @@ fun InfoScreen(
             item {
                 Surface(
                     shape = RoundedCornerShape(0.dp),
-                    color = Color(0xFF0A0A0A)
+                    color = GuardianTheme.BackgroundSurface
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
@@ -89,13 +89,13 @@ fun InfoScreen(
                             "GUARDIAN",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Black,
-                            color = Color.White,
+                            color = GuardianTheme.TextPrimary,
                             letterSpacing = 2.sp
                         )
                         Text(
                             "NFC-powered app blocker for digital wellbeing",
                             fontSize = 12.sp,
-                            color = Color(0xFF808080),
+                            color = GuardianTheme.TextSecondary,
                             letterSpacing = 1.sp
                         )
                     }
@@ -106,7 +106,7 @@ fun InfoScreen(
                 // GitHub + Stars section
                 Surface(
                     shape = RoundedCornerShape(0.dp),
-                    color = Color(0xFF0A0A0A),
+                    color = GuardianTheme.BackgroundSurface,
                     modifier = Modifier.clickable {
                         val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/Andebugulin/nfcGuard"))
                         context.startActivity(intent)
@@ -129,13 +129,13 @@ fun InfoScreen(
                                 "STAR ON GITHUB",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = GuardianTheme.TextPrimary,
                                 letterSpacing = 1.sp
                             )
                             Text(
                                 "Support the project",
                                 fontSize = 10.sp,
-                                color = Color(0xFF808080),
+                                color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.5.sp
                             )
                         }
@@ -143,7 +143,7 @@ fun InfoScreen(
                         // Stars Counter
                         Surface(
                             shape = RoundedCornerShape(16.dp),
-                            color = Color.Black
+                            color = GuardianTheme.BackgroundPrimary
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -153,14 +153,14 @@ fun InfoScreen(
                                 Icon(
                                     Icons.Default.Star,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = GuardianTheme.IconPrimary,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Text(
                                     if (githubStars > 0) githubStars.toString() else "0",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White,
+                                    color = GuardianTheme.TextPrimary,
                                     letterSpacing = 0.5.sp
                                 )
                             }
@@ -216,7 +216,7 @@ fun InfoScreen(
             item {
                 Surface(
                     shape = RoundedCornerShape(0.dp),
-                    color = Color(0xFF0A0A0A)
+                    color = GuardianTheme.BackgroundSurface
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
@@ -226,13 +226,13 @@ fun InfoScreen(
                             "OPEN SOURCE",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF808080),
+                            color = GuardianTheme.TextSecondary,
                             letterSpacing = 1.sp
                         )
                         Text(
                             "Guardian is free and open source software. Contributions welcome!",
                             fontSize = 12.sp,
-                            color = Color.White,
+                            color = GuardianTheme.TextPrimary,
                             letterSpacing = 0.5.sp
                         )
                     }
@@ -250,7 +250,7 @@ fun InfoSection(
 ) {
     Surface(
         shape = RoundedCornerShape(0.dp),
-        color = Color(0xFF0A0A0A)
+        color = GuardianTheme.BackgroundSurface
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -260,7 +260,7 @@ fun InfoSection(
                 title,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF808080),
+                color = GuardianTheme.TextSecondary,
                 letterSpacing = 1.sp
             )
 
@@ -268,7 +268,7 @@ fun InfoSection(
                 Text(
                     it,
                     fontSize = 12.sp,
-                    color = Color.White,
+                    color = GuardianTheme.TextPrimary,
                     letterSpacing = 0.5.sp,
                     lineHeight = 18.sp
                 )
@@ -278,7 +278,7 @@ fun InfoSection(
                 Text(
                     item,
                     fontSize = 12.sp,
-                    color = Color.White,
+                    color = GuardianTheme.TextPrimary,
                     letterSpacing = 0.5.sp,
                     lineHeight = 18.sp
                 )
@@ -326,7 +326,7 @@ fun GitHubOctocat(modifier: Modifier = Modifier) {
 
         drawPath(
             path = path,
-            color = Color.White
+            color = GuardianTheme.IconPrimary
         )
     }
 }

@@ -11,15 +11,23 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Nfc
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.net.Uri
+import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.launch
 
 enum class Screen {
@@ -129,9 +138,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun checkAndRequestPermissions() {
+    fun checkAndRequestPermissions() {
         val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
+        val hasSeenOnboarding = prefs.getBoolean("has_seen_onboarding", false)
         val hasCompletedInitialSetup = prefs.getBoolean("initial_permissions_granted", false)
+
+        if (!hasSeenOnboarding) {
+            // Show onboarding first
+            return
+        }
 
         if (!hasCompletedInitialSetup) {
             showWelcomeDialog()
@@ -143,11 +158,11 @@ class MainActivity : ComponentActivity() {
 
         builder.setTitle("WELCOME TO GUARDIAN")
             .setMessage(
-                "Guardian needs the following permissions to protect your focus:\n\n" +
-                        "• USAGE ACCESS - Detect which apps you're using\n" +
-                        "• DISPLAY OVER APPS - Show the block screen\n" +
-                        "• BATTERY OPTIMIZATION - Run reliably in background\n" +
-                        "• PAUSE APP ACTIVITY - Must be disabled for Guardian\n\n" +
+                "Guardian needs the following permissions to protect your focus:\n\n\n\n" +
+                        "• USAGE ACCESS - Detect which apps you're using\n\n" +
+                        "• DISPLAY OVER APPS - Show the block screen\n\n" +
+                        "• BATTERY OPTIMIZATION - Run reliably in background\n\n" +
+                        "• PAUSE APP ACTIVITY - Must be disabled for Guardian\n\n\n\n" +
                         "Let's set these up now."
             )
             .setPositiveButton("CONTINUE") { _, _ ->
@@ -163,6 +178,12 @@ class MainActivity : ComponentActivity() {
         dialog.window?.apply {
             setBackgroundDrawableResource(android.R.color.black)
             decorView.setBackgroundColor(android.graphics.Color.BLACK)
+
+            // Add border
+            val drawable = android.graphics.drawable.GradientDrawable()
+            drawable.setColor(android.graphics.Color.BLACK)
+            drawable.setStroke(6, android.graphics.Color.parseColor("#340000")) // Dark red border for warning
+            setBackgroundDrawable(drawable)
         }
         dialog.show()
 
@@ -269,6 +290,12 @@ class MainActivity : ComponentActivity() {
         dialog.window?.apply {
             setBackgroundDrawableResource(android.R.color.black)
             decorView.setBackgroundColor(android.graphics.Color.BLACK)
+
+            // Add border
+            val drawable = android.graphics.drawable.GradientDrawable()
+            drawable.setColor(android.graphics.Color.BLACK)
+            drawable.setStroke(6, android.graphics.Color.parseColor("#340000")) // Dark red border for warning
+            setBackgroundDrawable(drawable)
         }
         dialog.show()
 
@@ -311,6 +338,12 @@ class MainActivity : ComponentActivity() {
         dialog.window?.apply {
             setBackgroundDrawableResource(android.R.color.black)
             decorView.setBackgroundColor(android.graphics.Color.BLACK)
+
+            // Add border
+            val drawable = android.graphics.drawable.GradientDrawable()
+            drawable.setColor(android.graphics.Color.BLACK)
+            drawable.setStroke(6, android.graphics.Color.parseColor("#340000")) // Dark red border for warning
+            setBackgroundDrawable(drawable)
         }
         dialog.show()
 
@@ -362,6 +395,11 @@ fun MainNavigation(
     scannedNfcTagId: MutableState<String?>,
     wrongTagScanned: MutableState<Boolean>
 ) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE) }
+    var hasSeenOnboarding by remember {
+        mutableStateOf(prefs.getBoolean("has_seen_onboarding", false))
+    }
     var currentScreen by remember { mutableStateOf(Screen.HOME) }
     val appState by viewModel.appState.collectAsState()
 
@@ -376,35 +414,285 @@ fun MainNavigation(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        when (currentScreen) {
-            Screen.HOME -> HomeScreen(
-                viewModel = viewModel,
-                onNavigate = { screen -> currentScreen = screen }
+        if (!hasSeenOnboarding) {
+            OnboardingScreen(
+                onComplete = {
+                    prefs.edit().putBoolean("has_seen_onboarding", true).apply()
+                    hasSeenOnboarding = true
+                    // Trigger permission flow
+                    (context as? MainActivity)?.let { activity ->
+                        activity.runOnUiThread {
+                            val hasCompletedPermissions = prefs.getBoolean("initial_permissions_granted", false)
+                            if (!hasCompletedPermissions) {
+                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                    activity.checkAndRequestPermissions()
+                                }, 300)
+                            }
+                        }
+                    }
+                }
             )
-            Screen.MODES -> ModesScreen(
-                viewModel = viewModel,
-                onBack = { currentScreen = Screen.HOME }
-            )
-            Screen.SCHEDULES -> SchedulesScreen(
-                viewModel = viewModel,
-                onBack = { currentScreen = Screen.HOME }
-            )
-            Screen.NFC_TAGS -> NfcTagsScreen(
-                viewModel = viewModel,
-                scannedNfcTagId = scannedNfcTagId,
-                onBack = { currentScreen = Screen.HOME }
-            )
-            Screen.INFO -> InfoScreen(
-                onBack = { currentScreen = Screen.HOME }
-            )
-        }
+        } else {
+            when (currentScreen) {
+                Screen.HOME -> HomeScreen(
+                    viewModel = viewModel,
+                    onNavigate = { screen -> currentScreen = screen }
+                )
+                Screen.MODES -> ModesScreen(
+                    viewModel = viewModel,
+                    onBack = { currentScreen = Screen.HOME }
+                )
+                Screen.SCHEDULES -> SchedulesScreen(
+                    viewModel = viewModel,
+                    onBack = { currentScreen = Screen.HOME }
+                )
+                Screen.NFC_TAGS -> NfcTagsScreen(
+                    viewModel = viewModel,
+                    scannedNfcTagId = scannedNfcTagId,
+                    onBack = { currentScreen = Screen.HOME }
+                )
+                Screen.INFO -> InfoScreen(
+                    onBack = { currentScreen = Screen.HOME }
+                )
+            }
 
-        // Show wrong tag feedback
-        if (wrongTagScanned.value) {
-            WrongTagFeedback()
+            // Show wrong tag feedback
+            if (wrongTagScanned.value) {
+                WrongTagFeedback()
+            }
         }
     }
 }
+
+@Composable
+fun OnboardingScreen(onComplete: () -> Unit) {
+    var currentPage by remember { mutableStateOf(0) }
+    val pages = listOf(
+        OnboardingPage(
+            title = "GUARDIAN",
+            subtitle = "DIGITAL WELLBEING",
+            description = "Break free from mindless scrolling. Guardian blocks distracting apps until you physically unlock them with NFC tags.",
+            icon = "shield"
+        ),
+        OnboardingPage(
+            title = "MODES",
+            subtitle = "FLEXIBLE CONTROL",
+            description = "Create blocking modes for different contexts:\n\n• BLOCK MODE - Block specific distracting apps\n• ALLOW MODE - Block everything except essential apps",
+            icon = "modes"
+        ),
+        OnboardingPage(
+            title = "NFC LOCKS",
+            subtitle = "PHYSICAL FRICTION",
+            description = "Optional: Require NFC tags to unlock modes.\n\nPlace tags in inconvenient locations (kitchen, gym, friend's house) to add intentional friction before accessing blocked apps.",
+            icon = "nfc"
+        ),
+        OnboardingPage(
+            title = "SCHEDULES",
+            subtitle = "AUTOMATION",
+            description = "Set modes to activate automatically:\n\n• Weekday work hours (9am-5pm)\n• Sleep schedule (10pm-7am)\n• Weekend deep work sessions",
+            icon = "schedule"
+        ),
+        OnboardingPage(
+            title = "READY",
+            subtitle = "LET'S GET STARTED",
+            description = "Guardian needs a few permissions to work:\n\n• Usage access - Detect which apps you use\n• Display over apps - Show block screen\n• Battery optimization - Run reliably\n\nLet's set them up now.",
+            icon = "ready"
+        )
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(GuardianTheme.BackgroundPrimary)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Page content
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                OnboardingPageContent(pages[currentPage])
+            }
+
+            // Progress indicators
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                pages.indices.forEach { index ->
+                    if (index == currentPage) {
+                        // Active page - filled white circle
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .padding(2.dp)
+                                .background(
+                                    GuardianTheme.TextPrimary,
+                                    shape = androidx.compose.foundation.shape.CircleShape
+                                )
+                        )
+                    } else {
+                        // Inactive page - hollow circle with white border
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .padding(2.dp)
+                                .border(
+                                    width = 1.dp,
+                                    color = GuardianTheme.TextPrimary,
+                                    shape = androidx.compose.foundation.shape.CircleShape
+                                )
+                        )
+                    }
+                }
+            }
+
+            // Navigation buttons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                if (currentPage > 0) {
+                    TextButton(
+                        onClick = { currentPage-- },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = GuardianTheme.TextSecondary
+                        )
+                    ) {
+                        Text("BACK", letterSpacing = 1.sp)
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(80.dp))
+                }
+
+                Button(
+                    onClick = {
+                        if (currentPage < pages.size - 1) {
+                            currentPage++
+                        } else {
+                            onComplete()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GuardianTheme.ButtonPrimary,
+                        contentColor = GuardianTheme.ButtonPrimaryText
+                    ),
+                    shape = RoundedCornerShape(0.dp),
+                    modifier = Modifier.height(48.dp).widthIn(min = 120.dp)
+                ) {
+                    Text(
+                        if (currentPage < pages.size - 1) "NEXT" else "GET STARTED",
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OnboardingPageContent(page: OnboardingPage) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        // Icon
+        when (page.icon) {
+            "shield" -> {
+                // Use actual app icon
+                val context = LocalContext.current
+                val appIcon = remember {
+                    context.packageManager.getApplicationIcon(context.applicationInfo)
+                }
+                Image(
+                    bitmap = appIcon.toBitmap(120, 120).asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.size(80.dp)
+                )
+            }
+            "modes" -> Icon(
+                Icons.Default.DarkMode,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = GuardianTheme.IconPrimary
+            )
+            "nfc" -> Icon(
+                Icons.Default.Nfc,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = GuardianTheme.IconPrimary
+            )
+            "schedule" -> Icon(
+                Icons.Default.Schedule,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = GuardianTheme.IconPrimary
+            )
+            "ready" -> Icon(
+                Icons.Default.CheckCircle,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = GuardianTheme.IconPrimary
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Title
+        Text(
+            page.title,
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Black,
+            color = GuardianTheme.TextPrimary,
+            letterSpacing = 3.sp,
+            textAlign = TextAlign.Center
+        )
+
+        // Subtitle
+        Text(
+            page.subtitle,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = GuardianTheme.TextSecondary,
+            letterSpacing = 2.sp,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Description
+        Text(
+            page.description,
+            fontSize = 14.sp,
+            color = GuardianTheme.TextPrimary,
+            letterSpacing = 0.5.sp,
+            lineHeight = 22.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+    }
+}
+
+data class OnboardingPage(
+    val title: String,
+    val subtitle: String,
+    val description: String,
+    val icon: String
+)
 
 @Composable
 fun WrongTagFeedback() {

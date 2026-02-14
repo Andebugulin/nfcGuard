@@ -30,7 +30,7 @@ fun NfcTagsScreen(
     var showDeleteDialog by remember { mutableStateOf<NfcTag?>(null) }
     var showDeleteConfirmDialog by remember { mutableStateOf<NfcTag?>(null) }
     var deleteConfirmText by remember { mutableStateOf("") }
-    var deleteCountdown by remember { mutableStateOf(30) }
+    var deleteCountdown by remember { mutableStateOf(60) }
 
     LaunchedEffect(scannedNfcTagId.value) {
         val scannedId = scannedNfcTagId.value
@@ -335,7 +335,7 @@ fun NfcTagsScreen(
                         if (hasActiveMode) {
                             showDeleteDialog = null
                             showDeleteConfirmDialog = tag
-                            deleteCountdown = 30
+                            deleteCountdown = 60
                         } else {
                             viewModel.deleteNfcTag(tag.id)
                             showDeleteDialog = null
@@ -382,7 +382,7 @@ fun NfcTagsScreen(
             onDismissRequest = {
                 showDeleteConfirmDialog = null
                 deleteConfirmText = ""
-                deleteCountdown = 30
+                deleteCountdown = 60
             },
             containerColor = GuardianTheme.ButtonSecondary,
             tonalElevation = 0.dp,
@@ -477,7 +477,7 @@ fun NfcTagsScreen(
                         viewModel.deleteNfcTag(tag.id)
                         showDeleteConfirmDialog = null
                         deleteConfirmText = ""
-                        deleteCountdown = 30
+                        deleteCountdown = 60
                     },
                     enabled = deleteCountdown == 0 && deleteConfirmText == "DELETE TAG",
                     colors = ButtonDefaults.buttonColors(
@@ -500,7 +500,7 @@ fun NfcTagsScreen(
                     onClick = {
                         showDeleteConfirmDialog = null
                         deleteConfirmText = ""
-                        deleteCountdown = 30
+                        deleteCountdown = 60
                     },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = Color(0xFF808080)
@@ -672,6 +672,12 @@ fun NfcTagRegistrationDialog(
         onDismissRequest = onDismiss,
         containerColor = GuardianTheme.BackgroundSurface,
         tonalElevation = 0.dp,
+        shape = RoundedCornerShape(0.dp),
+        modifier = Modifier.border(
+            width = GuardianTheme.DialogBorderWidth,
+            color = GuardianTheme.DialogBorderInfo,
+            shape = RoundedCornerShape(0.dp)
+        ),
         title = {
             Text(
                 "REGISTER NFC TAG",
@@ -784,7 +790,6 @@ fun NfcTagRegistrationDialog(
                 Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
-        shape = RoundedCornerShape(0.dp)
     )
 }
 
