@@ -45,7 +45,7 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(GuardianTheme.BackgroundPrimary)
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -60,7 +60,7 @@ fun HomeScreen(
                     "GUARDIAN",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color.White,
+                    color = GuardianTheme.TextPrimary,
                     letterSpacing = 2.sp
                 )
                 if (appState.activeModes.isNotEmpty()) {
@@ -69,7 +69,7 @@ fun HomeScreen(
                         "${appState.activeModes.size} MODE${if (appState.activeModes.size > 1) "S" else ""} ACTIVE",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF808080),
+                        color = GuardianTheme.TextSecondary,
                         letterSpacing = 1.sp
                     )
                     Row(
@@ -80,14 +80,14 @@ fun HomeScreen(
                         Icon(
                             Icons.Default.Nfc,
                             contentDescription = null,
-                            tint = Color(0xFF808080),
+                            tint = GuardianTheme.IconSecondary,
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
                             "TAP NFC TO UNLOCK",
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF808080),
+                            color = GuardianTheme.TextSecondary,
                             letterSpacing = 1.sp
                         )
                     }
@@ -101,7 +101,7 @@ fun HomeScreen(
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Emergency Reset",
-                    tint = Color.White,
+                    tint = GuardianTheme.IconPrimary,
                     modifier = Modifier
                         .size(20.dp)
                         .clickable(
@@ -115,7 +115,7 @@ fun HomeScreen(
                 Icon(
                     imageVector = Icons.Outlined.Info,
                     contentDescription = "Info",
-                    tint = Color.White,
+                    tint = GuardianTheme.IconPrimary,
                     modifier = Modifier
                         .size(20.dp)
                         .clickable(
@@ -161,14 +161,14 @@ fun HomeScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(0.dp),
-                color = Color.White
+                color = GuardianTheme.TextPrimary
             ) {
                 Column(Modifier.padding(20.dp)) {
                     Text(
                         "ACTIVE NOW",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black,
+                        color = GuardianTheme.BackgroundSurface,
                         letterSpacing = 1.sp
                     )
                     Spacer(Modifier.height(12.dp))
@@ -190,7 +190,7 @@ fun HomeScreen(
                                 mode.name.uppercase(),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.Black,
+                                color = GuardianTheme.BackgroundSurface,
                                 letterSpacing = 1.sp
                             )
                         }
@@ -274,7 +274,7 @@ fun NavigationCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(0.dp),
-        color = Color(0xFF0A0A0A),
+        color = GuardianTheme.BackgroundSurface,
         onClick = onClick
     ) {
         Row(
@@ -284,7 +284,7 @@ fun NavigationCard(
             Icon(
                 icon,
                 contentDescription = null,
-                tint = Color.White,
+                tint = GuardianTheme.IconPrimary,
                 modifier = Modifier.size(32.dp)
             )
             Spacer(Modifier.width(16.dp))
@@ -293,20 +293,20 @@ fun NavigationCard(
                     title,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = GuardianTheme.TextPrimary,
                     letterSpacing = 1.sp
                 )
                 Text(
                     subtitle,
                     fontSize = 11.sp,
-                    color = Color(0xFF808080),
+                    color = GuardianTheme.TextSecondary,
                     letterSpacing = 1.sp
                 )
             }
             Icon(
                 Icons.Default.ArrowForward,
                 contentDescription = null,
-                tint = Color(0xFF808080)
+                tint = GuardianTheme.IconSecondary
             )
         }
     }
@@ -319,7 +319,8 @@ fun EmergencyWarningDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color.Black,
+        containerColor = GuardianTheme.ButtonSecondary,
+        tonalElevation = 0.dp,
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -328,14 +329,14 @@ fun EmergencyWarningDialog(
                 Icon(
                     Icons.Default.Warning,
                     contentDescription = null,
-                    tint = Color(0xFFFF4444),
+                    tint = GuardianTheme.Error,
                     modifier = Modifier.size(24.dp)
                 )
                 Text(
                     "LOST NFC TAG?",
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 2.sp,
-                    color = Color(0xFFFF4444)
+                    color = GuardianTheme.Error
                 )
             }
         },
@@ -345,7 +346,7 @@ fun EmergencyWarningDialog(
                     "This will help you:",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = GuardianTheme.TextPrimary,
                     letterSpacing = 0.5.sp
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -365,13 +366,13 @@ fun EmergencyWarningDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(0.dp),
-                    color = Color(0xFF1A0000)
+                    color = GuardianTheme.ErrorDark
                 ) {
                     Text(
                         "Your modes and schedules will NOT be deleted",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF4CAF50),
+                        color = GuardianTheme.Success,
                         letterSpacing = 0.5.sp,
                         modifier = Modifier.padding(16.dp)
                     )
@@ -382,7 +383,7 @@ fun EmergencyWarningDialog(
             TextButton(
                 onClick = onConfirm,
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = Color(0xFFFF4444)
+                    contentColor = GuardianTheme.Error
                 )
             ) {
                 Text("CONTINUE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
@@ -422,13 +423,14 @@ fun EmergencyConfirmDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color.Black,
+        containerColor = GuardianTheme.ButtonSecondary,
+        tonalElevation = 0.dp,
         title = {
             Text(
                 "FINAL CONFIRMATION",
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp,
-                color = Color(0xFFFF4444)
+                color = GuardianTheme.Error
             )
         },
         text = {
@@ -437,7 +439,7 @@ fun EmergencyConfirmDialog(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(0.dp),
-                        color = Color.Black
+                        color = GuardianTheme.BackgroundSurface
                     ) {
                         Column(
                             modifier = Modifier.padding(24.dp),
@@ -448,12 +450,12 @@ fun EmergencyConfirmDialog(
                                 countdown.toString(),
                                 fontSize = 48.sp,
                                 fontWeight = FontWeight.Black,
-                                color = Color(0xFFFF4444)
+                                color = GuardianTheme.Error
                             )
                             Text(
                                 "Waiting...",
                                 fontSize = 11.sp,
-                                color = Color(0xFF808080),
+                                color = GuardianTheme.TextSecondary,
                                 letterSpacing = 1.sp
                             )
                         }
@@ -463,7 +465,7 @@ fun EmergencyConfirmDialog(
                         "Type exactly:  RESET ALL DATA",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = GuardianTheme.TextPrimary,
                         letterSpacing = 0.5.sp
                     )
 
@@ -478,13 +480,13 @@ fun EmergencyConfirmDialog(
                             )
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color(0xFF0A0A0A),
-                            unfocusedContainerColor = Color(0xFF0A0A0A),
-                            focusedIndicatorColor = if (confirmText == "RESET ALL DATA") Color(0xFFFF4444) else Color.White,
-                            unfocusedIndicatorColor = Color(0xFF404040),
-                            cursorColor = Color.White,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
+                            focusedContainerColor = GuardianTheme.BackgroundSurface,
+                            unfocusedContainerColor = GuardianTheme.BackgroundSurface,
+                            focusedIndicatorColor = if (confirmText == "RESET ALL DATA") GuardianTheme.Error else Color.White,
+                            unfocusedIndicatorColor = GuardianTheme.BorderSubtle,
+                            cursorColor = GuardianTheme.InputCursor,
+                            focusedTextColor = GuardianTheme.InputText,
+                            unfocusedTextColor = GuardianTheme.InputText
                         ),
                         shape = RoundedCornerShape(0.dp),
                         modifier = Modifier.fillMaxWidth(),
@@ -495,7 +497,7 @@ fun EmergencyConfirmDialog(
                         Text(
                             "Text doesn't match",
                             fontSize = 11.sp,
-                            color = Color(0xFFFF4444),
+                            color = GuardianTheme.Error,
                             letterSpacing = 0.5.sp
                         )
                     }
@@ -507,7 +509,7 @@ fun EmergencyConfirmDialog(
                 onClick = onConfirm,
                 enabled = countdown == 0 && confirmText == "RESET ALL DATA",
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = Color(0xFFFF4444),
+                    contentColor = GuardianTheme.Error,
                     disabledContentColor = Color(0xFF404040)
                 )
             ) {
@@ -538,13 +540,14 @@ fun TagSelectionDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color.Black,
+        containerColor = GuardianTheme.ButtonSecondary,
+        tonalElevation = 0.dp,
         title = {
             Text(
                 "SELECT LOST TAGS",
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp,
-                color = Color.White
+                color = GuardianTheme.TextPrimary
             )
         },
         text = {
@@ -560,12 +563,12 @@ fun TagSelectionDialog(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(0.dp),
-                        color = Color(0xFF0A0A0A)
+                        color = GuardianTheme.BackgroundSurface
                     ) {
                         Text(
                             "No NFC tags registered",
                             fontSize = 12.sp,
-                            color = Color(0xFF808080),
+                            color = GuardianTheme.TextSecondary,
                             letterSpacing = 0.5.sp,
                             modifier = Modifier.padding(16.dp)
                         )
@@ -576,7 +579,7 @@ fun TagSelectionDialog(
                             Surface(
                                 onClick = { onTagToggle(tag.id) },
                                 shape = RoundedCornerShape(0.dp),
-                                color = if (selectedTags.contains(tag.id)) Color.White else Color(0xFF0A0A0A)
+                                color = if (selectedTags.contains(tag.id)) Color.White else GuardianTheme.BackgroundSurface
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -608,13 +611,13 @@ fun TagSelectionDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(0.dp),
-                    color = Color(0xFF001A00)
+                    color = GuardianTheme.SuccessBackground
                 ) {
                     Text(
                         "This will deactivate ALL modes and delete selected tags only",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF4CAF50),
+                        color = GuardianTheme.Success,
                         letterSpacing = 0.5.sp,
                         modifier = Modifier.padding(12.dp)
                     )
@@ -625,7 +628,7 @@ fun TagSelectionDialog(
             TextButton(
                 onClick = onConfirm,
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = Color(0xFFFF4444)
+                    contentColor = GuardianTheme.Error
                 )
             ) {
                 Text("CONFIRM", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)

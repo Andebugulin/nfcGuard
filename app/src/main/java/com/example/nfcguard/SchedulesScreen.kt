@@ -96,7 +96,7 @@ fun SchedulesScreen(
     var editingSchedule by remember { mutableStateOf<Schedule?>(null) }
     var showDeleteDialog by remember { mutableStateOf<Schedule?>(null) }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary)) {
         Column(Modifier.fillMaxSize()) {
             Row(
                 modifier = Modifier
@@ -105,14 +105,14 @@ fun SchedulesScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, null, tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
                 }
                 Text(
                     "SCHEDULES",
                     fontWeight = FontWeight.Black,
                     letterSpacing = 2.sp,
                     fontSize = 24.sp,
-                    color = Color.White,
+                    color = GuardianTheme.TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -129,15 +129,15 @@ fun SchedulesScreen(
                             "NO SCHEDULES",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF404040),
+                            color = GuardianTheme.TextDisabled,
                             letterSpacing = 2.sp
                         )
                         Spacer(Modifier.height(16.dp))
                         Button(
                             onClick = { showAddDialog = true },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White,
-                                contentColor = Color.Black
+                                containerColor = GuardianTheme.ButtonPrimary,
+                                contentColor = GuardianTheme.ButtonPrimaryText
                             ),
                             shape = RoundedCornerShape(0.dp),
                             modifier = Modifier.height(48.dp)
@@ -170,8 +170,8 @@ fun SchedulesScreen(
                         Button(
                             onClick = { showAddDialog = true },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF0A0A0A),
-                                contentColor = Color.White
+                                containerColor = GuardianTheme.BackgroundSurface,
+                                contentColor = GuardianTheme.ButtonSecondaryText
                             ),
                             shape = RoundedCornerShape(0.dp),
                             modifier = Modifier
@@ -219,7 +219,8 @@ fun SchedulesScreen(
 
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
-            containerColor = Color.Black,
+            containerColor = GuardianTheme.ButtonSecondary,
+            tonalElevation = 0.dp,
             shape = RoundedCornerShape(0.dp),
             title = {
                 Row(
@@ -229,14 +230,14 @@ fun SchedulesScreen(
                     Icon(
                         Icons.Default.Warning,
                         contentDescription = null,
-                        tint = Color(0xFFFF4444),
+                        tint = GuardianTheme.Error,
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
                         "DELETE SCHEDULE?",
                         fontWeight = FontWeight.Black,
                         letterSpacing = 2.sp,
-                        color = Color.White
+                        color = GuardianTheme.TextPrimary
                     )
                 }
             },
@@ -244,21 +245,21 @@ fun SchedulesScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Surface(
                         shape = RoundedCornerShape(0.dp),
-                        color = Color(0xFF0A0A0A)
+                        color = GuardianTheme.BackgroundSurface
                     ) {
                         Column(Modifier.padding(16.dp)) {
                             Text(
                                 schedule.name.uppercase(),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = GuardianTheme.TextPrimary,
                                 letterSpacing = 1.sp
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 "${schedule.linkedModeIds.size} linked mode${if (schedule.linkedModeIds.size != 1) "s" else ""}",
                                 fontSize = 11.sp,
-                                color = Color(0xFF808080),
+                                color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.5.sp
                             )
                         }
@@ -268,20 +269,20 @@ fun SchedulesScreen(
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(0.dp),
-                            color = Color(0xFF1A1A00)
+                            color = GuardianTheme.WarningBackground
                         ) {
                             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(
                                     "IMPORTANT:",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = Color(0xFFFFDD88),
+                                    color = GuardianTheme.Warning,
                                     letterSpacing = 1.sp
                                 )
                                 Text(
                                     "Linked modes will stay ACTIVE and switch to manual state",
                                     fontSize = 11.sp,
-                                    color = Color(0xFFFFDD88),
+                                    color = GuardianTheme.Warning,
                                     letterSpacing = 0.5.sp
                                 )
                             }
@@ -291,7 +292,7 @@ fun SchedulesScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(0.dp),
-                        color = Color(0xFF1A0000)
+                        color = GuardianTheme.ErrorDark
                     ) {
                         Text(
                             "This action cannot be undone",
@@ -310,8 +311,8 @@ fun SchedulesScreen(
                         showDeleteDialog = null
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFF4444),
-                        contentColor = Color.White
+                        containerColor = GuardianTheme.Error,
+                        contentColor = GuardianTheme.ButtonSecondaryText
                     ),
                     shape = RoundedCornerShape(0.dp)
                 ) {
@@ -347,7 +348,7 @@ fun ScheduleCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(0.dp),
-        color = Color(0xFF0A0A0A)
+        color = GuardianTheme.BackgroundSurface
     ) {
         Column(Modifier.padding(20.dp)) {
             // Title with state indicator
@@ -360,7 +361,7 @@ fun ScheduleCard(
                     schedule.name.uppercase(),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = GuardianTheme.TextPrimary,
                     letterSpacing = 1.sp,
                     modifier = Modifier.weight(1f)
                 )
@@ -369,7 +370,7 @@ fun ScheduleCard(
                     ScheduleState.ACTIVE -> {
                         Surface(
                             shape = RoundedCornerShape(0.dp),
-                            color = Color.White
+                            color = GuardianTheme.TextPrimary
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -380,13 +381,13 @@ fun ScheduleCard(
                                     modifier = Modifier
                                         .size(8.dp)
                                         .clip(CircleShape)
-                                        .background(Color.Black)
+                                        .background(GuardianTheme.BackgroundPrimary)
                                 )
                                 Text(
                                     "ACTIVE",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = Color.Black,
+                                    color = GuardianTheme.BackgroundSurface,
                                     letterSpacing = 1.sp
                                 )
                             }
@@ -395,7 +396,8 @@ fun ScheduleCard(
                     ScheduleState.DEACTIVATED -> {
                         Surface(
                             shape = RoundedCornerShape(0.dp),
-                            color = Color(0xFF404040)
+                            color = GuardianTheme.BackgroundSurface,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF404040))
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -406,13 +408,13 @@ fun ScheduleCard(
                                     modifier = Modifier
                                         .size(8.dp)
                                         .clip(CircleShape)
-                                        .background(Color.White)
+                                        .background(Color(0xFF808080))
                                 )
                                 Text(
                                     "DEACTIVATED",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = Color.White,
+                                    color = GuardianTheme.TextSecondary,
                                     letterSpacing = 1.sp
                                 )
                             }
@@ -435,7 +437,7 @@ fun ScheduleCard(
                     Icon(
                         Icons.Default.Schedule,
                         contentDescription = null,
-                        tint = Color(0xFF808080),
+                        tint = GuardianTheme.IconSecondary,
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
@@ -447,7 +449,7 @@ fun ScheduleCard(
                             }
                         },
                         fontSize = 11.sp,
-                        color = Color(0xFF808080),
+                        color = GuardianTheme.TextSecondary,
                         letterSpacing = 1.sp
                     )
                 }
@@ -466,13 +468,13 @@ fun ScheduleCard(
                                 Icon(
                                     Icons.Default.CheckCircle,
                                     contentDescription = null,
-                                    tint = Color(0xFF606060),
+                                    tint = GuardianTheme.TextTertiary,
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Text(
                                     mode.name.uppercase(),
                                     fontSize = 10.sp,
-                                    color = Color(0xFF606060),
+                                    color = GuardianTheme.TextTertiary,
                                     letterSpacing = 1.sp
                                 )
                             }
@@ -483,7 +485,7 @@ fun ScheduleCard(
                 Text(
                     "NO MODES LINKED",
                     fontSize = 10.sp,
-                    color = Color(0xFF404040),
+                    color = GuardianTheme.TextDisabled,
                     letterSpacing = 1.sp
                 )
             }
@@ -492,10 +494,10 @@ fun ScheduleCard(
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 TextButton(onClick = onEdit) {
-                    Text("EDIT", fontSize = 11.sp, color = Color.White, letterSpacing = 1.sp)
+                    Text("EDIT", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
                 }
                 TextButton(onClick = onDelete) {
-                    Text("DELETE", fontSize = 11.sp, color = Color(0xFF808080), letterSpacing = 1.sp)
+                    Text("DELETE", fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                 }
             }
         }
@@ -560,7 +562,7 @@ fun ScheduleEditorDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = Color(0xFF808080), letterSpacing = 1.sp)
+                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
         title = {
@@ -581,20 +583,20 @@ fun ScheduleEditorDialog(
                         item {
                             Surface(
                                 shape = RoundedCornerShape(0.dp),
-                                color = Color(0xFF1A1A00)
+                                color = GuardianTheme.WarningBackground
                             ) {
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(
                                         "NOTICE:",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Black,
-                                        color = Color(0xFFFFDD88),
+                                        color = GuardianTheme.Warning,
                                         letterSpacing = 1.sp
                                     )
                                     Text(
-                                        "This schedule is currently active. Changes will apply immediately.",
+                                        "This schedule is within its active time window. Changes will take effect immediately.",
                                         fontSize = 11.sp,
-                                        color = Color(0xFFFFDD88),
+                                        color = GuardianTheme.Warning,
                                         letterSpacing = 0.5.sp
                                     )
                                 }
@@ -608,13 +610,13 @@ fun ScheduleEditorDialog(
                             onValueChange = { name = it },
                             placeholder = { Text("SCHEDULE NAME", fontSize = 12.sp, letterSpacing = 1.sp) },
                             colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Black,
-                                unfocusedContainerColor = Color.Black,
-                                focusedIndicatorColor = Color.White,
-                                unfocusedIndicatorColor = Color(0xFF404040),
-                                cursorColor = Color.White,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
+                                focusedContainerColor = GuardianTheme.InputBackground,
+                                unfocusedContainerColor = GuardianTheme.InputBackground,
+                                focusedIndicatorColor = GuardianTheme.BorderFocused,
+                                unfocusedIndicatorColor = GuardianTheme.BorderSubtle,
+                                cursorColor = GuardianTheme.InputCursor,
+                                focusedTextColor = GuardianTheme.InputText,
+                                unfocusedTextColor = GuardianTheme.InputText
                             ),
                             shape = RoundedCornerShape(0.dp),
                             modifier = Modifier.fillMaxWidth()
@@ -623,7 +625,7 @@ fun ScheduleEditorDialog(
 
                     item {
                         Column {
-                            Text("DAYS & TIMES", fontSize = 11.sp, color = Color(0xFF808080), letterSpacing = 1.sp)
+                            Text("DAYS & TIMES", fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                             Spacer(Modifier.height(8.dp))
                             (1..7).forEach { day ->
                                 Surface(
@@ -662,7 +664,7 @@ fun ScheduleEditorDialog(
                                                 TextButton(
                                                     onClick = { showTimePickerForDay = day },
                                                     colors = ButtonDefaults.textButtonColors(
-                                                        contentColor = Color.Black
+                                                        contentColor = GuardianTheme.ButtonPrimaryText
                                                     )
                                                 ) {
                                                     val (h, m) = dayTimes[day] ?: (9 to 0)
@@ -685,14 +687,14 @@ fun ScheduleEditorDialog(
                                                 Text(
                                                     "UNTIL",
                                                     fontSize = 10.sp,
-                                                    color = Color(0xFF606060),
+                                                    color = GuardianTheme.TextTertiary,
                                                     letterSpacing = 1.sp,
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 TextButton(
                                                     onClick = { showEndTimePickerForDay = day },
                                                     colors = ButtonDefaults.textButtonColors(
-                                                        contentColor = Color.Black
+                                                        contentColor = GuardianTheme.ButtonPrimaryText
                                                     )
                                                 ) {
                                                     val (h, m) = dayEndTimes[day] ?: (23 to 59)
@@ -719,7 +721,7 @@ fun ScheduleEditorDialog(
                             Text(
                                 "CUSTOM END TIMES",
                                 fontSize = 11.sp,
-                                color = Color(0xFF808080),
+                                color = GuardianTheme.TextSecondary,
                                 letterSpacing = 1.sp,
                                 modifier = Modifier.weight(1f)
                             )
@@ -748,7 +750,7 @@ fun ScheduleEditorDialog(
                             Text(
                                 "Set custom end time for each day above",
                                 fontSize = 10.sp,
-                                color = Color(0xFF606060),
+                                color = GuardianTheme.TextTertiary,
                                 letterSpacing = 0.5.sp
                             )
                         }
@@ -756,13 +758,13 @@ fun ScheduleEditorDialog(
 
                     item {
                         Column {
-                            Text("LINKED MODES", fontSize = 11.sp, color = Color(0xFF808080), letterSpacing = 1.sp)
+                            Text("LINKED MODES", fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                             Spacer(Modifier.height(8.dp))
                             if (modes.isEmpty()) {
                                 Text(
                                     "No modes created yet",
                                     fontSize = 10.sp,
-                                    color = Color(0xFF606060),
+                                    color = GuardianTheme.TextTertiary,
                                     letterSpacing = 1.sp
                                 )
                             } else {
@@ -803,7 +805,8 @@ fun ScheduleEditorDialog(
                 }
             }
         },
-        containerColor = Color(0xFF0A0A0A),
+        containerColor = GuardianTheme.BackgroundSurface,
+        tonalElevation = 0.dp,
         shape = RoundedCornerShape(0.dp)
     )
 
@@ -858,7 +861,7 @@ fun ModernTimePickerDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = Color(0xFF808080), letterSpacing = 1.sp)
+                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
         title = {
@@ -922,7 +925,8 @@ fun ModernTimePickerDialog(
                 }
             }
         },
-        containerColor = Color(0xFF0A0A0A),
+        containerColor = GuardianTheme.BackgroundSurface,
+        tonalElevation = 0.dp,
         shape = RoundedCornerShape(0.dp)
     )
 }
@@ -977,7 +981,7 @@ fun ClockFace(
                 Text(
                     num.toString(),
                     fontSize = 14.sp,
-                    color = if (num == value) Color.White else Color(0xFF606060),
+                    color = if (num == value) Color.White else GuardianTheme.TextTertiary,
                     fontWeight = if (num == value) FontWeight.Bold else FontWeight.Normal
                 )
             }
@@ -1000,7 +1004,7 @@ fun ClockFace(
                 value.toString(),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = GuardianTheme.BackgroundSurface
             )
         }
     }

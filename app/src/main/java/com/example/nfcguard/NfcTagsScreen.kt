@@ -43,7 +43,7 @@ fun NfcTagsScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary)) {
         Column(Modifier.fillMaxSize()) {
             // Header
             Row(
@@ -53,14 +53,14 @@ fun NfcTagsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, null, tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
                 }
                 Text(
                     "NFC TAGS",
                     fontWeight = FontWeight.Black,
                     letterSpacing = 2.sp,
                     fontSize = 24.sp,
-                    color = Color.White,
+                    color = GuardianTheme.TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -71,7 +71,7 @@ fun NfcTagsScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(0.dp),
-                color = Color(0xFF0A0A0A)
+                color = GuardianTheme.BackgroundSurface
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -81,13 +81,13 @@ fun NfcTagsScreen(
                     Icon(
                         Icons.Default.Info,
                         contentDescription = null,
-                        tint = Color(0xFF808080),
+                        tint = GuardianTheme.IconSecondary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
                         "Register NFC tags to lock specific modes",
                         fontSize = 11.sp,
-                        color = Color(0xFF808080),
+                        color = GuardianTheme.TextSecondary,
                         letterSpacing = 0.5.sp
                     )
                 }
@@ -106,7 +106,7 @@ fun NfcTagsScreen(
                         Icon(
                             Icons.Default.Nfc,
                             contentDescription = null,
-                            tint = Color(0xFF404040),
+                            tint = GuardianTheme.IconDisabled,
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(Modifier.height(16.dp))
@@ -114,14 +114,14 @@ fun NfcTagsScreen(
                             "NO NFC TAGS",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF404040),
+                            color = GuardianTheme.TextDisabled,
                             letterSpacing = 2.sp
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
                             "Register tags to create secure locks",
                             fontSize = 11.sp,
-                            color = Color(0xFF404040),
+                            color = GuardianTheme.TextDisabled,
                             letterSpacing = 0.5.sp
                         )
                         Spacer(Modifier.height(24.dp))
@@ -131,8 +131,8 @@ fun NfcTagsScreen(
                                 showAddDialog = true
                             },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White,
-                                contentColor = Color.Black
+                                containerColor = GuardianTheme.ButtonPrimary,
+                                contentColor = GuardianTheme.ButtonPrimaryText
                             ),
                             shape = RoundedCornerShape(0.dp),
                             modifier = Modifier.height(48.dp)
@@ -170,8 +170,8 @@ fun NfcTagsScreen(
                                 showAddDialog = true
                             },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF0A0A0A),
-                                contentColor = Color.White
+                                containerColor = GuardianTheme.BackgroundSurface,
+                                contentColor = GuardianTheme.ButtonSecondaryText
                             ),
                             shape = RoundedCornerShape(0.dp),
                             modifier = Modifier
@@ -224,7 +224,8 @@ fun NfcTagsScreen(
 
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
-            containerColor = Color.Black,
+            containerColor = GuardianTheme.ButtonSecondary,
+            tonalElevation = 0.dp,
             shape = RoundedCornerShape(0.dp),
             title = {
                 Row(
@@ -234,14 +235,14 @@ fun NfcTagsScreen(
                     Icon(
                         Icons.Default.Warning,
                         contentDescription = null,
-                        tint = Color(0xFFFF4444),
+                        tint = GuardianTheme.Error,
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
                         "DELETE NFC TAG?",
                         fontWeight = FontWeight.Black,
                         letterSpacing = 2.sp,
-                        color = Color.White
+                        color = GuardianTheme.TextPrimary
                     )
                 }
             },
@@ -249,21 +250,21 @@ fun NfcTagsScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Surface(
                         shape = RoundedCornerShape(0.dp),
-                        color = Color(0xFF0A0A0A)
+                        color = GuardianTheme.BackgroundSurface
                     ) {
                         Column(Modifier.padding(16.dp)) {
                             Text(
                                 tag.name.uppercase(),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = GuardianTheme.TextPrimary,
                                 letterSpacing = 1.sp
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 "${linkedModes.size} linked mode${if (linkedModes.size != 1) "s" else ""}",
                                 fontSize = 11.sp,
-                                color = Color(0xFF808080),
+                                color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.5.sp
                             )
                         }
@@ -273,20 +274,20 @@ fun NfcTagsScreen(
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(0.dp),
-                            color = Color(0xFF1A1A00)
+                            color = GuardianTheme.WarningBackground
                         ) {
                             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(
                                     "ANTI-CHEAT PROTECTION:",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = Color(0xFFFFDD88),
+                                    color = GuardianTheme.Warning,
                                     letterSpacing = 1.sp
                                 )
                                 Text(
                                     "This tag has active modes. Extra confirmation required to prevent cheating.",
                                     fontSize = 11.sp,
-                                    color = Color(0xFFFFDD88),
+                                    color = GuardianTheme.Warning,
                                     letterSpacing = 0.5.sp
                                 )
                             }
@@ -296,7 +297,7 @@ fun NfcTagsScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(0.dp),
-                        color = Color(0xFF1A0000)
+                        color = GuardianTheme.ErrorDark
                     ) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
@@ -335,8 +336,8 @@ fun NfcTagsScreen(
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFF4444),
-                        contentColor = Color.White
+                        containerColor = GuardianTheme.Error,
+                        contentColor = GuardianTheme.ButtonSecondaryText
                     ),
                     shape = RoundedCornerShape(0.dp)
                 ) {
@@ -377,14 +378,15 @@ fun NfcTagsScreen(
                 deleteConfirmText = ""
                 deleteCountdown = 30
             },
-            containerColor = Color.Black,
+            containerColor = GuardianTheme.ButtonSecondary,
+            tonalElevation = 0.dp,
             shape = RoundedCornerShape(0.dp),
             title = {
                 Text(
                     "FINAL CONFIRMATION",
                     fontWeight = FontWeight.Black,
                     letterSpacing = 2.sp,
-                    color = Color(0xFFFF4444)
+                    color = GuardianTheme.Error
                 )
             },
             text = {
@@ -393,7 +395,7 @@ fun NfcTagsScreen(
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(0.dp),
-                            color = Color(0xFF0A0A0A)
+                            color = GuardianTheme.BackgroundSurface
                         ) {
                             Column(
                                 modifier = Modifier.padding(24.dp),
@@ -404,12 +406,12 @@ fun NfcTagsScreen(
                                     deleteCountdown.toString(),
                                     fontSize = 48.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = Color(0xFFFF4444)
+                                    color = GuardianTheme.Error
                                 )
                                 Text(
                                     "Waiting...",
                                     fontSize = 11.sp,
-                                    color = Color(0xFF808080),
+                                    color = GuardianTheme.TextSecondary,
                                     letterSpacing = 1.sp
                                 )
                             }
@@ -419,7 +421,7 @@ fun NfcTagsScreen(
                             "Type exactly:  DELETE TAG",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White,
+                            color = GuardianTheme.TextPrimary,
                             letterSpacing = 0.5.sp
                         )
 
@@ -434,13 +436,13 @@ fun NfcTagsScreen(
                                 )
                             },
                             colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color(0xFF0A0A0A),
-                                unfocusedContainerColor = Color(0xFF0A0A0A),
-                                focusedIndicatorColor = if (deleteConfirmText == "DELETE TAG") Color(0xFFFF4444) else Color.White,
-                                unfocusedIndicatorColor = Color(0xFF404040),
-                                cursorColor = Color.White,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
+                                focusedContainerColor = GuardianTheme.BackgroundSurface,
+                                unfocusedContainerColor = GuardianTheme.BackgroundSurface,
+                                focusedIndicatorColor = if (deleteConfirmText == "DELETE TAG") GuardianTheme.Error else Color.White,
+                                unfocusedIndicatorColor = GuardianTheme.BorderSubtle,
+                                cursorColor = GuardianTheme.InputCursor,
+                                focusedTextColor = GuardianTheme.InputText,
+                                unfocusedTextColor = GuardianTheme.InputText
                             ),
                             shape = RoundedCornerShape(0.dp),
                             modifier = Modifier.fillMaxWidth(),
@@ -451,7 +453,7 @@ fun NfcTagsScreen(
                             Text(
                                 "Text doesn't match",
                                 fontSize = 11.sp,
-                                color = Color(0xFFFF4444),
+                                color = GuardianTheme.Error,
                                 letterSpacing = 0.5.sp
                             )
                         }
@@ -468,9 +470,9 @@ fun NfcTagsScreen(
                     },
                     enabled = deleteCountdown == 0 && deleteConfirmText == "DELETE TAG",
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFF4444),
-                        contentColor = Color.White,
-                        disabledContainerColor = Color(0xFF404040),
+                        containerColor = GuardianTheme.Error,
+                        contentColor = GuardianTheme.ButtonSecondaryText,
+                        disabledContainerColor = Color.Black,
                         disabledContentColor = Color(0xFF808080)
                     ),
                     shape = RoundedCornerShape(0.dp)
@@ -510,10 +512,10 @@ fun NfcTagCard(
 ) {
     val linkedModes = modes.filter { it.nfcTagId == tag.id }
     val hasActiveMode = linkedModes.any { activeModes.contains(it.id) }
-    val backgroundColor = if (hasActiveMode) Color.White else Color(0xFF0A0A0A)
+    val backgroundColor = if (hasActiveMode) Color.White else GuardianTheme.BackgroundSurface
     val textColor = if (hasActiveMode) Color.Black else Color.White
     val iconColor = if (hasActiveMode) Color.Black else Color.White
-    val subtleColor = if (hasActiveMode) Color(0xFF606060) else Color(0xFF606060)
+    val subtleColor = if (hasActiveMode) GuardianTheme.TextTertiary else GuardianTheme.TextTertiary
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -549,7 +551,7 @@ fun NfcTagCard(
                 if (hasActiveMode) {
                     Surface(
                         shape = RoundedCornerShape(0.dp),
-                        color = Color.Black
+                        color = GuardianTheme.BackgroundSurface
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -559,13 +561,13 @@ fun NfcTagCard(
                             Box(
                                 modifier = Modifier
                                     .size(8.dp)
-                                        .background(Color.White)
+                                    .background(Color.White)
                             )
                             Text(
                                 "ACTIVE",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
-                                color = Color.White,
+                                color = GuardianTheme.TextPrimary,
                                 letterSpacing = 1.sp
                             )
                         }
@@ -619,7 +621,7 @@ fun NfcTagCard(
                 Text(
                     "NOT LINKED TO ANY MODES",
                     fontSize = 10.sp,
-                    color = Color(0xFF404040),
+                    color = GuardianTheme.TextDisabled,
                     letterSpacing = 1.sp
                 )
             }
@@ -628,10 +630,10 @@ fun NfcTagCard(
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 TextButton(onClick = onEdit) {
-                    Text("RENAME", fontSize = 11.sp, color = Color.White, letterSpacing = 1.sp)
+                    Text("RENAME", fontSize = 11.sp, color = textColor, letterSpacing = 1.sp)
                 }
                 TextButton(onClick = onDelete) {
-                    Text("DELETE", fontSize = 11.sp, color = Color(0xFF808080), letterSpacing = 1.sp)
+                    Text("DELETE", fontSize = 11.sp, color = if (hasActiveMode) Color(0xFF808080) else Color(0xFF808080), letterSpacing = 1.sp)
                 }
             }
         }
@@ -657,7 +659,8 @@ fun NfcTagRegistrationDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF0A0A0A),
+        containerColor = GuardianTheme.BackgroundSurface,
+        tonalElevation = 0.dp,
         title = {
             Text(
                 "REGISTER NFC TAG",
@@ -671,7 +674,7 @@ fun NfcTagRegistrationDialog(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(0.dp),
-                        color = Color.Black
+                        color = GuardianTheme.BackgroundSurface
                     ) {
                         Column(
                             modifier = Modifier.padding(24.dp),
@@ -680,7 +683,7 @@ fun NfcTagRegistrationDialog(
                             Icon(
                                 Icons.Default.Nfc,
                                 contentDescription = null,
-                                tint = Color(0xFF808080),
+                                tint = GuardianTheme.IconSecondary,
                                 modifier = Modifier.size(48.dp)
                             )
                             Spacer(Modifier.height(16.dp))
@@ -688,14 +691,14 @@ fun NfcTagRegistrationDialog(
                                 "TAP NFC TAG",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF808080),
+                                color = GuardianTheme.TextSecondary,
                                 letterSpacing = 1.sp
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 "Hold your NFC tag near the device",
                                 fontSize = 11.sp,
-                                color = Color(0xFF606060),
+                                color = GuardianTheme.TextTertiary,
                                 letterSpacing = 0.5.sp
                             )
                         }
@@ -714,14 +717,14 @@ fun NfcTagRegistrationDialog(
                             Icon(
                                 Icons.Default.CheckCircle,
                                 contentDescription = null,
-                                tint = Color(0xFF4CAF50)
+                                tint = GuardianTheme.Success
                             )
                             Column {
                                 Text(
                                     "TAG DETECTED",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF4CAF50),
+                                    color = GuardianTheme.Success,
                                     letterSpacing = 1.sp
                                 )
                                 Text(
@@ -739,13 +742,13 @@ fun NfcTagRegistrationDialog(
                         onValueChange = { name = it },
                         placeholder = { Text("TAG NAME (e.g., 'OFFICE KEY')", fontSize = 12.sp, letterSpacing = 1.sp) },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Black,
-                            unfocusedContainerColor = Color.Black,
-                            focusedIndicatorColor = Color.White,
-                            unfocusedIndicatorColor = Color(0xFF404040),
-                            cursorColor = Color.White,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
+                            focusedContainerColor = GuardianTheme.InputBackground,
+                            unfocusedContainerColor = GuardianTheme.InputBackground,
+                            focusedIndicatorColor = GuardianTheme.BorderFocused,
+                            unfocusedIndicatorColor = GuardianTheme.BorderSubtle,
+                            cursorColor = GuardianTheme.InputCursor,
+                            focusedTextColor = GuardianTheme.InputText,
+                            unfocusedTextColor = GuardianTheme.InputText
                         ),
                         shape = RoundedCornerShape(0.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -767,7 +770,7 @@ fun NfcTagRegistrationDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = Color(0xFF808080), letterSpacing = 1.sp)
+                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
         shape = RoundedCornerShape(0.dp)
@@ -784,7 +787,8 @@ fun NfcTagEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF0A0A0A),
+        containerColor = GuardianTheme.BackgroundSurface,
+        tonalElevation = 0.dp,
         title = {
             Text(
                 "RENAME NFC TAG",
@@ -798,13 +802,13 @@ fun NfcTagEditDialog(
                 onValueChange = { name = it },
                 placeholder = { Text("TAG NAME", fontSize = 12.sp, letterSpacing = 1.sp) },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Black,
-                    unfocusedContainerColor = Color.Black,
-                    focusedIndicatorColor = Color.White,
-                    unfocusedIndicatorColor = Color(0xFF404040),
-                    cursorColor = Color.White,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
+                    focusedContainerColor = GuardianTheme.InputBackground,
+                    unfocusedContainerColor = GuardianTheme.InputBackground,
+                    focusedIndicatorColor = GuardianTheme.BorderFocused,
+                    unfocusedIndicatorColor = GuardianTheme.BorderSubtle,
+                    cursorColor = GuardianTheme.InputCursor,
+                    focusedTextColor = GuardianTheme.InputText,
+                    unfocusedTextColor = GuardianTheme.InputText
                 ),
                 shape = RoundedCornerShape(0.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -824,7 +828,7 @@ fun NfcTagEditDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = Color(0xFF808080), letterSpacing = 1.sp)
+                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
         shape = RoundedCornerShape(0.dp)

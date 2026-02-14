@@ -27,7 +27,7 @@ fun ModesScreen(
     var selectedMode by remember { mutableStateOf<Mode?>(null) }
     var showDeleteDialog by remember { mutableStateOf<Mode?>(null) }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary)) {
         Column(Modifier.fillMaxSize()) {
             // Header
             Row(
@@ -37,14 +37,14 @@ fun ModesScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, null, tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
                 }
                 Text(
                     "MODES",
                     fontWeight = FontWeight.Black,
                     letterSpacing = 2.sp,
                     fontSize = 24.sp,
-                    color = Color.White,
+                    color = GuardianTheme.TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -62,15 +62,15 @@ fun ModesScreen(
                             "NO MODES",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF404040),
+                            color = GuardianTheme.TextDisabled,
                             letterSpacing = 2.sp
                         )
                         Spacer(Modifier.height(16.dp))
                         Button(
                             onClick = { showAddDialog = true },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White,
-                                contentColor = Color.Black
+                                containerColor = GuardianTheme.ButtonPrimary,
+                                contentColor = GuardianTheme.ButtonPrimaryText
                             ),
                             shape = RoundedCornerShape(0.dp),
                             modifier = Modifier.height(48.dp)
@@ -104,8 +104,8 @@ fun ModesScreen(
                         Button(
                             onClick = { showAddDialog = true },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF0A0A0A),
-                                contentColor = Color.White
+                                containerColor = GuardianTheme.BackgroundSurface,
+                                contentColor = GuardianTheme.ButtonSecondaryText
                             ),
                             shape = RoundedCornerShape(0.dp),
                             modifier = Modifier
@@ -136,7 +136,8 @@ fun ModesScreen(
     showDeleteDialog?.let { mode ->
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
-            containerColor = Color.Black,
+            containerColor = GuardianTheme.ButtonSecondary,
+            tonalElevation = 0.dp,
             shape = RoundedCornerShape(0.dp),
             title = {
                 Row(
@@ -146,14 +147,14 @@ fun ModesScreen(
                     Icon(
                         Icons.Default.Warning,
                         contentDescription = null,
-                        tint = Color(0xFFFF4444),
+                        tint = GuardianTheme.Error,
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
                         "DELETE MODE?",
                         fontWeight = FontWeight.Black,
                         letterSpacing = 2.sp,
-                        color = Color.White
+                        color = GuardianTheme.TextPrimary
                     )
                 }
             },
@@ -161,21 +162,21 @@ fun ModesScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Surface(
                         shape = RoundedCornerShape(0.dp),
-                        color = Color(0xFF0A0A0A)
+                        color = GuardianTheme.BackgroundSurface
                     ) {
                         Column(Modifier.padding(16.dp)) {
                             Text(
                                 mode.name.uppercase(),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = GuardianTheme.TextPrimary,
                                 letterSpacing = 1.sp
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 "${mode.blockedApps.size} app${if (mode.blockedApps.size != 1) "s" else ""}",
                                 fontSize = 11.sp,
-                                color = Color(0xFF808080),
+                                color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.5.sp
                             )
                         }
@@ -184,7 +185,7 @@ fun ModesScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(0.dp),
-                        color = Color(0xFF1A0000)
+                        color = GuardianTheme.ErrorDark
                     ) {
                         Text(
                             "This action cannot be undone",
@@ -203,8 +204,8 @@ fun ModesScreen(
                         showDeleteDialog = null
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFF4444),
-                        contentColor = Color.White
+                        containerColor = GuardianTheme.Error,
+                        contentColor = GuardianTheme.ButtonSecondaryText
                     ),
                     shape = RoundedCornerShape(0.dp)
                 ) {
@@ -259,7 +260,7 @@ fun ModeCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(0.dp),
-        color = if (isActive) Color.White else Color(0xFF0A0A0A)
+        color = if (isActive) Color.White else GuardianTheme.BackgroundSurface
     ) {
         Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -275,7 +276,7 @@ fun ModeCard(
                     Text(
                         "${mode.blockedApps.size} APPS · ${if (mode.blockMode == BlockMode.BLOCK_SELECTED) "BLOCK" else "ALLOW ONLY"}",
                         fontSize = 10.sp,
-                        color = if (isActive) Color(0xFF606060) else Color(0xFF606060),
+                        color = if (isActive) GuardianTheme.TextTertiary else GuardianTheme.TextTertiary,
                         letterSpacing = 1.sp
                     )
                     if (nfcTag != null) {
@@ -287,12 +288,12 @@ fun ModeCard(
                                 Icons.Default.Nfc,
                                 contentDescription = null,
                                 modifier = Modifier.size(10.dp),
-                                tint = if (isActive) Color(0xFF606060) else Color(0xFF606060)
+                                tint = if (isActive) GuardianTheme.TextTertiary else GuardianTheme.TextTertiary
                             )
                             Text(
                                 "LINKED TO: ${nfcTag.name.uppercase()}",
                                 fontSize = 10.sp,
-                                color = if (isActive) Color(0xFF606060) else Color(0xFF606060),
+                                color = if (isActive) GuardianTheme.TextTertiary else GuardianTheme.TextTertiary,
                                 letterSpacing = 1.sp
                             )
                         }
@@ -303,8 +304,8 @@ fun ModeCard(
                     Button(
                         onClick = onActivate,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = Color.Black
+                            containerColor = GuardianTheme.ButtonPrimary,
+                            contentColor = GuardianTheme.ButtonPrimaryText
                         ),
                         shape = RoundedCornerShape(0.dp),
                         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
@@ -316,7 +317,7 @@ fun ModeCard(
                         "ACTIVE",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black,
+                        color = GuardianTheme.BackgroundSurface,
                         letterSpacing = 1.sp
                     )
                 }
@@ -326,10 +327,10 @@ fun ModeCard(
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     TextButton(onClick = onEdit) {
-                        Text("EDIT", fontSize = 11.sp, color = Color.White, letterSpacing = 1.sp)
+                        Text("EDIT", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
                     }
                     TextButton(onClick = onDelete) {
-                        Text("DELETE", fontSize = 11.sp, color = Color(0xFF808080), letterSpacing = 1.sp)
+                        Text("DELETE", fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                     }
                 }
             }
@@ -346,7 +347,8 @@ fun ModeNameDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF0A0A0A),
+        containerColor = GuardianTheme.BackgroundSurface,
+        tonalElevation = 0.dp,
         title = {
             Text(
                 "NEW MODE",
@@ -360,13 +362,13 @@ fun ModeNameDialog(
                 onValueChange = { name = it },
                 placeholder = { Text("MODE NAME", fontSize = 12.sp, letterSpacing = 1.sp) },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Black,
-                    unfocusedContainerColor = Color.Black,
-                    focusedIndicatorColor = Color.White,
-                    unfocusedIndicatorColor = Color(0xFF404040),
-                    cursorColor = Color.White,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
+                    focusedContainerColor = GuardianTheme.InputBackground,
+                    unfocusedContainerColor = GuardianTheme.InputBackground,
+                    focusedIndicatorColor = GuardianTheme.BorderFocused,
+                    unfocusedIndicatorColor = GuardianTheme.BorderSubtle,
+                    cursorColor = GuardianTheme.InputCursor,
+                    focusedTextColor = GuardianTheme.InputText,
+                    unfocusedTextColor = GuardianTheme.InputText
                 ),
                 shape = RoundedCornerShape(0.dp)
             )
@@ -381,7 +383,7 @@ fun ModeNameDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = Color(0xFF808080), letterSpacing = 1.sp)
+                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
         shape = RoundedCornerShape(0.dp)

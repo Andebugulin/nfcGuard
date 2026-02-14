@@ -88,7 +88,7 @@ fun ModeEditorScreen(
         else installedApps.filter { it.appName.contains(searchQuery, ignoreCase = true) }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary)) {
         Column(Modifier.fillMaxSize()) {
             // Top bar
             Row(
@@ -98,13 +98,13 @@ fun ModeEditorScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, null, tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
                 }
                 Text(
                     mode.name.uppercase(),
                     fontWeight = FontWeight.Black,
                     letterSpacing = 2.sp,
-                    color = Color.White,
+                    color = GuardianTheme.TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
                 Button(
@@ -112,8 +112,8 @@ fun ModeEditorScreen(
                         onSave(selectedApps.toList(), blockMode, selectedNfcTagId)
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White,
-                        contentColor = Color.Black
+                        containerColor = GuardianTheme.ButtonPrimary,
+                        contentColor = GuardianTheme.ButtonPrimaryText
                     ),
                     shape = RoundedCornerShape(0.dp)
                 ) {
@@ -131,7 +131,7 @@ fun ModeEditorScreen(
                 Button(
                     onClick = { blockMode = BlockMode.BLOCK_SELECTED },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (blockMode == BlockMode.BLOCK_SELECTED) Color.White else Color(0xFF0A0A0A),
+                        containerColor = if (blockMode == BlockMode.BLOCK_SELECTED) Color.White else GuardianTheme.BackgroundSurface,
                         contentColor = if (blockMode == BlockMode.BLOCK_SELECTED) Color.Black else Color.White
                     ),
                     shape = RoundedCornerShape(0.dp),
@@ -142,7 +142,7 @@ fun ModeEditorScreen(
                 Button(
                     onClick = { blockMode = BlockMode.ALLOW_SELECTED },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (blockMode == BlockMode.ALLOW_SELECTED) Color.White else Color(0xFF0A0A0A),
+                        containerColor = if (blockMode == BlockMode.ALLOW_SELECTED) Color.White else GuardianTheme.BackgroundSurface,
                         contentColor = if (blockMode == BlockMode.ALLOW_SELECTED) Color.Black else Color.White
                     ),
                     shape = RoundedCornerShape(0.dp),
@@ -160,7 +160,7 @@ fun ModeEditorScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
                 shape = RoundedCornerShape(0.dp),
-                color = Color(0xFF0A0A0A)
+                color = GuardianTheme.BackgroundSurface
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Row(
@@ -170,14 +170,14 @@ fun ModeEditorScreen(
                         Icon(
                             Icons.Default.Nfc,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = GuardianTheme.IconPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             "NFC TAG LOCK",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White,
+                            color = GuardianTheme.TextPrimary,
                             letterSpacing = 1.sp
                         )
                     }
@@ -185,7 +185,7 @@ fun ModeEditorScreen(
                     Text(
                         "Optional: Require specific NFC tag to unlock",
                         fontSize = 10.sp,
-                        color = Color(0xFF808080),
+                        color = GuardianTheme.TextSecondary,
                         letterSpacing = 0.5.sp
                     )
 
@@ -195,7 +195,7 @@ fun ModeEditorScreen(
                         Text(
                             "No NFC tags registered yet",
                             fontSize = 10.sp,
-                            color = Color(0xFF606060),
+                            color = GuardianTheme.TextTertiary,
                             letterSpacing = 1.sp
                         )
                     } else {
@@ -275,13 +275,13 @@ fun ModeEditorScreen(
                 placeholder = { Text("SEARCH APPS...", fontSize = 12.sp, letterSpacing = 1.sp) },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFF0A0A0A),
-                    unfocusedContainerColor = Color(0xFF0A0A0A),
-                    focusedIndicatorColor = Color.White,
-                    unfocusedIndicatorColor = Color(0xFF404040),
-                    cursorColor = Color.White,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
+                    focusedContainerColor = GuardianTheme.BackgroundSurface,
+                    unfocusedContainerColor = GuardianTheme.BackgroundSurface,
+                    focusedIndicatorColor = GuardianTheme.BorderFocused,
+                    unfocusedIndicatorColor = GuardianTheme.BorderSubtle,
+                    cursorColor = GuardianTheme.InputCursor,
+                    focusedTextColor = GuardianTheme.InputText,
+                    unfocusedTextColor = GuardianTheme.InputText
                 ),
                 shape = RoundedCornerShape(0.dp),
                 modifier = Modifier
@@ -294,7 +294,7 @@ fun ModeEditorScreen(
             // Apps list
             if (isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("LOADING...", color = Color(0xFF404040), letterSpacing = 2.sp)
+                    Text("LOADING...", color = GuardianTheme.TextDisabled, letterSpacing = 2.sp)
                 }
             } else {
                 LazyColumn(
@@ -310,7 +310,7 @@ fun ModeEditorScreen(
                                     "SELECTED (${selectedApps.size})",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF808080),
+                                    color = GuardianTheme.TextSecondary,
                                     letterSpacing = 1.sp,
                                     modifier = Modifier.padding(horizontal = 4.dp)
                                 )
@@ -334,14 +334,14 @@ fun ModeEditorScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 8.dp),
-                                    color = Color(0xFF0A0A0A),
+                                    color = GuardianTheme.BackgroundSurface,
                                     shape = RoundedCornerShape(0.dp)
                                 ) {
                                     Text(
                                         "ALL APPS",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF606060),
+                                        color = GuardianTheme.TextTertiary,
                                         letterSpacing = 1.sp,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                                     )
@@ -377,7 +377,7 @@ fun AppItem(app: AppInfo, isSelected: Boolean, onToggle: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(0.dp),
-        color = if (isSelected) Color.White else Color(0xFF0A0A0A),
+        color = if (isSelected) Color.White else GuardianTheme.BackgroundSurface,
         onClick = onToggle
     ) {
         Row(

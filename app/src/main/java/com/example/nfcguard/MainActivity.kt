@@ -139,13 +139,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showWelcomeDialog() {
-        val builder = android.app.AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog)
+        val builder = android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
 
-        val dialogView = layoutInflater.inflate(
-            android.R.layout.select_dialog_item, null
-        )
-
-        builder.setTitle("Welcome to Guardian")
+        builder.setTitle("WELCOME TO GUARDIAN")
             .setMessage(
                 "Guardian needs the following permissions to protect your focus:\n\n" +
                         "• USAGE ACCESS - Detect which apps you're using\n" +
@@ -154,15 +150,31 @@ class MainActivity : ComponentActivity() {
                         "• PAUSE APP ACTIVITY - Must be disabled for Guardian\n\n" +
                         "Let's set these up now."
             )
-            .setPositiveButton("Continue") { _, _ ->
+            .setPositiveButton("CONTINUE") { _, _ ->
                 startPermissionFlow()
             }
-            .setNegativeButton("Skip") { _, _ ->
+            .setNegativeButton("SKIP") { _, _ ->
                 val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
                 prefs.edit().putBoolean("initial_permissions_granted", true).apply()
             }
             .setCancelable(false)
-            .show()
+
+        val dialog = builder.create()
+        dialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.black)
+            decorView.setBackgroundColor(android.graphics.Color.BLACK)
+        }
+        dialog.show()
+
+        // Style buttons after showing
+        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.apply {
+            setTextColor(android.graphics.Color.WHITE)
+            setBackgroundColor(android.graphics.Color.BLACK)
+        }
+        dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.apply {
+            setTextColor(android.graphics.Color.parseColor("#808080"))
+            setBackgroundColor(android.graphics.Color.BLACK)
+        }
     }
 
     private fun startPermissionFlow() {
@@ -235,8 +247,8 @@ class MainActivity : ComponentActivity() {
 
         val permission = permissions[index]
 
-        createStyledDialog(permission.title, permission.description)
-            .setPositiveButton("Grant") { _, _ ->
+        val builder = createStyledDialog(permission.title, permission.description)
+            .setPositiveButton("GRANT") { _, _ ->
                 try {
                     startActivity(permission.intent)
                 } catch (e: Exception) {
@@ -248,23 +260,38 @@ class MainActivity : ComponentActivity() {
                     showPermissionDialog(permissions, index + 1)
                 }, 500)
             }
-            .setNegativeButton("Skip") { _, _ ->
+            .setNegativeButton("SKIP") { _, _ ->
                 showPermissionDialog(permissions, index + 1)
             }
             .setCancelable(false)
-            .show()
+
+        val dialog = builder.create()
+        dialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.black)
+            decorView.setBackgroundColor(android.graphics.Color.BLACK)
+        }
+        dialog.show()
+
+        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.apply {
+            setTextColor(android.graphics.Color.WHITE)
+            setBackgroundColor(android.graphics.Color.BLACK)
+        }
+        dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.apply {
+            setTextColor(android.graphics.Color.parseColor("#808080"))
+            setBackgroundColor(android.graphics.Color.BLACK)
+        }
     }
 
     private fun showPauseAppReminder() {
-        createStyledDialog(
-            "Important: Disable 'Pause App if Unused'",
+        val builder = createStyledDialog(
+            "IMPORTANT: DISABLE 'PAUSE APP IF UNUSED'",
             "To ensure Guardian works reliably:\n\n" +
                     "1. Go to Settings > Apps > Guardian\n" +
                     "2. Find 'Pause app activity if unused'\n" +
                     "3. Turn it OFF\n\n" +
                     "This prevents Android from pausing Guardian in the background."
         )
-            .setPositiveButton("Open App Settings") { _, _ ->
+            .setPositiveButton("OPEN APP SETTINGS") { _, _ ->
                 try {
                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                         data = Uri.parse("package:$packageName")
@@ -279,16 +306,38 @@ class MainActivity : ComponentActivity() {
                 val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
                 prefs.edit().putBoolean("initial_permissions_granted", true).apply()
             }
-            .show()
+
+        val dialog = builder.create()
+        dialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.black)
+            decorView.setBackgroundColor(android.graphics.Color.BLACK)
+        }
+        dialog.show()
+
+        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.apply {
+            setTextColor(android.graphics.Color.WHITE)
+            setBackgroundColor(android.graphics.Color.BLACK)
+        }
+        dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.apply {
+            setTextColor(android.graphics.Color.parseColor("#808080"))
+            setBackgroundColor(android.graphics.Color.BLACK)
+        }
     }
 
     private fun createStyledDialog(
         title: String,
         message: String
     ): android.app.AlertDialog.Builder {
-        return android.app.AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog)
-            .setTitle(title)
-            .setMessage(message)
+        val builder = android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
+
+        // Create custom view using window
+        val dialog = builder.create()
+        dialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.black)
+            decorView.setBackgroundColor(android.graphics.Color.BLACK)
+        }
+
+        return builder.setTitle(title).setMessage(message)
     }
 }
 
@@ -296,12 +345,12 @@ class MainActivity : ComponentActivity() {
 fun MinimalistTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            background = Color(0xFF000000),
-            surface = Color(0xFF0A0A0A),
-            primary = Color(0xFFFFFFFF),
-            secondary = Color(0xFF808080),
-            onBackground = Color(0xFFFFFFFF),
-            onSurface = Color(0xFFFFFFFF),
+            background = GuardianTheme.BackgroundPrimary,
+            surface = GuardianTheme.BackgroundSurface,
+            primary = GuardianTheme.ButtonPrimary,
+            secondary = GuardianTheme.TextSecondary,
+            onBackground = GuardianTheme.TextPrimary,
+            onSurface = GuardianTheme.TextPrimary,
         ),
         content = content
     )
@@ -362,12 +411,12 @@ fun WrongTagFeedback() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0x88000000)),
+            .background(GuardianTheme.OverlayBackground),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             shape = RoundedCornerShape(0.dp),
-            color = Color(0xFF8B0000),
+            color = GuardianTheme.ErrorDark,
             modifier = Modifier.padding(48.dp)
         ) {
             Column(
@@ -378,14 +427,14 @@ fun WrongTagFeedback() {
                 Icon(
                     Icons.Default.Error,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = GuardianTheme.TextPrimary,
                     modifier = Modifier.size(64.dp)
                 )
                 Text(
                     "WRONG TAG",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = GuardianTheme.TextPrimary,
                     letterSpacing = 2.sp
                 )
                 Text(
