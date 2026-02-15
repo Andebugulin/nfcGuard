@@ -19,3 +19,41 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Guardian ProGuard Rules
+
+# ==================== kotlinx.serialization ====================
+# Keep serialization-related annotations and metadata
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+
+# Keep serializers for all @Serializable classes
+-keepclassmembers class kotlinx.serialization.json.** {
+    *** Companion;
+}
+-keepclasseswithmembers class kotlinx.serialization.json.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# App-specific serializable classes
+-keep,includedescriptorclasses class com.andebugulin.nfcguard.**$$serializer { *; }
+-keepclassmembers class com.andebugulin.nfcguard.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.andebugulin.nfcguard.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# Keep all @Serializable data classes
+-keepnames class com.andebugulin.nfcguard.AppState
+-keepnames class com.andebugulin.nfcguard.Mode
+-keepnames class com.andebugulin.nfcguard.Schedule
+-keepnames class com.andebugulin.nfcguard.NfcTag
+-keepnames class com.andebugulin.nfcguard.TimeSlot
+-keepnames class com.andebugulin.nfcguard.DayTime
+-keepnames class com.andebugulin.nfcguard.BlockMode
+-keepnames class com.andebugulin.nfcguard.ConfigManager$ExportData
+
+# ==================== General ====================
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

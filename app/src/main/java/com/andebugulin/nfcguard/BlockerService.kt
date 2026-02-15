@@ -1,4 +1,4 @@
-package com.example.nfcguard
+package com.andebugulin.nfcguard
 
 import android.app.*
 import android.app.usage.UsageStatsManager
@@ -12,7 +12,6 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
@@ -110,7 +109,7 @@ class BlockerService : Service() {
             "com.android.inputmethod.latin",
             "com.google.android.inputmethod.latin",
             "com.samsung.android.honeyboard",
-            "com.example.nfcguard",
+            "com.andebugulin.nfcguard",
             "com.android.settings.lockscreen",
             "com.android.security",
             "com.miui.securitycenter",

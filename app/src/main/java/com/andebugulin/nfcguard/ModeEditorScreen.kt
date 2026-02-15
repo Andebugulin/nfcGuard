@@ -1,4 +1,4 @@
-package com.example.nfcguard
+package com.andebugulin.nfcguard
 
 import android.content.Context
 import android.content.Intent
@@ -47,7 +47,7 @@ private val CRITICAL_SYSTEM_APPS = setOf(
     "com.android.inputmethod.latin",
     "com.google.android.inputmethod.latin",
     "com.samsung.android.honeyboard",
-    "com.example.nfcguard",  // Guardian itself (hardcoded)
+    "com.andebugulin.nfcguard",  // Guardian itself (hardcoded)
     // Lock screen / Security apps
     "com.android.settings.lockscreen",
     "com.android.security",

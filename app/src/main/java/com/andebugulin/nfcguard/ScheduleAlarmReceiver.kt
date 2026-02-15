@@ -1,4 +1,4 @@
-package com.example.nfcguard
+package com.andebugulin.nfcguard
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -171,8 +171,8 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        private const val ACTION_ACTIVATE_SCHEDULE = "com.example.nfcguard.ACTIVATE_SCHEDULE"
-        private const val ACTION_DEACTIVATE_SCHEDULE = "com.example.nfcguard.DEACTIVATE_SCHEDULE"
+        private const val ACTION_ACTIVATE_SCHEDULE = "com.andebugulin.nfcguard.ACTIVATE_SCHEDULE"
+        private const val ACTION_DEACTIVATE_SCHEDULE = "com.andebugulin.nfcguard.DEACTIVATE_SCHEDULE"
         private const val EXTRA_SCHEDULE_ID = "schedule_id"
         private const val EXTRA_DAY = "day"
 

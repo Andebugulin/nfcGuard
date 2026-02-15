@@ -1,4 +1,4 @@
-package com.example.nfcguard
+package com.andebugulin.nfcguard
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp

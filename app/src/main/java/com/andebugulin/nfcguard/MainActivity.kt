@@ -1,4 +1,4 @@
-package com.example.nfcguard
+package com.andebugulin.nfcguard
 
 import android.app.PendingIntent
 import android.content.Context
@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment

@@ -1,4 +1,4 @@
-package com.example.nfcguard
+package com.andebugulin.nfcguard
 
 import android.content.Context
 import android.content.SharedPreferences

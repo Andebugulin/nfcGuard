@@ -1,4 +1,4 @@
-package com.example.nfcguard
+package com.andebugulin.nfcguard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

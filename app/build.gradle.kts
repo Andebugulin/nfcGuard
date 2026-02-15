@@ -6,15 +6,15 @@ plugins {
 }
 
 android {
-    namespace = "com.example.nfcguard"
+    namespace = "com.andebugulin.nfcguard"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.nfcguard"
+        applicationId = "com.andebugulin.nfcguard"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "1.00"
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -27,8 +27,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isDebuggable = false  // ADD THIS LINE
+            isMinifyEnabled = true
+            isShrinkResources = true
+            isDebuggable = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -36,7 +37,7 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
         debug {
-            isDebuggable = true  // ADD THIS TOO for clarity
+            isDebuggable = true
         }
     }
 

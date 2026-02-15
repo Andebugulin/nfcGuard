@@ -1,4 +1,4 @@
-package com.example.nfcguard
+package com.andebugulin.nfcguard
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
