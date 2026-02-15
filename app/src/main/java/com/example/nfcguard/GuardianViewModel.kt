@@ -417,6 +417,64 @@ class GuardianViewModel : ViewModel() {
         }
     }
 
+    fun importConfig(data: ConfigManager.ExportData, mergeMode: Boolean = false) {
+        viewModelScope.launch {
+            if (mergeMode) {
+                // Build lookup maps from import data
+                val importModeMap = data.modes.associateBy { it.id }
+                val importScheduleMap = data.schedules.associateBy { it.id }
+                val importTagMap = data.nfcTags.associateBy { it.id }
+
+                val existingModeIds = _appState.value.modes.map { it.id }.toSet()
+                val existingScheduleIds = _appState.value.schedules.map { it.id }.toSet()
+                val existingTagIds = _appState.value.nfcTags.map { it.id }.toSet()
+
+                // For existing items: restore cross-references from import
+                // For new items: add them
+                val mergedModes = _appState.value.modes.map { existing ->
+                    val imported = importModeMap[existing.id]
+                    if (imported != null) {
+                        // Restore NFC tag link from import
+                        existing.copy(nfcTagId = imported.nfcTagId)
+                    } else existing
+                } + data.modes.filter { it.id !in existingModeIds }
+
+                val mergedSchedules = _appState.value.schedules.map { existing ->
+                    val imported = importScheduleMap[existing.id]
+                    if (imported != null) {
+                        // Restore linked mode IDs from import
+                        existing.copy(linkedModeIds = imported.linkedModeIds)
+                    } else existing
+                } + data.schedules.filter { it.id !in existingScheduleIds }
+
+                val mergedTags = _appState.value.nfcTags.map { existing ->
+                    val imported = importTagMap[existing.id]
+                    if (imported != null) {
+                        // Restore linked mode IDs from import
+                        existing.copy(linkedModeIds = imported.linkedModeIds)
+                    } else existing
+                } + data.nfcTags.filter { it.id !in existingTagIds }
+
+                _appState.value = _appState.value.copy(
+                    modes = mergedModes,
+                    schedules = mergedSchedules,
+                    nfcTags = mergedTags
+                )
+            } else {
+                // Replace: overwrite all config, reset runtime state
+                _appState.value = _appState.value.copy(
+                    modes = data.modes,
+                    schedules = data.schedules,
+                    nfcTags = data.nfcTags,
+                    activeModes = emptySet(),
+                    activeSchedules = emptySet(),
+                    deactivatedSchedules = emptySet()
+                )
+            }
+            saveState()
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)

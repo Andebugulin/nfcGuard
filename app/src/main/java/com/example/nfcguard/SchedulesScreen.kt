@@ -31,10 +31,25 @@ enum class ScheduleState {
     DEACTIVATED  // User deactivated during schedule time
 }
 
+// Convert Calendar.DAY_OF_WEEK to schedule day format (1=Monday..7=Sunday)
+private fun calendarDayToScheduleDay(): Int {
+    val calendar = Calendar.getInstance()
+    return when (calendar.get(Calendar.DAY_OF_WEEK)) {
+        Calendar.MONDAY -> 1
+        Calendar.TUESDAY -> 2
+        Calendar.WEDNESDAY -> 3
+        Calendar.THURSDAY -> 4
+        Calendar.FRIDAY -> 5
+        Calendar.SATURDAY -> 6
+        Calendar.SUNDAY -> 7
+        else -> 1
+    }
+}
+
 // Get current schedule state
 private fun isInScheduleTime(schedule: Schedule): Boolean {
     val calendar = Calendar.getInstance()
-    val currentDay = calendar.get(Calendar.DAY_OF_WEEK) - 1
+    val currentDay = calendarDayToScheduleDay()
     val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
     val currentMinute = calendar.get(Calendar.MINUTE)
     val currentTimeInMinutes = currentHour * 60 + currentMinute
@@ -53,7 +68,7 @@ private fun isInScheduleTime(schedule: Schedule): Boolean {
 
 private fun getScheduleState(schedule: Schedule, appState: AppState): ScheduleState {
     val calendar = Calendar.getInstance()
-    val currentDay = calendar.get(Calendar.DAY_OF_WEEK) - 1 // 0 = Sunday
+    val currentDay = calendarDayToScheduleDay()
     val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
     val currentMinute = calendar.get(Calendar.MINUTE)
     val currentTimeInMinutes = currentHour * 60 + currentMinute
@@ -79,7 +94,13 @@ private fun getScheduleState(schedule: Schedule, appState: AppState): ScheduleSt
     }
 
     // In schedule time and not deactivated - check if THIS SCHEDULE is active
-    return if (appState.activeSchedules.contains(schedule.id)) {
+    // Primary check: activeSchedules flag set by AlarmReceiver
+    // Fallback: if linked modes are active, schedule is effectively active
+    val inActiveSchedules = appState.activeSchedules.contains(schedule.id)
+    val linkedModesActive = schedule.linkedModeIds.isNotEmpty() &&
+            schedule.linkedModeIds.any { appState.activeModes.contains(it) }
+
+    return if (inActiveSchedules || linkedModesActive) {
         ScheduleState.ACTIVE
     } else {
         ScheduleState.NONE
