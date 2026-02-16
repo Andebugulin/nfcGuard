@@ -23,7 +23,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             ACTION_ACTIVATE_SCHEDULE -> {
                 val scheduleId = intent.getStringExtra(EXTRA_SCHEDULE_ID) ?: return
                 val day = intent.getIntExtra(EXTRA_DAY, -1)
-                android.util.Log.d("SCHEDULE_ALARM", "ðŸ”¥ ACTIVATE alarm fired")
+                android.util.Log.d("SCHEDULE_ALARM", "Ã°Å¸â€Â¥ ACTIVATE alarm fired")
                 android.util.Log.d("SCHEDULE_ALARM", "Schedule ID: $scheduleId, Day: $day")
                 if (day != -1) {
                     activateSpecificSchedule(context, scheduleId, day)
@@ -34,20 +34,13 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             ACTION_DEACTIVATE_SCHEDULE -> {
                 val scheduleId = intent.getStringExtra(EXTRA_SCHEDULE_ID) ?: return
                 val day = intent.getIntExtra(EXTRA_DAY, -1)
-                android.util.Log.d("SCHEDULE_ALARM", "ðŸ”¥ DEACTIVATE alarm fired")
+                android.util.Log.d("SCHEDULE_ALARM", "Ã°Å¸â€Â¥ DEACTIVATE alarm fired")
                 android.util.Log.d("SCHEDULE_ALARM", "Schedule ID: $scheduleId, Day: $day")
                 if (day != -1) {
                     deactivateSpecificSchedule(context, scheduleId)
                     // Reschedule THIS SPECIFIC alarm for next week
                     scheduleAlarmForSchedule(context, scheduleId, day, isStart = false, forNextWeek = true)
                 }
-            }
-            Intent.ACTION_BOOT_COMPLETED,
-            "android.intent.action.QUICKBOOT_POWERON",
-            "android.intent.action.LOCKED_BOOT_COMPLETED",
-            Intent.ACTION_MY_PACKAGE_REPLACED -> {
-                android.util.Log.d("SCHEDULE_ALARM", "Device booted/updated, rescheduling alarms")
-                scheduleAllUpcomingAlarms(context)
             }
         }
     }
@@ -86,9 +79,9 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             val newStateJson = json.encodeToString(newState)
             prefs.edit().putString("app_state", newStateJson).apply()
 
-            android.util.Log.d("SCHEDULE_ALARM", "✓ Active modes updated to: $newActiveModes")
+            android.util.Log.d("SCHEDULE_ALARM", "âœ“ Active modes updated to: $newActiveModes")
 
-            android.util.Log.d("SCHEDULE_ALARM", "✓ Active schedules: $newActiveSchedules")
+            android.util.Log.d("SCHEDULE_ALARM", "âœ“ Active schedules: $newActiveSchedules")
             updateBlockerService(context, newState)
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error activating schedule: ${e.message}", e)
@@ -128,7 +121,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             val newStateJson = json.encodeToString(newState)
             prefs.edit().putString("app_state", newStateJson).apply()
 
-            android.util.Log.d("SCHEDULE_ALARM", "✓ Active modes updated to: $newActiveModes")
+            android.util.Log.d("SCHEDULE_ALARM", "âœ“ Active modes updated to: $newActiveModes")
 
             updateBlockerService(context, newState)
         } catch (e: Exception) {
@@ -165,8 +158,13 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 BlockerService.start(context, allBlockedApps, BlockMode.BLOCK_SELECTED, activeModes.map { it.id }.toSet())
             }
         } else {
-            android.util.Log.d("SCHEDULE_ALARM", "Stopping service (no active modes)")
-            BlockerService.stop(context)
+            if (appState.schedules.isNotEmpty()) {
+                android.util.Log.d("SCHEDULE_ALARM", "No active modes, keeping service for schedules")
+                BlockerService.start(context, emptySet(), BlockMode.BLOCK_SELECTED, emptySet())
+            } else {
+                android.util.Log.d("SCHEDULE_ALARM", "No modes or schedules, stopping service")
+                BlockerService.stop(context)
+            }
         }
     }
 
@@ -248,7 +246,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     if (isStart) dayTime.startHour else dayTime.endHour,
                     if (isStart) dayTime.startMinute else dayTime.endMinute
                 )
-                android.util.Log.d("SCHEDULE_ALARM", "✓ Scheduled ${if (isStart) "START" else "END"} for ${getDayName(day)} $timeStr")
+                android.util.Log.d("SCHEDULE_ALARM", "âœ“ Scheduled ${if (isStart) "START" else "END"} for ${getDayName(day)} $timeStr")
                 android.util.Log.d("SCHEDULE_ALARM", "   Will fire at: ${java.util.Date(calendar.timeInMillis)}")
             } catch (e: Exception) {
                 android.util.Log.e("SCHEDULE_ALARM", "Error scheduling alarm: ${e.message}", e)

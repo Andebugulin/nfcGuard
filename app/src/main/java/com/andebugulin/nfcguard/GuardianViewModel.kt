@@ -230,8 +230,29 @@ class GuardianViewModel : ViewModel() {
 
     fun deactivateMode(modeId: String) {
         viewModelScope.launch {
-            _appState.value = _appState.value.copy(
-                activeModes = _appState.value.activeModes - modeId
+            val currentState = _appState.value
+
+            // Find schedules that linked this mode and are currently active
+            val schedulesToMark = currentState.schedules
+                .filter { schedule ->
+                    schedule.linkedModeIds.contains(modeId) &&
+                            currentState.activeSchedules.contains(schedule.id)
+                }
+                .map { it.id }
+                .toSet()
+
+            // Only deactivate schedule if ALL its linked modes will be inactive
+            val schedulesToDeactivate = schedulesToMark.filter { scheduleId ->
+                val schedule = currentState.schedules.find { it.id == scheduleId }
+                schedule?.linkedModeIds?.all { linkedModeId ->
+                    linkedModeId == modeId || !currentState.activeModes.contains(linkedModeId)
+                } ?: true
+            }.toSet()
+
+            _appState.value = currentState.copy(
+                activeModes = currentState.activeModes - modeId,
+                activeSchedules = currentState.activeSchedules - schedulesToDeactivate,
+                deactivatedSchedules = currentState.deactivatedSchedules + schedulesToDeactivate
             )
             saveState()
         }
@@ -372,18 +393,16 @@ class GuardianViewModel : ViewModel() {
                                     if (dayTime != null) {
                                         val startTime = dayTime.startHour * 60 + dayTime.startMinute
                                         if (currentTime >= startTime) {
-                                            // Mark schedule as deactivated
                                             if (_appState.value.activeSchedules.contains(schedule.id)) {
                                                 schedulesToDeactivate.add(schedule.id)
                                             }
-                                            val scheduleKey = "disabled_${schedule.id}_${currentDayOfWeek}_${dayTime.startHour}_${dayTime.startMinute}_$today"
-                                            prefs.edit().putBoolean(scheduleKey, true).apply()
                                         }
                                     }
                                 }
                             }
                         }
                     } else {
+                        // No NFC tag linked — any tag can unlock this mode
                         modesToDeactivate.add(modeId)
 
                         _appState.value.schedules.forEach { schedule ->
@@ -392,12 +411,9 @@ class GuardianViewModel : ViewModel() {
                                 if (dayTime != null) {
                                     val startTime = dayTime.startHour * 60 + dayTime.startMinute
                                     if (currentTime >= startTime) {
-                                        // Mark schedule as deactivated
                                         if (_appState.value.activeSchedules.contains(schedule.id)) {
                                             schedulesToDeactivate.add(schedule.id)
                                         }
-                                        val scheduleKey = "disabled_${schedule.id}_${currentDayOfWeek}_${dayTime.startHour}_${dayTime.startMinute}_$today"
-                                        prefs.edit().putBoolean(scheduleKey, true).apply()
                                     }
                                 }
                             }

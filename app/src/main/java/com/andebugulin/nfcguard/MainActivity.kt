@@ -36,6 +36,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import android.net.Uri
 import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 
 enum class Screen {
     HOME, MODES, SCHEDULES, NFC_TAGS, INFO
@@ -121,7 +122,7 @@ class MainActivity : ComponentActivity() {
                             if (!validTag && appState.activeModes.isNotEmpty()) {
                                 // Wrong tag scanned!
                                 wrongTagScanned.value = true
-                                kotlinx.coroutines.GlobalScope.launch {
+                                this@MainActivity.lifecycleScope.launch {
                                     kotlinx.coroutines.delay(2000)
                                     wrongTagScanned.value = false
                                 }
@@ -158,10 +159,10 @@ class MainActivity : ComponentActivity() {
         builder.setTitle("WELCOME TO GUARDIAN")
             .setMessage(
                 "Guardian needs the following permissions to protect your focus:\n\n\n\n" +
-                        "• USAGE ACCESS - Detect which apps you're using\n\n" +
-                        "• DISPLAY OVER APPS - Show the block screen\n\n" +
-                        "• BATTERY OPTIMIZATION - Run reliably in background\n\n" +
-                        "• PAUSE APP ACTIVITY - Must be disabled for Guardian\n\n\n\n" +
+                        "â€¢ USAGE ACCESS - Detect which apps you're using\n\n" +
+                        "â€¢ DISPLAY OVER APPS - Show the block screen\n\n" +
+                        "â€¢ BATTERY OPTIMIZATION - Run reliably in background\n\n" +
+                        "â€¢ PAUSE APP ACTIVITY - Must be disabled for Guardian\n\n\n\n" +
                         "Let's set these up now."
             )
             .setPositiveButton("CONTINUE") { _, _ ->
@@ -244,6 +245,14 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             )
+        }
+
+        // Check Notification Permission (Android 13+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001)
+            }
         }
 
         if (permissionsNeeded.isNotEmpty()) {
@@ -476,7 +485,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         OnboardingPage(
             title = "MODES",
             subtitle = "FLEXIBLE CONTROL",
-            description = "Create blocking modes for different contexts:\n\n• BLOCK MODE - Block specific distracting apps\n• ALLOW MODE - Block everything except essential apps",
+            description = "Create blocking modes for different contexts:\n\nâ€¢ BLOCK MODE - Block specific distracting apps\nâ€¢ ALLOW MODE - Block everything except essential apps",
             icon = "modes"
         ),
         OnboardingPage(
@@ -488,13 +497,13 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         OnboardingPage(
             title = "SCHEDULES",
             subtitle = "AUTOMATION",
-            description = "Set modes to activate automatically:\n\n• Weekday work hours (9am-5pm)\n• Sleep schedule (10pm-7am)\n• Weekend deep work sessions",
+            description = "Set modes to activate automatically:\n\nâ€¢ Weekday work hours (9am-5pm)\nâ€¢ Sleep schedule (10pm-7am)\nâ€¢ Weekend deep work sessions",
             icon = "schedule"
         ),
         OnboardingPage(
             title = "READY",
             subtitle = "LET'S GET STARTED",
-            description = "Guardian needs a few permissions to work:\n\n• Usage access - Detect which apps you use\n• Display over apps - Show block screen\n• Battery optimization - Run reliably\n\nLet's set them up now.",
+            description = "Guardian needs a few permissions to work:\n\nâ€¢ Usage access - Detect which apps you use\nâ€¢ Display over apps - Show block screen\nâ€¢ Battery optimization - Run reliably\n\nLet's set them up now.",
             icon = "ready"
         )
     )

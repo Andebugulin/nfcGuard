@@ -46,7 +46,6 @@ object ConfigManager {
     fun exportToYaml(appState: AppState): String {
         val sb = StringBuilder()
         sb.appendLine("# Guardian Configuration Export")
-        sb.appendLine("# https://github.com/YOUR_USERNAME/guardian")
         sb.appendLine()
         sb.appendLine("version: 1")
         sb.appendLine()

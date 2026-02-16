@@ -44,16 +44,22 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
-# Keep all @Serializable data classes
--keepnames class com.andebugulin.nfcguard.AppState
--keepnames class com.andebugulin.nfcguard.Mode
--keepnames class com.andebugulin.nfcguard.Schedule
--keepnames class com.andebugulin.nfcguard.NfcTag
--keepnames class com.andebugulin.nfcguard.TimeSlot
--keepnames class com.andebugulin.nfcguard.DayTime
--keepnames class com.andebugulin.nfcguard.BlockMode
--keepnames class com.andebugulin.nfcguard.ConfigManager$ExportData
+# Keep all @Serializable data classes (full keep, not just names, for R8 safety)
+-keep class com.andebugulin.nfcguard.AppState { *; }
+-keep class com.andebugulin.nfcguard.Mode { *; }
+-keep class com.andebugulin.nfcguard.Schedule { *; }
+-keep class com.andebugulin.nfcguard.NfcTag { *; }
+-keep class com.andebugulin.nfcguard.TimeSlot { *; }
+-keep class com.andebugulin.nfcguard.DayTime { *; }
+-keep class com.andebugulin.nfcguard.BlockMode { *; }
+-keep class com.andebugulin.nfcguard.ConfigManager$ExportData { *; }
 
 # ==================== General ====================
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# ==================== Strip debug logs in release ====================
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+}
