@@ -61,6 +61,7 @@ private val CRITICAL_SYSTEM_APPS = setOf(
 fun ModeEditorScreen(
     mode: Mode,
     availableNfcTags: List<NfcTag>,
+    allModes: List<Mode> = emptyList(),  // FIX #8: Pass all modes for NFC usage count
     onBack: () -> Unit,
     onSave: (List<String>, BlockMode, String?) -> Unit
 ) {
@@ -88,6 +89,14 @@ fun ModeEditorScreen(
         else installedApps.filter { it.appName.contains(searchQuery, ignoreCase = true) }
     }
 
+    // FIX #8: Count how many OTHER modes use each NFC tag (excluding the current mode being edited)
+    val nfcTagUsageCounts = remember(allModes, mode.id) {
+        allModes
+            .filter { it.id != mode.id && it.nfcTagId != null }
+            .groupingBy { it.nfcTagId!! }
+            .eachCount()
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary)) {
         Column(Modifier.fillMaxSize()) {
             // Top bar
@@ -107,18 +116,53 @@ fun ModeEditorScreen(
                     color = GuardianTheme.TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
+                // FIX #5: Disable SAVE when no apps selected
                 Button(
                     onClick = {
                         onSave(selectedApps.toList(), blockMode, selectedNfcTagId)
                     },
+                    enabled = selectedApps.isNotEmpty(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GuardianTheme.ButtonPrimary,
-                        contentColor = GuardianTheme.ButtonPrimaryText
+                        contentColor = GuardianTheme.ButtonPrimaryText,
+                        disabledContainerColor = Color(0xFF333333),
+                        disabledContentColor = Color(0xFF666666)
                     ),
                     shape = RoundedCornerShape(0.dp)
                 ) {
                     Text("SAVE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 }
+            }
+
+            // FIX #5: Show hint when no apps selected
+            if (selectedApps.isEmpty()) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    shape = RoundedCornerShape(0.dp),
+                    color = GuardianTheme.WarningBackground
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = GuardianTheme.Warning,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            "Select at least one app to save this mode",
+                            fontSize = 11.sp,
+                            color = GuardianTheme.Warning,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
             }
 
             // Block mode selector
@@ -232,6 +276,8 @@ fun ModeEditorScreen(
 
                             // Available tags
                             availableNfcTags.forEach { tag ->
+                                val usageCount = nfcTagUsageCounts[tag.id] ?: 0  // FIX #8
+
                                 Surface(
                                     onClick = { selectedNfcTagId = tag.id },
                                     shape = RoundedCornerShape(0.dp),
@@ -243,14 +289,24 @@ fun ModeEditorScreen(
                                             .padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            tag.name.uppercase(),
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (selectedNfcTagId == tag.id) Color.Black else Color.White,
-                                            letterSpacing = 1.sp,
-                                            modifier = Modifier.weight(1f)
-                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                tag.name.uppercase(),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (selectedNfcTagId == tag.id) Color.Black else Color.White,
+                                                letterSpacing = 1.sp
+                                            )
+                                            // FIX #8: Show usage count
+                                            if (usageCount > 0) {
+                                                Text(
+                                                    "USED BY $usageCount OTHER MODE${if (usageCount > 1) "S" else ""}",
+                                                    fontSize = 9.sp,
+                                                    color = if (selectedNfcTagId == tag.id) Color(0xFFE65100) else Color(0xFFFF9800),
+                                                    letterSpacing = 0.5.sp
+                                                )
+                                            }
+                                        }
                                         if (selectedNfcTagId == tag.id) {
                                             Icon(
                                                 Icons.Default.Check,
@@ -266,7 +322,7 @@ fun ModeEditorScreen(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(4.dp))
 
             // App search
             OutlinedTextField(

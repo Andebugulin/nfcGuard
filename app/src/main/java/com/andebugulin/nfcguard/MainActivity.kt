@@ -118,7 +118,7 @@ class MainActivity : ComponentActivity() {
                         val hasNfcLockedMode = activeModes.any { it.nfcTagId != null }
 
                         if (hasNfcLockedMode) {
-                            val validTag = activeModes.any { it.nfcTagId == tagId }
+                            val validTag = activeModes.any { it.nfcTagId == tagId || it.nfcTagId == null }
                             if (!validTag && appState.activeModes.isNotEmpty()) {
                                 // Wrong tag scanned!
                                 wrongTagScanned.value = true
@@ -159,10 +159,10 @@ class MainActivity : ComponentActivity() {
         builder.setTitle("WELCOME TO GUARDIAN")
             .setMessage(
                 "Guardian needs the following permissions to protect your focus:\n\n\n\n" +
-                        "â€¢ USAGE ACCESS - Detect which apps you're using\n\n" +
-                        "â€¢ DISPLAY OVER APPS - Show the block screen\n\n" +
-                        "â€¢ BATTERY OPTIMIZATION - Run reliably in background\n\n" +
-                        "â€¢ PAUSE APP ACTIVITY - Must be disabled for Guardian\n\n\n\n" +
+                        "- USAGE ACCESS - Detect which apps you're using\n\n" +
+                        "- DISPLAY OVER APPS - Show the block screen\n\n" +
+                        "- BATTERY OPTIMIZATION - Run reliably in background\n\n" +
+                        "- PAUSE APP ACTIVITY - Must be disabled for Guardian\n\n\n\n" +
                         "Let's set these up now."
             )
             .setPositiveButton("CONTINUE") { _, _ ->

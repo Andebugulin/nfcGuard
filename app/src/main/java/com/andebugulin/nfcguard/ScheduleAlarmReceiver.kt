@@ -23,7 +23,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             ACTION_ACTIVATE_SCHEDULE -> {
                 val scheduleId = intent.getStringExtra(EXTRA_SCHEDULE_ID) ?: return
                 val day = intent.getIntExtra(EXTRA_DAY, -1)
-                android.util.Log.d("SCHEDULE_ALARM", "Ã°Å¸â€Â¥ ACTIVATE alarm fired")
+                android.util.Log.d("SCHEDULE_ALARM", " ACTIVATE alarm fired")
                 android.util.Log.d("SCHEDULE_ALARM", "Schedule ID: $scheduleId, Day: $day")
                 if (day != -1) {
                     activateSpecificSchedule(context, scheduleId, day)
@@ -34,7 +34,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             ACTION_DEACTIVATE_SCHEDULE -> {
                 val scheduleId = intent.getStringExtra(EXTRA_SCHEDULE_ID) ?: return
                 val day = intent.getIntExtra(EXTRA_DAY, -1)
-                android.util.Log.d("SCHEDULE_ALARM", "Ã°Å¸â€Â¥ DEACTIVATE alarm fired")
+                android.util.Log.d("SCHEDULE_ALARM", " DEACTIVATE alarm fired")
                 android.util.Log.d("SCHEDULE_ALARM", "Schedule ID: $scheduleId, Day: $day")
                 if (day != -1) {
                     deactivateSpecificSchedule(context, scheduleId)
@@ -67,7 +67,20 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             android.util.Log.d("SCHEDULE_ALARM", "Found schedule: ${schedule.name}")
             android.util.Log.d("SCHEDULE_ALARM", "Linked modes: ${schedule.linkedModeIds}")
 
-            val newActiveModes = appState.activeModes + schedule.linkedModeIds
+            // FIX #2: Check for BLOCK/ALLOW conflict before activating
+            val currentlyActiveModes = appState.modes.filter { appState.activeModes.contains(it.id) }
+            val modesToActivate = schedule.linkedModeIds.filter { modeId ->
+                val mode = appState.modes.find { it.id == modeId }
+                if (mode == null) return@filter false
+                // Skip if there's a block mode conflict with currently active modes
+                if (currentlyActiveModes.isNotEmpty() && currentlyActiveModes.any { it.blockMode != mode.blockMode }) {
+                    android.util.Log.w("SCHEDULE_ALARM", "Skipping mode ${mode.name}: BLOCK/ALLOW conflict with active modes")
+                    return@filter false
+                }
+                true
+            }
+
+            val newActiveModes = appState.activeModes + modesToActivate
             val newActiveSchedules = appState.activeSchedules + scheduleId
             val newDeactivatedSchedules = appState.deactivatedSchedules - scheduleId
 
@@ -79,9 +92,9 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             val newStateJson = json.encodeToString(newState)
             prefs.edit().putString("app_state", newStateJson).apply()
 
-            android.util.Log.d("SCHEDULE_ALARM", "âœ“ Active modes updated to: $newActiveModes")
+            android.util.Log.d("SCHEDULE_ALARM", "“ Active modes updated to: $newActiveModes")
 
-            android.util.Log.d("SCHEDULE_ALARM", "âœ“ Active schedules: $newActiveSchedules")
+            android.util.Log.d("SCHEDULE_ALARM", "“ Active schedules: $newActiveSchedules")
             updateBlockerService(context, newState)
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error activating schedule: ${e.message}", e)
@@ -246,7 +259,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     if (isStart) dayTime.startHour else dayTime.endHour,
                     if (isStart) dayTime.startMinute else dayTime.endMinute
                 )
-                android.util.Log.d("SCHEDULE_ALARM", "âœ“ Scheduled ${if (isStart) "START" else "END"} for ${getDayName(day)} $timeStr")
+                android.util.Log.d("SCHEDULE_ALARM", "“ Scheduled ${if (isStart) "START" else "END"} for ${getDayName(day)} $timeStr")
                 android.util.Log.d("SCHEDULE_ALARM", "   Will fire at: ${java.util.Date(calendar.timeInMillis)}")
             } catch (e: Exception) {
                 android.util.Log.e("SCHEDULE_ALARM", "Error scheduling alarm: ${e.message}", e)

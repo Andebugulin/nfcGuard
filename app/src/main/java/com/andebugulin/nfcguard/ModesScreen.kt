@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,96 +29,129 @@ fun ModesScreen(
     var selectedMode by remember { mutableStateOf<Mode?>(null) }
     var showDeleteDialog by remember { mutableStateOf<Mode?>(null) }
 
-    Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary)) {
-        Column(Modifier.fillMaxSize()) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
-                }
-                Text(
-                    "MODES",
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp,
-                    fontSize = 24.sp,
-                    color = GuardianTheme.TextPrimary,
-                    modifier = Modifier.weight(1f)
+    // FIX #2: Snackbar for block mode conflict feedback
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = GuardianTheme.ErrorDark,
+                    contentColor = Color(0xFFFF8888),
+                    shape = RoundedCornerShape(0.dp)
                 )
             }
-
-            // Modes list
-            if (appState.modes.isEmpty()) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(48.dp),
-                    contentAlignment = Alignment.Center
+        },
+        containerColor = GuardianTheme.BackgroundPrimary
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(GuardianTheme.BackgroundPrimary)
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "NO MODES",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = GuardianTheme.TextDisabled,
-                            letterSpacing = 2.sp
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Button(
-                            onClick = { showAddDialog = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = GuardianTheme.ButtonPrimary,
-                                contentColor = GuardianTheme.ButtonPrimaryText
-                            ),
-                            shape = RoundedCornerShape(0.dp),
-                            modifier = Modifier.height(48.dp)
-                        ) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
+                    }
+                    Text(
+                        "MODES",
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp,
+                        fontSize = 24.sp,
+                        color = GuardianTheme.TextPrimary,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // Modes list
+                if (appState.modes.isEmpty()) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .padding(48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                "CREATE MODE",
+                                "NO MODES",
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
+                                color = GuardianTheme.TextDisabled,
+                                letterSpacing = 2.sp
                             )
+                            Spacer(Modifier.height(16.dp))
+                            Button(
+                                onClick = { showAddDialog = true },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = GuardianTheme.ButtonPrimary,
+                                    contentColor = GuardianTheme.ButtonPrimaryText
+                                ),
+                                shape = RoundedCornerShape(0.dp),
+                                modifier = Modifier.height(48.dp)
+                            ) {
+                                Text(
+                                    "CREATE MODE",
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
+                                )
+                            }
                         }
                     }
-                }
-            } else {
-                LazyColumn(
-                    Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(appState.modes, key = { it.id }) { mode ->
-                        ModeCard(
-                            mode = mode,
-                            isActive = appState.activeModes.contains(mode.id),
-                            nfcTag = appState.nfcTags.find { it.id == mode.nfcTagId },
-                            onActivate = { viewModel.activateMode(mode.id) },
-                            onEdit = { selectedMode = mode },
-                            onDelete = { showDeleteDialog = mode }
-                        )
-                    }
-
-                    item {
-                        Button(
-                            onClick = { showAddDialog = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = GuardianTheme.BackgroundSurface,
-                                contentColor = GuardianTheme.ButtonSecondaryText
-                            ),
-                            shape = RoundedCornerShape(0.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                        ) {
-                            Text(
-                                "+ NEW MODE",
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
+                } else {
+                    LazyColumn(
+                        Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(appState.modes, key = { it.id }) { mode ->
+                            ModeCard(
+                                mode = mode,
+                                isActive = appState.activeModes.contains(mode.id),
+                                nfcTag = appState.nfcTags.find { it.id == mode.nfcTagId },
+                                onActivate = {
+                                    // FIX #2: Handle activation result
+                                    val result = viewModel.activateMode(mode.id)
+                                    if (result == ActivationResult.BLOCK_MODE_CONFLICT) {
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                "Cannot mix BLOCK and ALLOW ONLY modes. Deactivate current modes first."
+                                            )
+                                        }
+                                    }
+                                },
+                                onEdit = { selectedMode = mode },
+                                onDelete = { showDeleteDialog = mode }
                             )
+                        }
+
+                        item {
+                            Button(
+                                onClick = { showAddDialog = true },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = GuardianTheme.BackgroundSurface,
+                                    contentColor = GuardianTheme.ButtonSecondaryText
+                                ),
+                                shape = RoundedCornerShape(0.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                            ) {
+                                Text(
+                                    "+ NEW MODE",
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
+                                )
+                            }
                         }
                     }
                 }
@@ -127,6 +161,7 @@ fun ModesScreen(
 
     if (showAddDialog) {
         ModeNameDialog(
+            existingNames = appState.modes.map { it.name },  // FIX #6
             onDismiss = { showAddDialog = false }
         ) { name ->
             showAddDialog = false
@@ -135,6 +170,9 @@ fun ModesScreen(
     }
 
     showDeleteDialog?.let { mode ->
+        // FIX #9: Find linked schedules to warn user
+        val linkedSchedules = appState.schedules.filter { it.linkedModeIds.contains(mode.id) }
+
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
             containerColor = GuardianTheme.ButtonSecondary,
@@ -185,6 +223,34 @@ fun ModesScreen(
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.5.sp
                             )
+                        }
+                    }
+
+                    // FIX #9: Warn about linked schedules
+                    if (linkedSchedules.isNotEmpty()) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(0.dp),
+                            color = GuardianTheme.WarningBackground
+                        ) {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    "LINKED SCHEDULES AFFECTED:",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = GuardianTheme.Warning,
+                                    letterSpacing = 1.sp
+                                )
+                                linkedSchedules.forEach { sched ->
+                                    val remainingModes = sched.linkedModeIds.count { it != mode.id }
+                                    Text(
+                                        "\u2022 ${sched.name.uppercase()} ($remainingModes mode${if (remainingModes != 1) "s" else ""} remaining)",
+                                        fontSize = 11.sp,
+                                        color = GuardianTheme.Warning,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -240,6 +306,7 @@ fun ModesScreen(
             ModeEditorScreen(
                 mode = mode,
                 availableNfcTags = appState.nfcTags,
+                allModes = appState.modes,  // FIX #8: pass all modes for NFC usage indicator
                 onBack = { selectedMode = null },
                 onSave = { apps, blockMode, nfcTagId ->
                     if (appState.modes.any { it.id == mode.id }) {
@@ -280,7 +347,7 @@ fun ModeCard(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "${mode.blockedApps.size} APPS · ${if (mode.blockMode == BlockMode.BLOCK_SELECTED) "BLOCK" else "ALLOW ONLY"}",
+                        "${mode.blockedApps.size} APPS \u00B7 ${if (mode.blockMode == BlockMode.BLOCK_SELECTED) "BLOCK" else "ALLOW ONLY"}",
                         fontSize = 10.sp,
                         color = if (isActive) GuardianTheme.TextTertiary else GuardianTheme.TextTertiary,
                         letterSpacing = 1.sp
@@ -346,10 +413,14 @@ fun ModeCard(
 
 @Composable
 fun ModeNameDialog(
+    existingNames: List<String> = emptyList(),  // FIX #6
     onDismiss: () -> Unit,
     onSave: (String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
+
+    // FIX #6: Check for duplicate names
+    val nameExists = existingNames.any { it.equals(name.trim(), ignoreCase = true) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -369,26 +440,46 @@ fun ModeNameDialog(
             )
         },
         text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                placeholder = { Text("MODE NAME", fontSize = 12.sp, letterSpacing = 1.sp) },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = GuardianTheme.InputBackground,
-                    unfocusedContainerColor = GuardianTheme.InputBackground,
-                    focusedIndicatorColor = GuardianTheme.BorderFocused,
-                    unfocusedIndicatorColor = GuardianTheme.BorderSubtle,
-                    cursorColor = GuardianTheme.InputCursor,
-                    focusedTextColor = GuardianTheme.InputText,
-                    unfocusedTextColor = GuardianTheme.InputText
-                ),
-                shape = RoundedCornerShape(0.dp)
-            )
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { if (it.length <= 30) name = it },  // FIX #7: Max length
+                    placeholder = { Text("MODE NAME", fontSize = 12.sp, letterSpacing = 1.sp) },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = GuardianTheme.InputBackground,
+                        unfocusedContainerColor = GuardianTheme.InputBackground,
+                        focusedIndicatorColor = GuardianTheme.BorderFocused,
+                        unfocusedIndicatorColor = GuardianTheme.BorderSubtle,
+                        cursorColor = GuardianTheme.InputCursor,
+                        focusedTextColor = GuardianTheme.InputText,
+                        unfocusedTextColor = GuardianTheme.InputText
+                    ),
+                    shape = RoundedCornerShape(0.dp),
+                    supportingText = {
+                        // FIX #6: Duplicate name feedback
+                        if (nameExists && name.isNotBlank()) {
+                            Text(
+                                "A mode with this name already exists",
+                                fontSize = 10.sp,
+                                color = GuardianTheme.Error,
+                                letterSpacing = 0.5.sp
+                            )
+                        } else {
+                            Text(
+                                "${name.length}/30",
+                                fontSize = 10.sp,
+                                color = GuardianTheme.TextTertiary,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                )
+            }
         },
         confirmButton = {
             TextButton(
-                onClick = { if (name.isNotBlank()) onSave(name) },
-                enabled = name.isNotBlank()
+                onClick = { if (name.isNotBlank() && !nameExists) onSave(name.trim()) },
+                enabled = name.isNotBlank() && !nameExists  // FIX #6
             ) {
                 Text("CREATE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }

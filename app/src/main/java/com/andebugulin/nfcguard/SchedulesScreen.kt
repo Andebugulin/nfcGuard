@@ -155,17 +155,32 @@ fun SchedulesScreen(
                             letterSpacing = 2.sp
                         )
                         Spacer(Modifier.height(16.dp))
+
+                        // FIX #12: Disable button if no modes exist, show guidance
+                        if (appState.modes.isEmpty()) {
+                            Text(
+                                "Create at least one mode first",
+                                fontSize = 11.sp,
+                                color = GuardianTheme.TextTertiary,
+                                letterSpacing = 0.5.sp
+                            )
+                            Spacer(Modifier.height(8.dp))
+                        }
+
                         Button(
                             onClick = { showAddDialog = true },
+                            enabled = appState.modes.isNotEmpty(),  // FIX #12
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = GuardianTheme.ButtonPrimary,
-                                contentColor = GuardianTheme.ButtonPrimaryText
+                                contentColor = GuardianTheme.ButtonPrimaryText,
+                                disabledContainerColor = Color(0xFF333333),
+                                disabledContentColor = Color(0xFF666666)
                             ),
                             shape = RoundedCornerShape(0.dp),
                             modifier = Modifier.height(48.dp)
                         ) {
                             Text(
-                                "CREATE SCHEDULE",
+                                if (appState.modes.isNotEmpty()) "CREATE SCHEDULE" else "CREATE MODES FIRST",
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp
                             )
@@ -189,11 +204,15 @@ fun SchedulesScreen(
                     }
 
                     item {
+                        // FIX #12: Also disable "+ NEW SCHEDULE" if no modes
                         Button(
                             onClick = { showAddDialog = true },
+                            enabled = appState.modes.isNotEmpty(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = GuardianTheme.BackgroundSurface,
-                                contentColor = GuardianTheme.ButtonSecondaryText
+                                contentColor = GuardianTheme.ButtonSecondaryText,
+                                disabledContainerColor = Color(0xFF1A1A1A),
+                                disabledContentColor = Color(0xFF555555)
                             ),
                             shape = RoundedCornerShape(0.dp),
                             modifier = Modifier
@@ -201,7 +220,7 @@ fun SchedulesScreen(
                                 .height(56.dp)
                         ) {
                             Text(
-                                "+ NEW SCHEDULE",
+                                if (appState.modes.isNotEmpty()) "+ NEW SCHEDULE" else "CREATE MODES FIRST",
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp
                             )
@@ -215,6 +234,7 @@ fun SchedulesScreen(
     if (showAddDialog) {
         ScheduleEditorDialog(
             modes = appState.modes,
+            existingNames = appState.schedules.map { it.name },  // FIX #6
             onDismiss = { showAddDialog = false },
             onSave = { name, timeSlot, linkedModeIds, hasEndTime ->
                 viewModel.addSchedule(name, timeSlot, linkedModeIds, hasEndTime)
@@ -227,6 +247,7 @@ fun SchedulesScreen(
         ScheduleEditorDialog(
             existingSchedule = schedule,
             modes = appState.modes,
+            existingNames = appState.schedules.filter { it.id != schedule.id }.map { it.name },  // FIX #6
             onDismiss = { editingSchedule = null },
             onSave = { name, timeSlot, linkedModeIds, hasEndTime ->
                 viewModel.updateSchedule(schedule.id, name, timeSlot, linkedModeIds, hasEndTime)
@@ -535,6 +556,7 @@ fun ScheduleCard(
 fun ScheduleEditorDialog(
     existingSchedule: Schedule? = null,
     modes: List<Mode>,
+    existingNames: List<String> = emptyList(),  // FIX #6
     onDismiss: () -> Unit,
     onSave: (String, TimeSlot, List<String>, Boolean) -> Unit
 ) {
@@ -567,6 +589,12 @@ fun ScheduleEditorDialog(
     var showTimePickerForDay by remember { mutableStateOf<Int?>(null) }
     var showEndTimePickerForDay by remember { mutableStateOf<Int?>(null) }
 
+    // FIX #4: Track end-time validation error
+    var endTimeError by remember { mutableStateOf(false) }
+
+    // FIX #6: Duplicate name check
+    val nameExists = name.isNotBlank() && existingNames.any { it.equals(name.trim(), ignoreCase = true) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = GuardianTheme.BackgroundSurface,
@@ -580,17 +608,31 @@ fun ScheduleEditorDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (name.isNotBlank() && selectedDays.isNotEmpty() && selectedModeIds.isNotEmpty()) {
+                    // FIX #4: Validate end times before saving
+                    if (hasEndTime) {
+                        val hasInvalidEndTime = selectedDays.any { day ->
+                            val (startH, startM) = dayTimes[day] ?: (9 to 0)
+                            val (endH, endM) = dayEndTimes[day] ?: (23 to 59)
+                            (endH * 60 + endM) <= (startH * 60 + startM)
+                        }
+                        if (hasInvalidEndTime) {
+                            endTimeError = true
+                            return@TextButton
+                        }
+                    }
+                    endTimeError = false
+
+                    if (name.isNotBlank() && selectedDays.isNotEmpty() && selectedModeIds.isNotEmpty() && !nameExists) {
                         val dayTimesList = selectedDays.sorted().map { day ->
                             val (startH, startM) = dayTimes[day] ?: (9 to 0)
                             val (endH, endM) = dayEndTimes[day] ?: (23 to 59)
                             DayTime(day, startH, startM, endH, endM)
                         }
                         val timeSlot = TimeSlot(dayTimesList)
-                        onSave(name, timeSlot, selectedModeIds.toList(), hasEndTime)
+                        onSave(name.trim(), timeSlot, selectedModeIds.toList(), hasEndTime)
                     }
                 },
-                enabled = name.isNotBlank() && selectedDays.isNotEmpty() && selectedModeIds.isNotEmpty()
+                enabled = name.isNotBlank() && selectedDays.isNotEmpty() && selectedModeIds.isNotEmpty() && !nameExists
             ) {
                 Text(if (existingSchedule != null) "SAVE" else "CREATE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
@@ -642,7 +684,7 @@ fun ScheduleEditorDialog(
                     item {
                         OutlinedTextField(
                             value = name,
-                            onValueChange = { name = it },
+                            onValueChange = { if (it.length <= 30) name = it },  // FIX #7: Max length
                             placeholder = { Text("SCHEDULE NAME", fontSize = 12.sp, letterSpacing = 1.sp) },
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = GuardianTheme.InputBackground,
@@ -654,7 +696,25 @@ fun ScheduleEditorDialog(
                                 unfocusedTextColor = GuardianTheme.InputText
                             ),
                             shape = RoundedCornerShape(0.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            supportingText = {
+                                // FIX #6: Duplicate name feedback
+                                if (nameExists) {
+                                    Text(
+                                        "A schedule with this name already exists",
+                                        fontSize = 10.sp,
+                                        color = GuardianTheme.Error,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                } else {
+                                    Text(
+                                        "${name.length}/30",
+                                        fontSize = 10.sp,
+                                        color = GuardianTheme.TextTertiary,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
+                            }
                         )
                     }
 
@@ -678,6 +738,7 @@ fun ScheduleEditorDialog(
                                                 this[day] = Pair(23, 59)
                                             }
                                         }
+                                        endTimeError = false  // Reset error on change
                                     },
                                     shape = RoundedCornerShape(0.dp),
                                     color = if (selectedDays.contains(day)) Color.White else Color.Black,
@@ -715,6 +776,12 @@ fun ScheduleEditorDialog(
 
                                         if (selectedDays.contains(day) && hasEndTime) {
                                             Spacer(Modifier.height(4.dp))
+
+                                            // FIX #4: Show per-day end time error
+                                            val (startH, startM) = dayTimes[day] ?: (9 to 0)
+                                            val (endH, endM) = dayEndTimes[day] ?: (23 to 59)
+                                            val endBeforeStart = (endH * 60 + endM) <= (startH * 60 + startM)
+
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 modifier = Modifier.fillMaxWidth()
@@ -722,24 +789,33 @@ fun ScheduleEditorDialog(
                                                 Text(
                                                     "UNTIL",
                                                     fontSize = 10.sp,
-                                                    color = GuardianTheme.TextTertiary,
+                                                    color = if (endBeforeStart && endTimeError) Color(0xFFFF6666) else GuardianTheme.TextTertiary,
                                                     letterSpacing = 1.sp,
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 TextButton(
                                                     onClick = { showEndTimePickerForDay = day },
                                                     colors = ButtonDefaults.textButtonColors(
-                                                        contentColor = GuardianTheme.ButtonPrimaryText
+                                                        contentColor = if (endBeforeStart && endTimeError) Color(0xFFFF6666) else GuardianTheme.ButtonPrimaryText
                                                     )
                                                 ) {
-                                                    val (h, m) = dayEndTimes[day] ?: (23 to 59)
                                                     Text(
-                                                        String.format("%02d:%02d", h, m),
+                                                        String.format("%02d:%02d", endH, endM),
                                                         fontSize = 14.sp,
                                                         fontWeight = FontWeight.Bold,
                                                         letterSpacing = 1.sp
                                                     )
                                                 }
+                                            }
+
+                                            // FIX #4: Inline error
+                                            if (endBeforeStart && endTimeError) {
+                                                Text(
+                                                    "End time must be after start time",
+                                                    fontSize = 9.sp,
+                                                    color = Color(0xFFFF6666),
+                                                    letterSpacing = 0.5.sp
+                                                )
                                             }
                                         }
                                     }
@@ -764,6 +840,7 @@ fun ScheduleEditorDialog(
                                 checked = hasEndTime,
                                 onCheckedChange = {
                                     hasEndTime = it
+                                    endTimeError = false  // Reset error
                                     if (it) {
                                         dayEndTimes = dayEndTimes.toMutableMap().apply {
                                             selectedDays.forEach { day ->
@@ -788,6 +865,36 @@ fun ScheduleEditorDialog(
                                 color = GuardianTheme.TextTertiary,
                                 letterSpacing = 0.5.sp
                             )
+                        }
+                    }
+
+                    // FIX #4: Show global end-time error banner
+                    if (endTimeError) {
+                        item {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(0.dp),
+                                color = GuardianTheme.ErrorDark
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Error,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFF8888),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        "Fix end times that are before start times",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFFFF8888),
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -852,6 +959,7 @@ fun ScheduleEditorDialog(
                 dayTimes = dayTimes.toMutableMap().apply {
                     this[day] = Pair(h, m)
                 }
+                endTimeError = false
                 showTimePickerForDay = null
             }
         )
@@ -867,6 +975,7 @@ fun ScheduleEditorDialog(
                 dayEndTimes = dayEndTimes.toMutableMap().apply {
                     this[day] = Pair(h, m)
                 }
+                endTimeError = false
                 showEndTimePickerForDay = null
             }
         )

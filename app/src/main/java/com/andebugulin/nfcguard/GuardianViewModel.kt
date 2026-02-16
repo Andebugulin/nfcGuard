@@ -75,6 +75,13 @@ data class AppState(
     val deactivatedSchedules: Set<String> = emptySet() // Schedules manually deactivated by user
 )
 
+/** Result of attempting to activate a mode */
+enum class ActivationResult {
+    SUCCESS,
+    BLOCK_MODE_CONFLICT,
+    MODE_NOT_FOUND
+}
+
 class GuardianViewModel : ViewModel() {
     private val _appState = MutableStateFlow(AppState())
     val appState: StateFlow<AppState> = _appState
@@ -219,13 +226,26 @@ class GuardianViewModel : ViewModel() {
         }
     }
 
-    fun activateMode(modeId: String) {
+    // FIX #2: Returns ActivationResult to indicate success or conflict
+    fun activateMode(modeId: String): ActivationResult {
+        val currentState = _appState.value
+        val modeToActivate = currentState.modes.find { it.id == modeId }
+            ?: return ActivationResult.MODE_NOT_FOUND
+
+        // Check for BLOCK/ALLOW conflict with currently active modes
+        val currentlyActiveModes = currentState.modes.filter { currentState.activeModes.contains(it.id) }
+        if (currentlyActiveModes.isNotEmpty()) {
+            val hasConflict = currentlyActiveModes.any { it.blockMode != modeToActivate.blockMode }
+            if (hasConflict) return ActivationResult.BLOCK_MODE_CONFLICT
+        }
+
         viewModelScope.launch {
-            _appState.value = _appState.value.copy(
-                activeModes = _appState.value.activeModes + modeId
+            _appState.value = currentState.copy(
+                activeModes = currentState.activeModes + modeId
             )
             saveState()
         }
+        return ActivationResult.SUCCESS
     }
 
     fun deactivateMode(modeId: String) {
@@ -317,12 +337,12 @@ class GuardianViewModel : ViewModel() {
         }
     }
 
-    fun addNfcTag(tagId: String, name: String) {
+    // FIX #3: Returns false if tag already registered
+    fun addNfcTag(tagId: String, name: String): Boolean {
+        if (_appState.value.nfcTags.any { it.id == tagId }) {
+            return false
+        }
         viewModelScope.launch {
-            if (_appState.value.nfcTags.any { it.id == tagId }) {
-                return@launch
-            }
-
             val newTag = NfcTag(
                 id = tagId,
                 name = name,
@@ -333,6 +353,7 @@ class GuardianViewModel : ViewModel() {
             )
             saveState()
         }
+        return true
     }
 
     fun updateNfcTag(tagId: String, name: String) {
@@ -487,6 +508,17 @@ class GuardianViewModel : ViewModel() {
                     deactivatedSchedules = emptySet()
                 )
             }
+
+            // FIX #11: Clean up orphaned nfcTagId references after import
+            val validTagIds = _appState.value.nfcTags.map { it.id }.toSet()
+            _appState.value = _appState.value.copy(
+                modes = _appState.value.modes.map { mode ->
+                    if (mode.nfcTagId != null && mode.nfcTagId !in validTagIds) {
+                        mode.copy(nfcTagId = null)
+                    } else mode
+                }
+            )
+
             saveState()
         }
     }

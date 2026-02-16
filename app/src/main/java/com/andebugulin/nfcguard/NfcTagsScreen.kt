@@ -196,14 +196,20 @@ fun NfcTagsScreen(
     if (showAddDialog) {
         NfcTagRegistrationDialog(
             scannedTagId = pendingTagId,
+            existingTagIds = appState.nfcTags.map { it.id }.toSet(),  // FIX #3
+            existingNames = appState.nfcTags.map { it.name },  // FIX #6
             onDismiss = {
                 showAddDialog = false
                 pendingTagId = null
             },
             onSave = { tagId, name ->
-                viewModel.addNfcTag(tagId, name)
-                showAddDialog = false
-                pendingTagId = null
+                // FIX #3: addNfcTag now returns false if duplicate
+                val added = viewModel.addNfcTag(tagId, name)
+                if (added) {
+                    showAddDialog = false
+                    pendingTagId = null
+                }
+                // If not added, the dialog already shows the duplicate warning
             }
         )
     }
@@ -211,6 +217,7 @@ fun NfcTagsScreen(
     editingTag?.let { tag ->
         NfcTagEditDialog(
             tag = tag,
+            existingNames = appState.nfcTags.filter { it.id != tag.id }.map { it.name },  // FIX #6
             onDismiss = { editingTag = null },
             onSave = { name ->
                 viewModel.updateNfcTag(tag.id, name)
@@ -314,13 +321,13 @@ fun NfcTagsScreen(
                                 letterSpacing = 0.5.sp
                             )
                             Text(
-                                "• Remove the NFC tag",
+                                "\u2022 Remove the NFC tag",
                                 fontSize = 11.sp,
                                 color = Color(0xFFFF8888),
                                 letterSpacing = 0.5.sp
                             )
                             Text(
-                                "• Unlink from all modes",
+                                "\u2022 Unlink from all modes",
                                 fontSize = 11.sp,
                                 color = Color(0xFFFF8888),
                                 letterSpacing = 0.5.sp
@@ -654,6 +661,8 @@ fun NfcTagCard(
 @Composable
 fun NfcTagRegistrationDialog(
     scannedTagId: String?,
+    existingTagIds: Set<String> = emptySet(),  // FIX #3
+    existingNames: List<String> = emptyList(),  // FIX #6
     onDismiss: () -> Unit,
     onSave: (String, String) -> Unit
 ) {
@@ -667,6 +676,11 @@ fun NfcTagRegistrationDialog(
             tagId = scannedTagId
         }
     }
+
+    // FIX #3: Check if this tag is already registered
+    val isDuplicate = tagId.isNotBlank() && existingTagIds.contains(tagId)
+    // FIX #6: Check if name already exists
+    val nameExists = name.isNotBlank() && existingNames.any { it.equals(name.trim(), ignoreCase = true) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -720,6 +734,47 @@ fun NfcTagRegistrationDialog(
                             )
                         }
                     }
+                } else if (isDuplicate) {
+                    // FIX #3: Show duplicate tag warning
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(0.dp),
+                        color = GuardianTheme.ErrorDark
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Error,
+                                contentDescription = null,
+                                tint = GuardianTheme.Error
+                            )
+                            Column {
+                                Text(
+                                    "TAG ALREADY REGISTERED",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = GuardianTheme.Error,
+                                    letterSpacing = 1.sp
+                                )
+                                Text(
+                                    "This NFC tag is already in your list. Try a different tag.",
+                                    fontSize = 9.sp,
+                                    color = Color(0xFFFF8888),
+                                    letterSpacing = 0.5.sp
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    tagId.take(16) + "...",
+                                    fontSize = 9.sp,
+                                    color = Color(0xFFFF8888),
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                )
+                            }
+                        }
+                    }
                 } else {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -756,7 +811,7 @@ fun NfcTagRegistrationDialog(
 
                     OutlinedTextField(
                         value = name,
-                        onValueChange = { name = it },
+                        onValueChange = { if (it.length <= 30) name = it },  // FIX #7: Max length
                         placeholder = { Text("TAG NAME (e.g., 'OFFICE KEY')", fontSize = 12.sp, letterSpacing = 1.sp) },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = GuardianTheme.InputBackground,
@@ -768,7 +823,25 @@ fun NfcTagRegistrationDialog(
                             unfocusedTextColor = GuardianTheme.InputText
                         ),
                         shape = RoundedCornerShape(0.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        supportingText = {
+                            // FIX #6: Duplicate name feedback
+                            if (nameExists) {
+                                Text(
+                                    "A tag with this name already exists",
+                                    fontSize = 10.sp,
+                                    color = GuardianTheme.Error,
+                                    letterSpacing = 0.5.sp
+                                )
+                            } else {
+                                Text(
+                                    "${name.length}/30",
+                                    fontSize = 10.sp,
+                                    color = GuardianTheme.TextTertiary,
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
+                        }
                     )
                 }
             }
@@ -776,11 +849,12 @@ fun NfcTagRegistrationDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (name.isNotBlank() && tagId.isNotBlank()) {
-                        onSave(tagId, name)
+                    if (name.isNotBlank() && tagId.isNotBlank() && !isDuplicate && !nameExists) {
+                        onSave(tagId, name.trim())
                     }
                 },
-                enabled = name.isNotBlank() && tagId.isNotBlank()
+                // FIX #3 + #6: Disable when duplicate tag or duplicate name
+                enabled = name.isNotBlank() && tagId.isNotBlank() && !isDuplicate && !nameExists
             ) {
                 Text("REGISTER", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
@@ -796,10 +870,16 @@ fun NfcTagRegistrationDialog(
 @Composable
 fun NfcTagEditDialog(
     tag: NfcTag,
+    existingNames: List<String> = emptyList(),  // FIX #6
     onDismiss: () -> Unit,
     onSave: (String) -> Unit
 ) {
     var name by remember { mutableStateOf(tag.name) }
+
+    // FIX #6: Check for duplicate names (excluding current name)
+    val nameExists = name.isNotBlank() &&
+            !name.trim().equals(tag.name, ignoreCase = true) &&
+            existingNames.any { it.equals(name.trim(), ignoreCase = true) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -821,7 +901,7 @@ fun NfcTagEditDialog(
         text = {
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { if (it.length <= 30) name = it },  // FIX #7: Max length
                 placeholder = { Text("TAG NAME", fontSize = 12.sp, letterSpacing = 1.sp) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = GuardianTheme.InputBackground,
@@ -833,17 +913,34 @@ fun NfcTagEditDialog(
                     unfocusedTextColor = GuardianTheme.InputText
                 ),
                 shape = RoundedCornerShape(0.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                supportingText = {
+                    if (nameExists) {
+                        Text(
+                            "A tag with this name already exists",
+                            fontSize = 10.sp,
+                            color = GuardianTheme.Error,
+                            letterSpacing = 0.5.sp
+                        )
+                    } else {
+                        Text(
+                            "${name.length}/30",
+                            fontSize = 10.sp,
+                            color = GuardianTheme.TextTertiary,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
             )
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (name.isNotBlank()) {
-                        onSave(name)
+                    if (name.isNotBlank() && !nameExists) {
+                        onSave(name.trim())
                     }
                 },
-                enabled = name.isNotBlank()
+                enabled = name.isNotBlank() && !nameExists  // FIX #6
             ) {
                 Text("SAVE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
