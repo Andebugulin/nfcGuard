@@ -37,6 +37,7 @@ import android.net.Uri
 import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
+import androidx.compose.ui.graphics.FilterQuality
 
 enum class Screen {
     HOME, MODES, SCHEDULES, NFC_TAGS, INFO
@@ -631,10 +632,12 @@ fun OnboardingPageContent(page: OnboardingPage) {
                 val appIcon = remember {
                     context.packageManager.getApplicationIcon(context.applicationInfo)
                 }
+                // AFTER
                 Image(
-                    bitmap = appIcon.toBitmap(120, 120).asImageBitmap(),
+                    bitmap = appIcon.toBitmap(512, 512).asImageBitmap(),
                     contentDescription = null,
-                    modifier = Modifier.size(80.dp)
+                    modifier = Modifier.size(80.dp),
+                    filterQuality = FilterQuality.High
                 )
             }
             "modes" -> Icon(
