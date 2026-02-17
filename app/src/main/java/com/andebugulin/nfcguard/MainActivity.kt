@@ -51,6 +51,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Initialize logger first
+        AppLogger.init(this)
+
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
         pendingIntent = PendingIntent.getActivity(
             this, 0,
@@ -104,6 +107,7 @@ class MainActivity : ComponentActivity() {
             tag?.let {
                 val tagId = it.id.joinToString("") { byte -> "%02x".format(byte) }
                 android.util.Log.d("NFC_SCAN", "Scanned tag: $tagId")
+                AppLogger.log("NFC", "Tag scanned: $tagId")
 
                 // Check if this is a valid tag for current active modes
                 val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
@@ -121,6 +125,7 @@ class MainActivity : ComponentActivity() {
                             val validTag = activeModes.any { it.nfcTagId == tagId || it.nfcTagId == null }
                             if (!validTag && appState.activeModes.isNotEmpty()) {
                                 // Wrong tag scanned!
+                                AppLogger.log("NFC", "WRONG TAG for active modes (tag=$tagId, activeModes=${appState.activeModes})")
                                 wrongTagScanned.value = true
                                 this@MainActivity.lifecycleScope.launch {
                                     kotlinx.coroutines.delay(2000)
@@ -485,7 +490,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         OnboardingPage(
             title = "MODES",
             subtitle = "FLEXIBLE CONTROL",
-            description = "Create blocking modes for different contexts:\n\nâ€¢ BLOCK MODE - Block specific distracting apps\nâ€¢ ALLOW MODE - Block everything except essential apps",
+            description = "Create blocking modes for different contexts:\n\n- BLOCK MODE - Block specific distracting apps\n- ALLOW MODE - Block everything except essential apps",
             icon = "modes"
         ),
         OnboardingPage(
@@ -497,13 +502,13 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         OnboardingPage(
             title = "SCHEDULES",
             subtitle = "AUTOMATION",
-            description = "Set modes to activate automatically:\n\nâ€¢ Weekday work hours (9am-5pm)\nâ€¢ Sleep schedule (10pm-7am)\nâ€¢ Weekend deep work sessions",
+            description = "Set modes to activate automatically:\n\n- Weekday work hours (9am-5pm)\n- Sleep schedule (10pm-7am)\n- Weekend deep work sessions",
             icon = "schedule"
         ),
         OnboardingPage(
             title = "READY",
             subtitle = "LET'S GET STARTED",
-            description = "Guardian needs a few permissions to work:\n\nâ€¢ Usage access - Detect which apps you use\nâ€¢ Display over apps - Show block screen\nâ€¢ Battery optimization - Run reliably\n\nLet's set them up now.",
+            description = "Guardian needs a few permissions to work:\n\n- Usage access - Detect which apps you use\n- Display over apps - Show block screen\n- Battery optimization - Run reliably\n\nLet's set them up now.",
             icon = "ready"
         )
     )

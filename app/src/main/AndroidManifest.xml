@@ -62,6 +62,17 @@
                 android:value="App blocking service for digital wellbeing" />
         </service>
 
+        <!-- FileProvider for sharing bug reports -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <receiver
             android:name=".ServiceRestartReceiver"
             android:enabled="true"

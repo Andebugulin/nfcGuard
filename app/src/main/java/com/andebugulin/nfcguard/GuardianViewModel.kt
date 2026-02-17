@@ -154,6 +154,8 @@ class GuardianViewModel : ViewModel() {
             _appState.value.activeModes.contains(it.id)
         }
 
+        AppLogger.log("SERVICE", "updateBlockerService: ${activeModes.size} active modes, ids=${_appState.value.activeModes}")
+
         if (activeModes.isNotEmpty()) {
             val hasAllowMode = activeModes.any { it.blockMode == BlockMode.ALLOW_SELECTED }
 
@@ -164,15 +166,18 @@ class GuardianViewModel : ViewModel() {
                         allAllowedApps.addAll(mode.blockedApps)
                     }
                 }
+                AppLogger.log("SERVICE", "Starting ALLOW_SELECTED with ${allAllowedApps.size} allowed apps")
                 BlockerService.start(context, allAllowedApps, BlockMode.ALLOW_SELECTED, activeModes.map { it.id }.toSet())
             } else {
                 val allBlockedApps = mutableSetOf<String>()
                 activeModes.forEach { mode ->
                     allBlockedApps.addAll(mode.blockedApps)
                 }
+                AppLogger.log("SERVICE", "Starting BLOCK_SELECTED with ${allBlockedApps.size} blocked apps")
                 BlockerService.start(context, allBlockedApps, BlockMode.BLOCK_SELECTED, activeModes.map { it.id }.toSet())
             }
         } else {
+            AppLogger.log("SERVICE", "No active modes — starting empty service for schedule monitoring")
             // Keep service running even with no active modes to handle schedules
             BlockerService.start(context, emptySet(), BlockMode.BLOCK_SELECTED, emptySet())
         }
@@ -236,8 +241,13 @@ class GuardianViewModel : ViewModel() {
         val currentlyActiveModes = currentState.modes.filter { currentState.activeModes.contains(it.id) }
         if (currentlyActiveModes.isNotEmpty()) {
             val hasConflict = currentlyActiveModes.any { it.blockMode != modeToActivate.blockMode }
-            if (hasConflict) return ActivationResult.BLOCK_MODE_CONFLICT
+            if (hasConflict) {
+                AppLogger.log("MODE", "CONFLICT: Cannot activate '${modeToActivate.name}' (${modeToActivate.blockMode}) — conflicts with active modes")
+                return ActivationResult.BLOCK_MODE_CONFLICT
+            }
         }
+
+        AppLogger.log("MODE", "Activating: '${modeToActivate.name}' (${modeToActivate.blockMode}, ${modeToActivate.blockedApps.size} apps, nfc=${modeToActivate.nfcTagId ?: "none"})")
 
         viewModelScope.launch {
             _appState.value = currentState.copy(
@@ -251,6 +261,8 @@ class GuardianViewModel : ViewModel() {
     fun deactivateMode(modeId: String) {
         viewModelScope.launch {
             val currentState = _appState.value
+            val modeName = currentState.modes.find { it.id == modeId }?.name ?: "unknown"
+            AppLogger.log("MODE", "Deactivating: '$modeName' (id=$modeId)")
 
             // Find schedules that linked this mode and are currently active
             val schedulesToMark = currentState.schedules
@@ -381,6 +393,7 @@ class GuardianViewModel : ViewModel() {
 
     fun handleNfcTag(tagId: String) {
         viewModelScope.launch {
+            AppLogger.log("NFC", "handleNfcTag: tagId=$tagId, activeModes=${_appState.value.activeModes}")
             val calendar = java.util.Calendar.getInstance()
             val today = "${calendar.get(java.util.Calendar.YEAR)}-${calendar.get(java.util.Calendar.DAY_OF_YEAR)}"
             val currentDayOfWeek = when (calendar.get(java.util.Calendar.DAY_OF_WEEK)) {
@@ -444,6 +457,7 @@ class GuardianViewModel : ViewModel() {
             }
 
             if (modesToDeactivate.isNotEmpty() || schedulesToDeactivate.isNotEmpty()) {
+                AppLogger.log("NFC", "Deactivating modes=$modesToDeactivate, schedules=$schedulesToDeactivate")
                 _appState.value = _appState.value.copy(
                     activeModes = _appState.value.activeModes - modesToDeactivate,
                     activeSchedules = _appState.value.activeSchedules - schedulesToDeactivate,

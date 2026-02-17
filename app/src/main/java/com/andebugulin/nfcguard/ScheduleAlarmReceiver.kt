@@ -15,7 +15,9 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
     private val json = Json { ignoreUnknownKeys = true }
 
     override fun onReceive(context: Context, intent: Intent) {
+        AppLogger.init(context)  // Ensure logger is ready (receivers run independently)
         android.util.Log.d("SCHEDULE_ALARM", "=== ALARM RECEIVED ===")
+        AppLogger.log("ALARM", "Alarm received: action=${intent.action} at ${java.util.Date()}")
         android.util.Log.d("SCHEDULE_ALARM", "Action: ${intent.action}")
         android.util.Log.d("SCHEDULE_ALARM", "Time: ${java.util.Date()}")
 
@@ -23,7 +25,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             ACTION_ACTIVATE_SCHEDULE -> {
                 val scheduleId = intent.getStringExtra(EXTRA_SCHEDULE_ID) ?: return
                 val day = intent.getIntExtra(EXTRA_DAY, -1)
-                android.util.Log.d("SCHEDULE_ALARM", " ACTIVATE alarm fired")
+                android.util.Log.d("SCHEDULE_ALARM", "- ACTIVATE alarm fired")
                 android.util.Log.d("SCHEDULE_ALARM", "Schedule ID: $scheduleId, Day: $day")
                 if (day != -1) {
                     activateSpecificSchedule(context, scheduleId, day)
@@ -34,7 +36,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             ACTION_DEACTIVATE_SCHEDULE -> {
                 val scheduleId = intent.getStringExtra(EXTRA_SCHEDULE_ID) ?: return
                 val day = intent.getIntExtra(EXTRA_DAY, -1)
-                android.util.Log.d("SCHEDULE_ALARM", " DEACTIVATE alarm fired")
+                android.util.Log.d("SCHEDULE_ALARM", "- DEACTIVATE alarm fired")
                 android.util.Log.d("SCHEDULE_ALARM", "Schedule ID: $scheduleId, Day: $day")
                 if (day != -1) {
                     deactivateSpecificSchedule(context, scheduleId)
@@ -47,11 +49,13 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
     private fun activateSpecificSchedule(context: Context, scheduleId: String, day: Int) {
         android.util.Log.d("SCHEDULE_ALARM", ">>> Activating schedule $scheduleId for day $day")
+        AppLogger.log("ALARM", "Activating schedule $scheduleId for day $day")
         val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
         val stateJson = prefs.getString("app_state", null)
 
         if (stateJson == null) {
             android.util.Log.e("SCHEDULE_ALARM", "No app state found!")
+            AppLogger.log("ALARM", "ERROR: No app state in SharedPreferences!")
             return
         }
 
@@ -61,6 +65,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
             if (schedule == null) {
                 android.util.Log.e("SCHEDULE_ALARM", "Schedule not found: $scheduleId")
+                AppLogger.log("ALARM", "ERROR: Schedule not found: $scheduleId")
                 return
             }
 
@@ -75,6 +80,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 // Skip if there's a block mode conflict with currently active modes
                 if (currentlyActiveModes.isNotEmpty() && currentlyActiveModes.any { it.blockMode != mode.blockMode }) {
                     android.util.Log.w("SCHEDULE_ALARM", "Skipping mode ${mode.name}: BLOCK/ALLOW conflict with active modes")
+                    AppLogger.log("ALARM", "CONFLICT: Skipping mode ${mode.name} — BLOCK/ALLOW conflict")
                     return@filter false
                 }
                 true
@@ -89,12 +95,13 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 activeSchedules = newActiveSchedules,
                 deactivatedSchedules = newDeactivatedSchedules
             )
+            AppLogger.log("ALARM", "Schedule activated: activeModes=$newActiveModes, activeSchedules=$newActiveSchedules")
             val newStateJson = json.encodeToString(newState)
             prefs.edit().putString("app_state", newStateJson).apply()
 
-            android.util.Log.d("SCHEDULE_ALARM", "“ Active modes updated to: $newActiveModes")
+            android.util.Log.d("SCHEDULE_ALARM", "- Active modes updated to: $newActiveModes")
 
-            android.util.Log.d("SCHEDULE_ALARM", "“ Active schedules: $newActiveSchedules")
+            android.util.Log.d("SCHEDULE_ALARM", "- Active schedules: $newActiveSchedules")
             updateBlockerService(context, newState)
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error activating schedule: ${e.message}", e)
@@ -103,11 +110,13 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
     private fun deactivateSpecificSchedule(context: Context, scheduleId: String) {
         android.util.Log.d("SCHEDULE_ALARM", ">>> Deactivating schedule $scheduleId")
+        AppLogger.log("ALARM", "Deactivating schedule $scheduleId")
         val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
         val stateJson = prefs.getString("app_state", null)
 
         if (stateJson == null) {
             android.util.Log.e("SCHEDULE_ALARM", "No app state found!")
+            AppLogger.log("ALARM", "ERROR: No app state in SharedPreferences!")
             return
         }
 
@@ -117,6 +126,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
             if (schedule == null) {
                 android.util.Log.e("SCHEDULE_ALARM", "Schedule not found: $scheduleId")
+                AppLogger.log("ALARM", "ERROR: Schedule not found: $scheduleId")
                 return
             }
 
@@ -131,10 +141,11 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 activeSchedules = newActiveSchedules,
                 deactivatedSchedules = newDeactivatedSchedules
             )
+            AppLogger.log("ALARM", "Schedule activated: activeModes=$newActiveModes, activeSchedules=$newActiveSchedules")
             val newStateJson = json.encodeToString(newState)
             prefs.edit().putString("app_state", newStateJson).apply()
 
-            android.util.Log.d("SCHEDULE_ALARM", "âœ“ Active modes updated to: $newActiveModes")
+            android.util.Log.d("SCHEDULE_ALARM", "- Active modes updated to: $newActiveModes")
 
             updateBlockerService(context, newState)
         } catch (e: Exception) {
@@ -259,8 +270,9 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     if (isStart) dayTime.startHour else dayTime.endHour,
                     if (isStart) dayTime.startMinute else dayTime.endMinute
                 )
-                android.util.Log.d("SCHEDULE_ALARM", "“ Scheduled ${if (isStart) "START" else "END"} for ${getDayName(day)} $timeStr")
+                android.util.Log.d("SCHEDULE_ALARM", "- Scheduled ${if (isStart) "START" else "END"} for ${getDayName(day)} $timeStr")
                 android.util.Log.d("SCHEDULE_ALARM", "   Will fire at: ${java.util.Date(calendar.timeInMillis)}")
+                AppLogger.log("ALARM", "Scheduled ${if (isStart) "START" else "END"} for ${getDayName(day)} $timeStr at ${java.util.Date(calendar.timeInMillis)}")
             } catch (e: Exception) {
                 android.util.Log.e("SCHEDULE_ALARM", "Error scheduling alarm: ${e.message}", e)
             }
@@ -275,6 +287,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
             if (stateJson == null) {
                 android.util.Log.e("SCHEDULE_ALARM", "No app state found!")
+                AppLogger.log("ALARM", "ERROR: No app state in SharedPreferences!")
                 return
             }
 

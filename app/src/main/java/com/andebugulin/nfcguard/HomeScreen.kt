@@ -263,10 +263,10 @@ fun HomeScreen(
             onConfirm = {
                 showEmergencyDialog = false
                 if (appState.activeModes.isNotEmpty()) {
-                    // Modes active â€” require countdown + confirmation
+                    // Modes active --” require countdown + confirmation
                     showConfirmDialog = true
                 } else {
-                    // No modes active â€” skip safety gate, go straight to tag selection
+                    // No modes active --” skip safety gate, go straight to tag selection
                     showTagSelectionDialog = true
                 }
             }
@@ -430,13 +430,13 @@ fun EmergencyWarningDialog(
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "â€¢ Deactivate all active modes",
+                        "--- Deactivate all active modes",
                         fontSize = 13.sp,
                         color = Color(0xFFCCCCCC),
                         letterSpacing = 0.5.sp
                     )
                     Text(
-                        "â€¢ Delete lost NFC tags",
+                        "--- Delete lost NFC tags",
                         fontSize = 13.sp,
                         color = Color(0xFFCCCCCC),
                         letterSpacing = 0.5.sp
@@ -983,7 +983,7 @@ fun SettingsDialog(
                             )
                         }
                         Text(
-                            "Recommended â€” prevents Android from hibernating Guardian in background",
+                            "Recommended -” prevents Android from hibernating Guardian in background",
                             fontSize = 9.sp,
                             color = Color(0xFF999966),
                             letterSpacing = 0.3.sp
@@ -1056,7 +1056,7 @@ fun SettingsDialog(
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            "${appState.modes.size} modes  Â·  ${appState.schedules.size} schedules  Â·  ${appState.nfcTags.size} tags",
+                            "${appState.modes.size} modes  -  ${appState.schedules.size} schedules  -  ${appState.nfcTags.size} tags",
                             fontSize = 10.sp,
                             color = GuardianTheme.TextSecondary,
                             letterSpacing = 0.5.sp
@@ -1128,7 +1128,7 @@ fun SettingsDialog(
                                 letterSpacing = 1.sp
                             )
                             Text(
-                                "Standard data format â€” compatible with most tools",
+                                "Standard data format -” compatible with most tools",
                                 fontSize = 10.sp,
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.3.sp
@@ -1153,7 +1153,7 @@ fun SettingsDialog(
                                 letterSpacing = 1.sp
                             )
                             Text(
-                                "Human-readable format â€” easy to edit by hand",
+                                "Human-readable format -” easy to edit by hand",
                                 fontSize = 10.sp,
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.3.sp
