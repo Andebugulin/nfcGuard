@@ -42,9 +42,9 @@ class BlockerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
+        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
         android.util.Log.d("BLOCKER_SERVICE", "SERVICE CREATED")
-        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
+        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
         AppLogger.init(this)
         isRunning = true
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -137,9 +137,9 @@ class BlockerService : Service() {
             blockMode: BlockMode,
             activeModeIds: Set<String>
         ) {
-            android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
+            android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
             android.util.Log.d("BLOCKER_SERVICE", "START REQUEST RECEIVED")
-            android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
+            android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
 
             if (!Settings.canDrawOverlays(context)) {
                 android.util.Log.e("BLOCKER_SERVICE", "--- OVERLAY PERMISSION NOT GRANTED!")
@@ -164,9 +164,9 @@ class BlockerService : Service() {
         }
 
         fun stop(context: Context) {
-            android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
+            android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
             android.util.Log.d("BLOCKER_SERVICE", "STOP REQUEST RECEIVED")
-            android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
+            android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
             context.stopService(Intent(context, BlockerService::class.java))
         }
 
@@ -196,7 +196,7 @@ class BlockerService : Service() {
                         delay(500)
                     }
 
-                    android.util.Log.d("BLOCKER_SERVICE", "--â€” Monitoring loop ended")
+                    android.util.Log.d("BLOCKER_SERVICE", "--— Monitoring loop ended")
                 }
             }
         }
@@ -529,7 +529,7 @@ class BlockerService : Service() {
             }
 
             setOnTouchListener { _, event ->
-                android.util.Log.d("BLOCKER_SERVICE", "--â€˜â€  TOUCH EVENT DETECTED ON OVERLAY")
+                android.util.Log.d("BLOCKER_SERVICE", "--‘† TOUCH EVENT DETECTED ON OVERLAY")
                 // Launch in monitoring scope to avoid creating extra coroutines
                 monitoringJob?.let { job ->
                     if (job.isActive) {
@@ -580,7 +580,7 @@ class BlockerService : Service() {
                 })
 
                 addView(android.widget.TextView(this@BlockerService).apply {
-                    text = "â†“"
+                    text = "↓"
                     textSize = 32f
                     gravity = Gravity.CENTER
                     setTextColor(0xFF808080.toInt())
@@ -610,7 +610,7 @@ class BlockerService : Service() {
                 })
 
                 addView(android.widget.TextView(this@BlockerService).apply {
-                    text = "â†“"
+                    text = "↓"
                     textSize = 24f
                     gravity = Gravity.CENTER
                     setTextColor(0xFF808080.toInt())
@@ -664,7 +664,7 @@ class BlockerService : Service() {
                         )
 
                         setOnClickListener {
-                            android.util.Log.d("BLOCKER_SERVICE", "---Ëœ GUARDIAN BUTTON CLICKED")
+                            android.util.Log.d("BLOCKER_SERVICE", "---˜ GUARDIAN BUTTON CLICKED")
                             val intent =
                                 Intent(this@BlockerService, MainActivity::class.java).apply {
                                     flags =
@@ -676,7 +676,7 @@ class BlockerService : Service() {
                 })
 
                 addView(android.widget.TextView(this@BlockerService).apply {
-                    text = "â†“"
+                    text = "↓"
                     textSize = 24f
                     gravity = Gravity.CENTER
                     setTextColor(0xFF808080.toInt())
@@ -757,9 +757,9 @@ class BlockerService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
+        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
         android.util.Log.d("BLOCKER_SERVICE", "TASK REMOVED")
-        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
+        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
         scheduleServiceRestart()
     }
 
@@ -801,9 +801,9 @@ class BlockerService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
+        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
         android.util.Log.d("BLOCKER_SERVICE", "SERVICE DESTROYED")
-        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
+        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
         isRunning = false
         AppLogger.log("SERVICE", "BlockerService DESTROYED")
 
@@ -835,7 +835,7 @@ class BlockerService : Service() {
         serviceScope.cancel()
 
         scheduleServiceRestart()
-        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
+        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
