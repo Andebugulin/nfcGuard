@@ -14,6 +14,8 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import android.content.pm.ServiceInfo
@@ -40,9 +42,9 @@ class BlockerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
+        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
         android.util.Log.d("BLOCKER_SERVICE", "SERVICE CREATED")
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
+        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
         AppLogger.init(this)
         isRunning = true
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -135,9 +137,9 @@ class BlockerService : Service() {
             blockMode: BlockMode,
             activeModeIds: Set<String>
         ) {
-            android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
+            android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
             android.util.Log.d("BLOCKER_SERVICE", "START REQUEST RECEIVED")
-            android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
+            android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
 
             if (!Settings.canDrawOverlays(context)) {
                 android.util.Log.e("BLOCKER_SERVICE", "--- OVERLAY PERMISSION NOT GRANTED!")
@@ -162,9 +164,9 @@ class BlockerService : Service() {
         }
 
         fun stop(context: Context) {
-            android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
+            android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
             android.util.Log.d("BLOCKER_SERVICE", "STOP REQUEST RECEIVED")
-            android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
+            android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
             context.stopService(Intent(context, BlockerService::class.java))
         }
 
@@ -194,7 +196,7 @@ class BlockerService : Service() {
                         delay(500)
                     }
 
-                    android.util.Log.d("BLOCKER_SERVICE", "--— Monitoring loop ended")
+                    android.util.Log.d("BLOCKER_SERVICE", "--â€” Monitoring loop ended")
                 }
             }
         }
@@ -210,49 +212,44 @@ class BlockerService : Service() {
             return
         }
 
-        if (currentApp != lastCheckedApp) {
-            android.util.Log.d("BLOCKER_SERVICE", "------------------------------------------------------------------------------")
-            android.util.Log.d("BLOCKER_SERVICE", "APP SWITCH DETECTED")
-            android.util.Log.d("BLOCKER_SERVICE", "------------------------------------------------------------------------------")
-            android.util.Log.d("BLOCKER_SERVICE", "---- Previous app: $lastCheckedApp")
-            android.util.Log.d("BLOCKER_SERVICE", "---- Current app: $currentApp")
-
-            lastCheckedApp = currentApp
-
-            val shouldBlock = when {
-                currentApp == packageName -> {
-                    android.util.Log.d("BLOCKER_SERVICE", "--- This is Guardian app - ALLOW")
-                    false
-                }
-                isSystemLauncher(currentApp) -> {
-                    android.util.Log.d("BLOCKER_SERVICE", "--- This is system launcher - ALLOW")
-                    false
-                }
-                isCriticalSystemApp(currentApp) -> {
-                    android.util.Log.d("BLOCKER_SERVICE", "--- Critical system app - ALLOW")
-                    false
-                }
-                else -> {
-                    val result = when (blockMode) {
-                        BlockMode.BLOCK_SELECTED -> blockedApps.contains(currentApp)
-                        BlockMode.ALLOW_SELECTED -> !blockedApps.contains(currentApp)
-                    }
-                    android.util.Log.d("BLOCKER_SERVICE", "---- Block mode: $blockMode")
-                    android.util.Log.d("BLOCKER_SERVICE", "---- App in list: ${blockedApps.contains(currentApp)}")
-                    android.util.Log.d("BLOCKER_SERVICE", "---- Should block: $result")
-                    result
-                }
+        val shouldBlock = when {
+            currentApp == packageName -> {
+                android.util.Log.d("BLOCKER_SERVICE", "--- This is Guardian app - ALLOW")
+                false
             }
-
-            // Direct call - we're already in the monitoring coroutine
-            if (shouldBlock) {
-                android.util.Log.w("BLOCKER_SERVICE", "---- BLOCKING APP: $currentApp")
-                AppLogger.log("SERVICE", "BLOCKING: $currentApp (mode=$blockMode, inList=${blockedApps.contains(currentApp)})")
-                showOverlaySafe()
-            } else {
-                android.util.Log.d("BLOCKER_SERVICE", "--- ALLOWING APP: $currentApp")
-                hideOverlaySafe()
+            isSystemLauncher(currentApp) -> {
+                android.util.Log.d("BLOCKER_SERVICE", "--- This is system launcher - ALLOW")
+                false
             }
+            isCriticalSystemApp(currentApp) -> {
+                android.util.Log.d("BLOCKER_SERVICE", "--- Critical system app - ALLOW")
+                false
+            }
+            else -> {
+                val result = when (blockMode) {
+                    BlockMode.BLOCK_SELECTED -> blockedApps.contains(currentApp)
+                    BlockMode.ALLOW_SELECTED -> !blockedApps.contains(currentApp)
+                }
+                android.util.Log.d("BLOCKER_SERVICE", "---- Block mode: $blockMode")
+                android.util.Log.d("BLOCKER_SERVICE", "---- App in list: ${blockedApps.contains(currentApp)}")
+                android.util.Log.d("BLOCKER_SERVICE", "---- Should block: $result")
+                result
+            }
+        }
+
+        lastCheckedApp = currentApp
+
+        if (shouldBlock) {
+            // showOverlaySafe() is already a no-op when overlay is showing (isOverlayShowing guard
+            // inside the mutex), so calling it every tick is safe and avoids any race condition
+            // where lastCheckedApp was poisoned by the previous monitoring job's last tick.
+            android.util.Log.w("BLOCKER_SERVICE", "---- BLOCKING APP: $currentApp")
+            AppLogger.log("SERVICE", "BLOCKING: $currentApp (mode=$blockMode, inList=${blockedApps.contains(currentApp)})")
+            showOverlaySafe()
+        } else {
+            // hideOverlaySafe() is a no-op when overlay is not showing — no performance cost.
+            android.util.Log.d("BLOCKER_SERVICE", "--- ALLOWING APP: $currentApp")
+            hideOverlaySafe()
         }
     }
 
@@ -279,37 +276,53 @@ class BlockerService : Service() {
         val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val time = System.currentTimeMillis()
 
-        // Step 1: Get the reliable app from UsageStats (your original method)
-        val stats = usageStatsManager.queryUsageStats(
-            UsageStatsManager.INTERVAL_DAILY,
-            time - 1000 * 10,
-            time
-        )
-        val statsApp = stats?.maxByOrNull { it.lastTimeUsed }?.packageName
-
-        // Step 2: Check if user just opened recents/system navigation
-        // Only override statsApp if the last ACTIVITY_RESUMED is a system app or launcher
+        // Step 1: Query events for the last 60s to find the most recently resumed activity.
+        // We use queryEvents (not queryUsageStats) as the primary source because it reflects
+        // the actual foreground state even when the user is idle — queryUsageStats with a narrow
+        // window returns null after ~10s of inactivity, causing 25s+ activation delays.
         try {
-            val usageEvents = usageStatsManager.queryEvents(time - 5000, time)
-            var lastEventApp: String? = null
+            val usageEvents = usageStatsManager.queryEvents(time - 60_000, time)
+            var lastResumedApp: String? = null
+            var lastResumedTime = 0L
+            var lastPausedApp: String? = null
             val event = android.app.usage.UsageEvents.Event()
 
             while (usageEvents.hasNextEvent()) {
                 usageEvents.getNextEvent(event)
-                if (event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED) {
-                    lastEventApp = event.packageName
+                when (event.eventType) {
+                    android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED -> {
+                        if (event.timeStamp >= lastResumedTime) {
+                            lastResumedApp = event.packageName
+                            lastResumedTime = event.timeStamp
+                        }
+                    }
+                    android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED -> {
+                        lastPausedApp = event.packageName
+                    }
                 }
             }
 
-            // If last resumed activity is a system/launcher app, user is in recents or navigation
-            if (lastEventApp != null && (isCriticalSystemApp(lastEventApp) || isSystemLauncher(lastEventApp))) {
-                return lastEventApp
+            // If the most recently resumed app is currently paused (user left it), fall through.
+            // If it's still resumed (no matching pause after it), it's the foreground app.
+            if (lastResumedApp != null && lastResumedApp != lastPausedApp) {
+                // System/launcher = user is in recents/home, not in a blocked app
+                if (isCriticalSystemApp(lastResumedApp) || isSystemLauncher(lastResumedApp)) {
+                    return lastResumedApp
+                }
+                return lastResumedApp
             }
         } catch (e: Exception) {
-            android.util.Log.e("BLOCKER_SERVICE", "queryEvents check failed: ${e.message}")
+            android.util.Log.e("BLOCKER_SERVICE", "queryEvents (primary) failed: ${e.message}")
         }
 
-        return statsApp
+        // Step 2: Fallback — queryUsageStats with a wider 5-minute window.
+        // Covers edge cases where queryEvents returns nothing (e.g. MIUI permission quirks).
+        val stats = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            time - 1000 * 60 * 5,
+            time
+        )
+        return stats?.maxByOrNull { it.lastTimeUsed }?.packageName
     }
 
     // CRITICAL FIX: Thread-safe overlay showing with mutex
@@ -336,8 +349,12 @@ class BlockerService : Service() {
                         overlayView = null
                     }
 
-                    showOverlay()
-                    isOverlayShowing = true
+                    val shown = showOverlay()
+                    // Only mark as showing if addView actually succeeded.
+                    // showOverlay() returns false on failure (e.g. MIUI PermissionDenied),
+                    // so we must NOT set isOverlayShowing=true — otherwise all future
+                    // ticks see "already showing" and skip indefinitely.
+                    isOverlayShowing = shown
                 } finally {
                     overlayAnimating = false
                 }
@@ -345,27 +362,37 @@ class BlockerService : Service() {
         }
     }
 
-    // CRITICAL FIX: Thread-safe overlay hiding with mutex
+    // CRITICAL FIX: Thread-safe overlay hiding with mutex.
+    // State flags are cleared ONLY inside the onComplete callback — i.e. after
+    // removeView actually executes — not before. This prevents the overlay from
+    // getting permanently stuck when withEndAction throws or is never called.
     private suspend fun hideOverlaySafe() {
         overlayMutex.withLock {
             if (!isOverlayShowing || overlayAnimating) {
                 return
             }
-
             overlayAnimating = true
-
-            withContext(Dispatchers.Main) {
-                try {
-                    hideOverlay()
-                    isOverlayShowing = false
-                } finally {
-                    overlayAnimating = false
+            // NonCancellable: prevents CancellationException (from double onStartCommand cancelling
+            // the old monitoring job) from aborting the hide mid-way and leaving overlayAnimating=true
+            // permanently. Without this, job A sets overlayAnimating=true, gets cancelled before
+            // hideOverlay() runs, and job B sees overlayAnimating=true forever.
+            //
+            // suspendCoroutine: holds the mutex until onComplete fires (animation done ~250ms),
+            // so state flags are guaranteed reset before the next hideOverlaySafe() call can enter.
+            withContext(Dispatchers.Main + NonCancellable) {
+                suspendCoroutine { cont ->
+                    hideOverlay(onComplete = {
+                        isOverlayShowing = false
+                        overlayAnimating = false
+                        cont.resume(Unit)
+                    })
                 }
             }
         }
     }
 
-    private fun showOverlay() {
+    // Returns true if addView succeeded and the overlay is visible, false otherwise.
+    private fun showOverlay(): Boolean {
         android.util.Log.d("BLOCKER_SERVICE", "------------------------------------------------------------------------------")
         android.util.Log.d("BLOCKER_SERVICE", "SHOWING OVERLAY")
         android.util.Log.d("BLOCKER_SERVICE", "------------------------------------------------------------------------------")
@@ -417,6 +444,7 @@ class BlockerService : Service() {
 
             android.util.Log.d("BLOCKER_SERVICE", "------- OVERLAY SUCCESSFULLY SHOWN -------")
             AppLogger.log("SERVICE", "OVERLAY SHOWN successfully")
+            return true
         } catch (e: Exception) {
             android.util.Log.e("BLOCKER_SERVICE", "--------- FAILED TO SHOW OVERLAY ---------")
             AppLogger.log("SERVICE", "OVERLAY FAILED: ${e.javaClass.simpleName} - ${e.message}")
@@ -424,47 +452,55 @@ class BlockerService : Service() {
             android.util.Log.e("BLOCKER_SERVICE", "   Message: ${e.message}")
             android.util.Log.e("BLOCKER_SERVICE", "   Stack trace:", e)
             overlayView = null
-            isOverlayShowing = false
+            return false
         }
     }
 
-    private fun hideOverlay() {
+    // onComplete is guaranteed to be called exactly once, whether removal succeeds or fails.
+    private fun hideOverlay(onComplete: () -> Unit) {
         android.util.Log.d("BLOCKER_SERVICE", "------------------------------------------------------------------------------")
         android.util.Log.d("BLOCKER_SERVICE", "HIDING OVERLAY")
         android.util.Log.d("BLOCKER_SERVICE", "------------------------------------------------------------------------------")
 
-        overlayView?.let { view ->
-            try {
-                // Buttery smooth fade + slight scale down
-                view.animate()
-                    ?.alpha(0f)
-                    ?.scaleX(0.98f)  // Subtle scale down
-                    ?.scaleY(0.98f)
-                    ?.setDuration(250)  // Quick but smooth
-                    ?.setInterpolator(android.view.animation.AccelerateInterpolator(1.2f))
-                    ?.withEndAction {
-                        try {
-                            windowManager?.removeView(view)
-                            overlayView = null
-                            android.util.Log.d("BLOCKER_SERVICE", "------- OVERLAY SUCCESSFULLY HIDDEN -------")
-                            AppLogger.log("SERVICE", "OVERLAY HIDDEN successfully")
-                        } catch (e: Exception) {
-                            android.util.Log.e("BLOCKER_SERVICE", "--- Failed to remove overlay: ${e.message}")
-                            overlayView = null
-                        }
-                    }
-                    ?.start()
-            } catch (e: Exception) {
-                android.util.Log.e("BLOCKER_SERVICE", "--- Failed to animate overlay: ${e.message}")
-                try {
-                    windowManager?.removeView(view)
-                } catch (e2: Exception) {
-                    android.util.Log.e("BLOCKER_SERVICE", "--- Failed to force remove overlay: ${e2.message}")
-                }
-                overlayView = null
-            }
-        } ?: run {
+        val view = overlayView
+        if (view == null) {
             android.util.Log.d("BLOCKER_SERVICE", "   No overlay to hide (already null)")
+            onComplete()
+            return
+        }
+
+        fun forceRemove() {
+            try { windowManager?.removeView(view) } catch (e: Exception) {
+                android.util.Log.e("BLOCKER_SERVICE", "--- Failed to force remove overlay: ${e.message}")
+            }
+            overlayView = null
+            onComplete()
+        }
+
+        try {
+            view.animate()
+                ?.alpha(0f)
+                ?.scaleX(0.98f)
+                ?.scaleY(0.98f)
+                ?.setDuration(250)
+                ?.setInterpolator(android.view.animation.AccelerateInterpolator(1.2f))
+                ?.withEndAction {
+                    // Runs on main thread ~250ms later. State is cleared here.
+                    try {
+                        windowManager?.removeView(view)
+                        overlayView = null
+                        android.util.Log.d("BLOCKER_SERVICE", "------- OVERLAY SUCCESSFULLY HIDDEN -------")
+                        AppLogger.log("SERVICE", "OVERLAY HIDDEN successfully")
+                    } catch (e: Exception) {
+                        android.util.Log.e("BLOCKER_SERVICE", "--- Failed to remove overlay in withEndAction: ${e.message}")
+                        overlayView = null
+                    }
+                    onComplete()
+                }
+                ?.start()
+        } catch (e: Exception) {
+            android.util.Log.e("BLOCKER_SERVICE", "--- Failed to start hide animation: ${e.message}")
+            forceRemove()
         }
     }
 
@@ -493,7 +529,7 @@ class BlockerService : Service() {
             }
 
             setOnTouchListener { _, event ->
-                android.util.Log.d("BLOCKER_SERVICE", "--‘† TOUCH EVENT DETECTED ON OVERLAY")
+                android.util.Log.d("BLOCKER_SERVICE", "--â€˜â€  TOUCH EVENT DETECTED ON OVERLAY")
                 // Launch in monitoring scope to avoid creating extra coroutines
                 monitoringJob?.let { job ->
                     if (job.isActive) {
@@ -544,7 +580,7 @@ class BlockerService : Service() {
                 })
 
                 addView(android.widget.TextView(this@BlockerService).apply {
-                    text = "↓"
+                    text = "â†“"
                     textSize = 32f
                     gravity = Gravity.CENTER
                     setTextColor(0xFF808080.toInt())
@@ -574,7 +610,7 @@ class BlockerService : Service() {
                 })
 
                 addView(android.widget.TextView(this@BlockerService).apply {
-                    text = "↓"
+                    text = "â†“"
                     textSize = 24f
                     gravity = Gravity.CENTER
                     setTextColor(0xFF808080.toInt())
@@ -628,7 +664,7 @@ class BlockerService : Service() {
                         )
 
                         setOnClickListener {
-                            android.util.Log.d("BLOCKER_SERVICE", "---˜ GUARDIAN BUTTON CLICKED")
+                            android.util.Log.d("BLOCKER_SERVICE", "---Ëœ GUARDIAN BUTTON CLICKED")
                             val intent =
                                 Intent(this@BlockerService, MainActivity::class.java).apply {
                                     flags =
@@ -640,7 +676,7 @@ class BlockerService : Service() {
                 })
 
                 addView(android.widget.TextView(this@BlockerService).apply {
-                    text = "↓"
+                    text = "â†“"
                     textSize = 24f
                     gravity = Gravity.CENTER
                     setTextColor(0xFF808080.toInt())
@@ -721,9 +757,9 @@ class BlockerService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
+        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
         android.util.Log.d("BLOCKER_SERVICE", "TASK REMOVED")
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
+        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
         scheduleServiceRestart()
     }
 
@@ -765,9 +801,9 @@ class BlockerService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
+        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
         android.util.Log.d("BLOCKER_SERVICE", "SERVICE DESTROYED")
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
+        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
         isRunning = false
         AppLogger.log("SERVICE", "BlockerService DESTROYED")
 
@@ -799,7 +835,7 @@ class BlockerService : Service() {
         serviceScope.cancel()
 
         scheduleServiceRestart()
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
+        android.util.Log.d("BLOCKER_SERVICE", "-â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢--â€¢-")
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
