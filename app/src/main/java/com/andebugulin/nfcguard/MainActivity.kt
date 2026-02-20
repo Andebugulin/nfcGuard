@@ -165,6 +165,7 @@ class MainActivity : ComponentActivity() {
         builder.setTitle("WELCOME TO GUARDIAN")
             .setMessage(
                 "Guardian needs the following permissions to protect your focus:\n\n\n\n" +
+                        "- Notifications (optional) - To display active modes\n\n" +
                         "- USAGE ACCESS - Detect which apps you're using\n\n" +
                         "- DISPLAY OVER APPS - Show the block screen\n\n" +
                         "- BATTERY OPTIMIZATION - Run reliably in background\n\n" +

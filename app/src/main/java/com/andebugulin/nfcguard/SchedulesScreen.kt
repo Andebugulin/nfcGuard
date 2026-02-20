@@ -24,6 +24,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.PI
 import java.util.Calendar
+import kotlinx.coroutines.launch
 
 enum class ScheduleState {
     NONE,        // Not in schedule time OR schedule ended
@@ -59,7 +60,8 @@ private fun isInScheduleTime(schedule: Schedule): Boolean {
 
     return if (schedule.hasEndTime) {
         val endTimeInMinutes = dayTime.endHour * 60 + dayTime.endMinute
-        currentTimeInMinutes in startTimeInMinutes..endTimeInMinutes
+        // Exclusive end: at exactly the end minute the schedule is over (alarm fires at xx:00)
+        currentTimeInMinutes in startTimeInMinutes until endTimeInMinutes
     } else {
         currentTimeInMinutes >= startTimeInMinutes
     }
@@ -79,7 +81,8 @@ private fun getScheduleState(schedule: Schedule, appState: AppState): ScheduleSt
     // Check if we're in schedule time
     val inScheduleTime = if (schedule.hasEndTime) {
         val endTimeInMinutes = dayTime.endHour * 60 + dayTime.endMinute
-        currentTimeInMinutes in startTimeInMinutes..endTimeInMinutes
+        // Exclusive end: at exactly the end minute the schedule is over (alarm fires at xx:00)
+        currentTimeInMinutes in startTimeInMinutes until endTimeInMinutes
     } else {
         currentTimeInMinutes >= startTimeInMinutes
     }
@@ -118,118 +121,147 @@ fun SchedulesScreen(
     var editingSchedule by remember { mutableStateOf<Schedule?>(null) }
     var showDeleteDialog by remember { mutableStateOf<Schedule?>(null) }
 
-    Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary)) {
-        Column(Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
-                }
-                Text(
-                    "SCHEDULES",
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp,
-                    fontSize = 24.sp,
-                    color = GuardianTheme.TextPrimary,
-                    modifier = Modifier.weight(1f)
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = GuardianTheme.ErrorDark,
+                    contentColor = Color(0xFFFF8888),
+                    shape = RoundedCornerShape(0.dp)
                 )
             }
-
-            if (appState.schedules.isEmpty()) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(48.dp),
-                    contentAlignment = Alignment.Center
+        },
+        containerColor = GuardianTheme.BackgroundPrimary
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues).background(GuardianTheme.BackgroundPrimary)) {
+            Column(Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "NO SCHEDULES",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = GuardianTheme.TextDisabled,
-                            letterSpacing = 2.sp
-                        )
-                        Spacer(Modifier.height(16.dp))
-
-                        // FIX #12: Disable button if no modes exist, show guidance
-                        if (appState.modes.isEmpty()) {
-                            Text(
-                                "Create at least one mode first",
-                                fontSize = 11.sp,
-                                color = GuardianTheme.TextTertiary,
-                                letterSpacing = 0.5.sp
-                            )
-                            Spacer(Modifier.height(8.dp))
-                        }
-
-                        Button(
-                            onClick = { showAddDialog = true },
-                            enabled = appState.modes.isNotEmpty(),  // FIX #12
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = GuardianTheme.ButtonPrimary,
-                                contentColor = GuardianTheme.ButtonPrimaryText,
-                                disabledContainerColor = Color(0xFF333333),
-                                disabledContentColor = Color(0xFF666666)
-                            ),
-                            shape = RoundedCornerShape(0.dp),
-                            modifier = Modifier.height(48.dp)
-                        ) {
-                            Text(
-                                if (appState.modes.isNotEmpty()) "CREATE SCHEDULE" else "CREATE MODES FIRST",
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-                        }
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
                     }
+                    Text(
+                        "SCHEDULES",
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp,
+                        fontSize = 24.sp,
+                        color = GuardianTheme.TextPrimary,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(appState.schedules.size) { index ->
-                        ScheduleCard(
-                            schedule = appState.schedules[index],
-                            modes = appState.modes,
-                            scheduleState = getScheduleState(appState.schedules[index], appState),
-                            onEdit = { editingSchedule = appState.schedules[index] },
-                            onDelete = { showDeleteDialog = appState.schedules[index] }
-                        )
-                    }
 
-                    item {
-                        // FIX #12: Also disable "+ NEW SCHEDULE" if no modes
-                        Button(
-                            onClick = { showAddDialog = true },
-                            enabled = appState.modes.isNotEmpty(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = GuardianTheme.BackgroundSurface,
-                                contentColor = GuardianTheme.ButtonSecondaryText,
-                                disabledContainerColor = Color(0xFF1A1A1A),
-                                disabledContentColor = Color(0xFF555555)
-                            ),
-                            shape = RoundedCornerShape(0.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                        ) {
+                if (appState.schedules.isEmpty()) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .padding(48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                if (appState.modes.isNotEmpty()) "+ NEW SCHEDULE" else "CREATE MODES FIRST",
+                                "NO SCHEDULES",
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
+                                color = GuardianTheme.TextDisabled,
+                                letterSpacing = 2.sp
                             )
+                            Spacer(Modifier.height(16.dp))
+
+                            // FIX #12: Disable button if no modes exist, show guidance
+                            if (appState.modes.isEmpty()) {
+                                Text(
+                                    "Create at least one mode first",
+                                    fontSize = 11.sp,
+                                    color = GuardianTheme.TextTertiary,
+                                    letterSpacing = 0.5.sp
+                                )
+                                Spacer(Modifier.height(8.dp))
+                            }
+
+                            Button(
+                                onClick = { showAddDialog = true },
+                                enabled = appState.modes.isNotEmpty(),  // FIX #12
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = GuardianTheme.ButtonPrimary,
+                                    contentColor = GuardianTheme.ButtonPrimaryText,
+                                    disabledContainerColor = Color(0xFF333333),
+                                    disabledContentColor = Color(0xFF666666)
+                                ),
+                                shape = RoundedCornerShape(0.dp),
+                                modifier = Modifier.height(48.dp)
+                            ) {
+                                Text(
+                                    if (appState.modes.isNotEmpty()) "CREATE SCHEDULE" else "CREATE MODES FIRST",
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(appState.schedules.size) { index ->
+                            val schedule = appState.schedules[index]
+                            ScheduleCard(
+                                schedule = schedule,
+                                modes = appState.modes,
+                                scheduleState = getScheduleState(schedule, appState),
+                                isInTimeRange = isInScheduleTime(schedule),
+                                onActivate = {
+                                    val result = viewModel.activateScheduleManually(schedule.id)
+                                    if (result == ActivationResult.BLOCK_MODE_CONFLICT) {
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                "Cannot mix BLOCK and ALLOW ONLY modes. Deactivate current modes first."
+                                            )
+                                        }
+                                    }
+                                },
+                                onEdit = { editingSchedule = schedule },
+                                onDelete = { showDeleteDialog = schedule }
+                            )
+                        }
+
+                        item {
+                            // FIX #12: Also disable "+ NEW SCHEDULE" if no modes
+                            Button(
+                                onClick = { showAddDialog = true },
+                                enabled = appState.modes.isNotEmpty(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = GuardianTheme.BackgroundSurface,
+                                    contentColor = GuardianTheme.ButtonSecondaryText,
+                                    disabledContainerColor = Color(0xFF1A1A1A),
+                                    disabledContentColor = Color(0xFF555555)
+                                ),
+                                shape = RoundedCornerShape(0.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                            ) {
+                                Text(
+                                    if (appState.modes.isNotEmpty()) "+ NEW SCHEDULE" else "CREATE MODES FIRST",
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
+                                )
+                            }
                         }
                     }
                 }
             }
         }
-    }
+    } // end Scaffold content
 
     if (showAddDialog) {
         ScheduleEditorDialog(
@@ -390,6 +422,8 @@ fun ScheduleCard(
     schedule: Schedule,
     modes: List<Mode>,
     scheduleState: ScheduleState,
+    isInTimeRange: Boolean,
+    onActivate: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -540,7 +574,26 @@ fun ScheduleCard(
 
             Spacer(Modifier.height(16.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Show ACTIVATE button when schedule is in time range but not active (NONE or DEACTIVATED)
+                if (isInTimeRange && scheduleState != ScheduleState.ACTIVE && schedule.linkedModeIds.isNotEmpty()) {
+                    Button(
+                        onClick = onActivate,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = GuardianTheme.ButtonPrimary,
+                            contentColor = GuardianTheme.ButtonPrimaryText
+                        ),
+                        shape = RoundedCornerShape(0.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text("ACTIVATE", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    }
+                }
+
                 TextButton(onClick = onEdit) {
                     Text("EDIT", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
                 }

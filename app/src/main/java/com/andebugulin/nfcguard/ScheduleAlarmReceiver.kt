@@ -44,6 +44,12 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     scheduleAlarmForSchedule(context, scheduleId, day, isStart = false, forNextWeek = true)
                 }
             }
+            ACTION_TIMED_DEACTIVATE_MODE -> {
+                val modeId = intent.getStringExtra("mode_id") ?: return
+                android.util.Log.d("SCHEDULE_ALARM", "- TIMED DEACTIVATE alarm fired for mode $modeId")
+                AppLogger.log("ALARM", "Timed deactivation alarm for mode $modeId")
+                deactivateTimedMode(context, modeId)
+            }
         }
     }
 
@@ -132,7 +138,17 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
             android.util.Log.d("SCHEDULE_ALARM", "Deactivating modes: ${schedule.linkedModeIds}")
 
-            val newActiveModes = appState.activeModes - schedule.linkedModeIds.toSet()
+            // Skip modes that have a user-set timer — user's explicit duration takes priority
+            val modesToDeactivate = schedule.linkedModeIds.filter { modeId ->
+                val hasTimer = appState.timedModeDeactivations.containsKey(modeId)
+                if (hasTimer) {
+                    android.util.Log.d("SCHEDULE_ALARM", "Skipping mode $modeId: has active user timer, keeping alive")
+                    AppLogger.log("ALARM", "Skipping timed mode $modeId — user timer takes priority over schedule end")
+                }
+                !hasTimer
+            }.toSet()
+
+            val newActiveModes = appState.activeModes - modesToDeactivate
             val newActiveSchedules = appState.activeSchedules - scheduleId
             val newDeactivatedSchedules = appState.deactivatedSchedules - scheduleId
 
@@ -141,7 +157,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 activeSchedules = newActiveSchedules,
                 deactivatedSchedules = newDeactivatedSchedules
             )
-            AppLogger.log("ALARM", "Schedule activated: activeModes=$newActiveModes, activeSchedules=$newActiveSchedules")
+            AppLogger.log("ALARM", "Schedule deactivated: removed=${modesToDeactivate}, kept=${schedule.linkedModeIds.toSet() - modesToDeactivate}, activeModes=$newActiveModes")
             val newStateJson = json.encodeToString(newState)
             prefs.edit().putString("app_state", newStateJson).apply()
 
@@ -161,6 +177,8 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             appState.activeModes.contains(it.id)
         }
 
+        val modeNamesMap = appState.modes.associate { it.id to it.name }
+
         if (activeModes.isNotEmpty()) {
             val hasAllowMode = activeModes.any { it.blockMode == BlockMode.ALLOW_SELECTED }
 
@@ -172,14 +190,20 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     }
                 }
                 android.util.Log.d("SCHEDULE_ALARM", "Starting service in ALLOW mode")
-                BlockerService.start(context, allAllowedApps, BlockMode.ALLOW_SELECTED, activeModes.map { it.id }.toSet())
+                BlockerService.start(context, allAllowedApps, BlockMode.ALLOW_SELECTED, activeModes.map { it.id }.toSet(),
+                    manuallyActivatedModeIds = appState.manuallyActivatedModes,
+                    timedModeDeactivations = appState.timedModeDeactivations,
+                    modeNames = modeNamesMap)
             } else {
                 val allBlockedApps = mutableSetOf<String>()
                 activeModes.forEach { mode ->
                     allBlockedApps.addAll(mode.blockedApps)
                 }
                 android.util.Log.d("SCHEDULE_ALARM", "Starting service in BLOCK mode")
-                BlockerService.start(context, allBlockedApps, BlockMode.BLOCK_SELECTED, activeModes.map { it.id }.toSet())
+                BlockerService.start(context, allBlockedApps, BlockMode.BLOCK_SELECTED, activeModes.map { it.id }.toSet(),
+                    manuallyActivatedModeIds = appState.manuallyActivatedModes,
+                    timedModeDeactivations = appState.timedModeDeactivations,
+                    modeNames = modeNamesMap)
             }
         } else {
             if (appState.schedules.isNotEmpty()) {
@@ -192,9 +216,56 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
         }
     }
 
+    private fun deactivateTimedMode(context: Context, modeId: String) {
+        android.util.Log.d("SCHEDULE_ALARM", ">>> Deactivating timed mode $modeId")
+        AppLogger.log("ALARM", "Deactivating timed mode $modeId")
+        val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
+        val stateJson = prefs.getString("app_state", null) ?: return
+
+        try {
+            val appState = json.decodeFromString<AppState>(stateJson)
+            if (!appState.activeModes.contains(modeId)) {
+                android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId already inactive, skipping")
+                return
+            }
+
+            // Find schedules that linked this mode and are currently active
+            val schedulesToMark = appState.schedules
+                .filter { schedule ->
+                    schedule.linkedModeIds.contains(modeId) &&
+                            appState.activeSchedules.contains(schedule.id)
+                }
+                .map { it.id }
+                .toSet()
+
+            val schedulesToDeactivate = schedulesToMark.filter { scheduleId ->
+                val schedule = appState.schedules.find { it.id == scheduleId }
+                schedule?.linkedModeIds?.all { linkedModeId ->
+                    linkedModeId == modeId || !appState.activeModes.contains(linkedModeId)
+                } ?: true
+            }.toSet()
+
+            val newState = appState.copy(
+                activeModes = appState.activeModes - modeId,
+                activeSchedules = appState.activeSchedules - schedulesToDeactivate,
+                deactivatedSchedules = appState.deactivatedSchedules + schedulesToDeactivate,
+                manuallyActivatedModes = appState.manuallyActivatedModes - modeId,
+                timedModeDeactivations = appState.timedModeDeactivations - modeId
+            )
+
+            val newStateJson = json.encodeToString(newState)
+            prefs.edit().putString("app_state", newStateJson).apply()
+
+            updateBlockerService(context, newState)
+        } catch (e: Exception) {
+            android.util.Log.e("SCHEDULE_ALARM", "Error deactivating timed mode: ${e.message}", e)
+        }
+    }
+
     companion object {
         private const val ACTION_ACTIVATE_SCHEDULE = "com.andebugulin.nfcguard.ACTIVATE_SCHEDULE"
         private const val ACTION_DEACTIVATE_SCHEDULE = "com.andebugulin.nfcguard.DEACTIVATE_SCHEDULE"
+        private const val ACTION_TIMED_DEACTIVATE_MODE = "com.andebugulin.nfcguard.TIMED_DEACTIVATE_MODE"
         private const val EXTRA_SCHEDULE_ID = "schedule_id"
         private const val EXTRA_DAY = "day"
 

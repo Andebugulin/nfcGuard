@@ -28,6 +28,9 @@ class BlockerService : Service() {
     private var blockedApps = setOf<String>()
     private var blockMode = BlockMode.BLOCK_SELECTED
     private var activeModeIds = setOf<String>()
+    private var manuallyActivatedModeIds = setOf<String>()
+    private var timedModeDeactivations = mapOf<String, Long>()
+    private var modeNames = mapOf<String, String>()
     private var lastCheckedApp: String? = null
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
@@ -85,6 +88,20 @@ class BlockerService : Service() {
             android.util.Log.d("BLOCKER_SERVICE", "---- Active modes: ${activeModeIds.size}")
         }
 
+        intent?.getStringArrayListExtra("manually_activated_mode_ids")?.let {
+            manuallyActivatedModeIds = it.toSet()
+        }
+
+        intent?.getSerializableExtra("timed_mode_deactivations")?.let {
+            @Suppress("UNCHECKED_CAST")
+            timedModeDeactivations = (it as? java.util.HashMap<String, Long>)?.toMap() ?: emptyMap()
+        }
+
+        intent?.getSerializableExtra("mode_names")?.let {
+            @Suppress("UNCHECKED_CAST")
+            modeNames = (it as? java.util.HashMap<String, String>)?.toMap() ?: emptyMap()
+        }
+
         lastCheckedApp = null
         // Don't spawn new coroutine - just check immediately
         startMonitoring()
@@ -135,7 +152,10 @@ class BlockerService : Service() {
             context: Context,
             blockedApps: Set<String>,
             blockMode: BlockMode,
-            activeModeIds: Set<String>
+            activeModeIds: Set<String>,
+            manuallyActivatedModeIds: Set<String> = emptySet(),
+            timedModeDeactivations: Map<String, Long> = emptyMap(),
+            modeNames: Map<String, String> = emptyMap()
         ) {
             android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
             android.util.Log.d("BLOCKER_SERVICE", "START REQUEST RECEIVED")
@@ -158,6 +178,9 @@ class BlockerService : Service() {
                 putStringArrayListExtra("blocked_apps", ArrayList(blockedApps))
                 putExtra("block_mode", blockMode.name)
                 putStringArrayListExtra("active_mode_ids", ArrayList(activeModeIds))
+                putStringArrayListExtra("manually_activated_mode_ids", ArrayList(manuallyActivatedModeIds))
+                putExtra("timed_mode_deactivations", HashMap(timedModeDeactivations))
+                putExtra("mode_names", HashMap(modeNames))
             }
             context.startForegroundService(intent)
             android.util.Log.d("BLOCKER_SERVICE", "--- Service start intent sent")
@@ -728,12 +751,56 @@ class BlockerService : Service() {
         val contentText = if (activeModeIds.isEmpty()) {
             "Waiting for scheduled modes"
         } else {
-            "${activeModeIds.size} MODE${if (activeModeIds.size > 1) "S" else ""} RUNNING"
+            val modeCount = activeModeIds.size
+            val manualCount = activeModeIds.count { manuallyActivatedModeIds.contains(it) }
+            val scheduleCount = modeCount - manualCount
+            val timedCount = activeModeIds.count { timedModeDeactivations.containsKey(it) }
+
+            buildString {
+                append("$modeCount MODE${if (modeCount > 1) "S" else ""}")
+                val parts = mutableListOf<String>()
+                if (manualCount > 0) parts.add("${manualCount} manual")
+                if (scheduleCount > 0) parts.add("${scheduleCount} scheduled")
+                if (parts.isNotEmpty()) append(" (${parts.joinToString(", ")})")
+                if (timedCount > 0) {
+                    val nextExpiry = activeModeIds
+                        .mapNotNull { timedModeDeactivations[it] }
+                        .minOrNull()
+                    if (nextExpiry != null) {
+                        val remaining = (nextExpiry - System.currentTimeMillis()) / 60000
+                        if (remaining > 0) append(" · ${remaining}m left")
+                    }
+                }
+            }
+        }
+
+        // Build expanded style with mode details
+        val bigTextStyle = NotificationCompat.BigTextStyle()
+        if (activeModeIds.isNotEmpty()) {
+            val details = buildString {
+                activeModeIds.forEach { modeId ->
+                    val name = modeNames[modeId]?.uppercase() ?: modeId.take(8)
+                    val isManual = manuallyActivatedModeIds.contains(modeId)
+                    val isTimed = timedModeDeactivations.containsKey(modeId)
+                    append("• $name")
+                    if (isManual && isTimed) {
+                        val remaining = ((timedModeDeactivations[modeId] ?: 0) - System.currentTimeMillis()) / 60000
+                        append(" — manual, ${remaining}m left")
+                    } else if (isManual) {
+                        append(" — manual (NFC to unlock)")
+                    } else {
+                        append(" — by schedule")
+                    }
+                    append("\n")
+                }
+            }.trimEnd()
+            bigTextStyle.bigText(details)
         }
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(titleText)
             .setContentText(contentText)
+            .setStyle(bigTextStyle)
             .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)

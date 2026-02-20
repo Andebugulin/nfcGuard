@@ -52,6 +52,17 @@ fun HomeScreen(
     var selectedTagsToDelete by remember { mutableStateOf(setOf<String>()) }
     var showSettingsDialog by remember { mutableStateOf(false) }
 
+    // Tick every 30s to keep timer countdowns fresh
+    var timeTick by remember { mutableStateOf(0L) }
+    LaunchedEffect(appState.timedModeDeactivations) {
+        while (appState.timedModeDeactivations.isNotEmpty()) {
+            kotlinx.coroutines.delay(30_000)
+            timeTick = System.currentTimeMillis()
+        }
+    }
+    // Read timeTick to derive 'now' — forces recomposition every 30s for live countdowns
+    val now = timeTick.let { System.currentTimeMillis() }
+
     // Auto-refresh permissions when activity resumes (user returns from system settings)
     var permissionCheckTrigger by remember { mutableStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -106,31 +117,75 @@ fun HomeScreen(
                 )
                 if (appState.activeModes.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
+                    val manualCount = appState.activeModes.count { appState.manuallyActivatedModes.contains(it) }
+                    val scheduleCount = appState.activeModes.size - manualCount
+                    val timedCount = appState.activeModes.count { appState.timedModeDeactivations.containsKey(it) }
+
+                    val sourceText = buildString {
+                        append("${appState.activeModes.size} MODE${if (appState.activeModes.size > 1) "S" else ""} ACTIVE")
+                        val parts = mutableListOf<String>()
+                        if (manualCount > 0) parts.add("$manualCount MANUAL")
+                        if (scheduleCount > 0) parts.add("$scheduleCount SCHEDULED")
+                        if (parts.size > 1) append(" (${parts.joinToString(" · ")})")
+                    }
+
                     Text(
-                        "${appState.activeModes.size} MODE${if (appState.activeModes.size > 1) "S" else ""} ACTIVE",
+                        sourceText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = GuardianTheme.TextSecondary,
                         letterSpacing = 1.sp
                     )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.padding(top = 8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Nfc,
-                            contentDescription = null,
-                            tint = GuardianTheme.IconSecondary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            "TAP NFC TO UNLOCK",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = GuardianTheme.TextSecondary,
-                            letterSpacing = 1.sp
-                        )
+
+                    if (timedCount > 0) {
+                        val nextExpiry = appState.activeModes
+                            .mapNotNull { appState.timedModeDeactivations[it] }
+                            .minOrNull()
+                        if (nextExpiry != null) {
+                            val remaining = ((nextExpiry - now) / 60000).coerceAtLeast(0)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Timer,
+                                    contentDescription = null,
+                                    tint = GuardianTheme.IconSecondary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    "${remaining}M REMAINING",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = GuardianTheme.TextSecondary,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                    }
+
+                    val hasManual = manualCount > 0
+                    if (hasManual) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Nfc,
+                                contentDescription = null,
+                                tint = GuardianTheme.IconSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                "TAP NFC TO UNLOCK",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = GuardianTheme.TextSecondary,
+                                letterSpacing = 1.sp
+                            )
+                        }
                     }
                 }
             }
@@ -229,6 +284,9 @@ fun HomeScreen(
                     )
                     Spacer(Modifier.height(12.dp))
                     appState.modes.filter { appState.activeModes.contains(it.id) }.forEach { mode ->
+                        val isManual = appState.manuallyActivatedModes.contains(mode.id)
+                        val isTimed = appState.timedModeDeactivations.containsKey(mode.id)
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -242,13 +300,30 @@ fun HomeScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text(
-                                mode.name.uppercase(),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = GuardianTheme.BackgroundSurface,
-                                letterSpacing = 1.sp
-                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    mode.name.uppercase(),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = GuardianTheme.BackgroundSurface,
+                                    letterSpacing = 1.sp
+                                )
+                                val sourceLabel = when {
+                                    isManual && isTimed -> {
+                                        val remaining = ((appState.timedModeDeactivations[mode.id] ?: 0) - now) / 60000
+                                        "MANUAL · ${remaining.coerceAtLeast(0)}M LEFT"
+                                    }
+                                    isManual -> "MANUAL · NFC TO UNLOCK"
+                                    else -> "BY SCHEDULE"
+                                }
+                                Text(
+                                    sourceLabel,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF555555),
+                                    letterSpacing = 1.sp
+                                )
+                            }
                         }
                     }
                 }

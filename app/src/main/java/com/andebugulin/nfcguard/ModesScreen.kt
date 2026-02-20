@@ -28,6 +28,17 @@ fun ModesScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var selectedMode by remember { mutableStateOf<Mode?>(null) }
     var showDeleteDialog by remember { mutableStateOf<Mode?>(null) }
+    var showActivationOptionsDialog by remember { mutableStateOf<Mode?>(null) }
+
+    // Tick every 30s so timer countdowns in ModeCards stay fresh
+    var timeTick by remember { mutableStateOf(0L) }
+    LaunchedEffect(appState.timedModeDeactivations) {
+        while (appState.timedModeDeactivations.isNotEmpty()) {
+            kotlinx.coroutines.delay(30_000)
+            timeTick = System.currentTimeMillis()
+        }
+    }
+    val now = timeTick.let { System.currentTimeMillis() }
 
     // FIX #2: Snackbar for block mode conflict feedback
     val snackbarHostState = remember { SnackbarHostState() }
@@ -117,17 +128,12 @@ fun ModesScreen(
                             ModeCard(
                                 mode = mode,
                                 isActive = appState.activeModes.contains(mode.id),
+                                isManual = appState.manuallyActivatedModes.contains(mode.id),
+                                timedUntil = appState.timedModeDeactivations[mode.id],
+                                now = now,
                                 nfcTag = appState.nfcTags.find { it.id == mode.nfcTagId },
                                 onActivate = {
-                                    // FIX #2: Handle activation result
-                                    val result = viewModel.activateMode(mode.id)
-                                    if (result == ActivationResult.BLOCK_MODE_CONFLICT) {
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar(
-                                                "Cannot mix BLOCK and ALLOW ONLY modes. Deactivate current modes first."
-                                            )
-                                        }
-                                    }
+                                    showActivationOptionsDialog = mode
                                 },
                                 onEdit = { selectedMode = mode },
                                 onDelete = { showDeleteDialog = mode }
@@ -301,6 +307,45 @@ fun ModesScreen(
         )
     }
 
+    // Activation Options Dialog (Feature 3)
+    showActivationOptionsDialog?.let { mode ->
+        ActivationOptionsDialog(
+            mode = mode,
+            hasLinkedSchedules = run {
+                val cal = java.util.Calendar.getInstance()
+                val currentDay = when (cal.get(java.util.Calendar.DAY_OF_WEEK)) {
+                    java.util.Calendar.MONDAY -> 1; java.util.Calendar.TUESDAY -> 2
+                    java.util.Calendar.WEDNESDAY -> 3; java.util.Calendar.THURSDAY -> 4
+                    java.util.Calendar.FRIDAY -> 5; java.util.Calendar.SATURDAY -> 6
+                    java.util.Calendar.SUNDAY -> 7; else -> 1
+                }
+                val currentTime = cal.get(java.util.Calendar.HOUR_OF_DAY) * 60 + cal.get(java.util.Calendar.MINUTE)
+                appState.schedules.any { schedule ->
+                    schedule.linkedModeIds.contains(mode.id) && schedule.hasEndTime &&
+                            schedule.timeSlot.getTimeForDay(currentDay)?.let { dt ->
+                                val end = dt.endHour * 60 + dt.endMinute
+                                // Schedule will deactivate this mode if:
+                                // - currently active (start <= now < end), OR
+                                // - upcoming today (now < start, so end alarm is still ahead)
+                                currentTime < end
+                            } == true
+                }
+            },
+            onDismiss = { showActivationOptionsDialog = null },
+            onActivate = { timedUntilMillis ->
+                showActivationOptionsDialog = null
+                val result = viewModel.activateMode(mode.id, timedUntilMillis)
+                if (result == ActivationResult.BLOCK_MODE_CONFLICT) {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            "Cannot mix BLOCK and ALLOW ONLY modes. Deactivate current modes first."
+                        )
+                    }
+                }
+            }
+        )
+    }
+
     selectedMode?.let { mode ->
         Box(modifier = Modifier.fillMaxSize()) {
             ModeEditorScreen(
@@ -325,6 +370,9 @@ fun ModesScreen(
 fun ModeCard(
     mode: Mode,
     isActive: Boolean,
+    isManual: Boolean = false,
+    timedUntil: Long? = null,
+    now: Long = System.currentTimeMillis(),
     nfcTag: NfcTag?,
     onActivate: () -> Unit,
     onEdit: () -> Unit,
@@ -367,6 +415,42 @@ fun ModeCard(
                                 "LINKED TO: ${nfcTag.name.uppercase()}",
                                 fontSize = 10.sp,
                                 color = if (isActive) GuardianTheme.TextTertiary else GuardianTheme.TextTertiary,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
+                    // Show activation source when active
+                    if (isActive) {
+                        Spacer(Modifier.height(4.dp))
+                        val isTimed = timedUntil != null
+                        val sourceLabel = when {
+                            isManual && isTimed -> {
+                                val remaining = ((timedUntil ?: 0) - now) / 60000
+                                "MANUAL · ${remaining.coerceAtLeast(0)}M LEFT"
+                            }
+                            isManual -> "MANUAL · NFC TO UNLOCK"
+                            else -> "ACTIVATED BY SCHEDULE"
+                        }
+                        val sourceIcon = when {
+                            isManual && isTimed -> Icons.Default.Timer
+                            isManual -> Icons.Default.TouchApp
+                            else -> Icons.Default.Schedule
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                sourceIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp),
+                                tint = Color(0xFF555555)
+                            )
+                            Text(
+                                sourceLabel,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF555555),
                                 letterSpacing = 1.sp
                             )
                         }
@@ -482,6 +566,243 @@ fun ModeNameDialog(
                 enabled = name.isNotBlank() && !nameExists  // FIX #6
             ) {
                 Text("CREATE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+            }
+        },
+    )
+}
+
+@Composable
+fun ActivationOptionsDialog(
+    mode: Mode,
+    hasLinkedSchedules: Boolean,
+    onDismiss: () -> Unit,
+    onActivate: (timedUntilMillis: Long?) -> Unit
+) {
+    var selectedOption by remember { mutableStateOf(0) } // 0 = until schedule/tag, 1 = timed
+    var timedHours by remember { mutableStateOf("0") }
+    var timedMinutes by remember { mutableStateOf("30") }
+
+    // Compute normalized total minutes from hours + minutes input
+    val totalMinutes = run {
+        val h = timedHours.toLongOrNull() ?: 0L
+        val m = timedMinutes.toLongOrNull() ?: 0L
+        h * 60 + m
+    }
+    // Display normalized for user clarity (e.g. 0h 130m → "2H 10M")
+    val normalizedH = totalMinutes / 60
+    val normalizedM = totalMinutes % 60
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = GuardianTheme.BackgroundSurface,
+        tonalElevation = 0.dp,
+        shape = RoundedCornerShape(0.dp),
+        modifier = Modifier.border(
+            width = GuardianTheme.DialogBorderWidth,
+            color = GuardianTheme.DialogBorderInfo,
+            shape = RoundedCornerShape(0.dp)
+        ),
+        title = {
+            Text(
+                "ACTIVATE ${mode.name.uppercase()}",
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                fontSize = 14.sp
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "HOW SHOULD THIS MODE END?",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GuardianTheme.TextSecondary,
+                    letterSpacing = 1.sp
+                )
+
+                // Option 1: Until schedule/tag
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(0.dp),
+                    color = if (selectedOption == 0) Color.White else Color(0xFF1A1A1A),
+                    onClick = { selectedOption = 0 }
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            if (hasLinkedSchedules) "UNTIL SCHEDULE ENDS / NFC TAG" else "UNTIL NFC TAG",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (selectedOption == 0) Color.Black else Color.White,
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            if (hasLinkedSchedules)
+                                "Mode will deactivate when a linked schedule ends, or when you tap an NFC tag"
+                            else
+                                "Mode stays active until you tap an NFC tag to unlock",
+                            fontSize = 10.sp,
+                            color = if (selectedOption == 0) Color(0xFF555555) else GuardianTheme.TextTertiary,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+
+                // Option 2: Timed
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(0.dp),
+                    color = if (selectedOption == 1) Color.White else Color(0xFF1A1A1A),
+                    onClick = { selectedOption = 1 }
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            "FOR A SET DURATION",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (selectedOption == 1) Color.Black else Color.White,
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            if (hasLinkedSchedules)
+                                "Mode will stay active for this duration even if a schedule ends sooner"
+                            else
+                                "Mode will automatically deactivate after the time expires",
+                            fontSize = 10.sp,
+                            color = if (selectedOption == 1) Color(0xFF555555) else GuardianTheme.TextTertiary,
+                            letterSpacing = 0.5.sp
+                        )
+
+                        if (selectedOption == 1) {
+                            Spacer(Modifier.height(12.dp))
+
+                            // Quick presets
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(
+                                    Triple("0", "15", "15M"),
+                                    Triple("0", "30", "30M"),
+                                    Triple("1", "0", "1H"),
+                                    Triple("2", "0", "2H")
+                                ).forEach { (h, m, label) ->
+                                    val isSelected = timedHours == h && timedMinutes == m
+                                    Surface(
+                                        shape = RoundedCornerShape(0.dp),
+                                        color = if (isSelected) Color.Black else Color(0xFFEEEEEE),
+                                        onClick = { timedHours = h; timedMinutes = m }
+                                    ) {
+                                        Text(
+                                            label,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isSelected) Color.White else Color.Black,
+                                            letterSpacing = 1.sp,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(8.dp))
+
+                            // Hours + Minutes inputs
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = timedHours,
+                                    onValueChange = { newValue ->
+                                        if (newValue.all { it.isDigit() } && newValue.length <= 3) {
+                                            timedHours = newValue
+                                        }
+                                    },
+                                    placeholder = { Text("0", fontSize = 11.sp) },
+                                    label = { Text("HOURS", fontSize = 8.sp, letterSpacing = 1.sp) },
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.White,
+                                        unfocusedContainerColor = Color(0xFFF0F0F0),
+                                        focusedIndicatorColor = Color.Black,
+                                        unfocusedIndicatorColor = Color(0xFFCCCCCC),
+                                        cursorColor = Color.Black,
+                                        focusedTextColor = Color.Black,
+                                        unfocusedTextColor = Color.Black,
+                                        focusedLabelColor = Color(0xFF555555),
+                                        unfocusedLabelColor = Color(0xFF888888)
+                                    ),
+                                    shape = RoundedCornerShape(0.dp),
+                                    modifier = Modifier.width(72.dp),
+                                    singleLine = true
+                                )
+                                Text(
+                                    ":",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF555555)
+                                )
+                                OutlinedTextField(
+                                    value = timedMinutes,
+                                    onValueChange = { newValue ->
+                                        if (newValue.all { it.isDigit() } && newValue.length <= 3) {
+                                            timedMinutes = newValue
+                                        }
+                                    },
+                                    placeholder = { Text("30", fontSize = 11.sp) },
+                                    label = { Text("MINUTES", fontSize = 8.sp, letterSpacing = 1.sp) },
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.White,
+                                        unfocusedContainerColor = Color(0xFFF0F0F0),
+                                        focusedIndicatorColor = Color.Black,
+                                        unfocusedIndicatorColor = Color(0xFFCCCCCC),
+                                        cursorColor = Color.Black,
+                                        focusedTextColor = Color.Black,
+                                        unfocusedTextColor = Color.Black,
+                                        focusedLabelColor = Color(0xFF555555),
+                                        unfocusedLabelColor = Color(0xFF888888)
+                                    ),
+                                    shape = RoundedCornerShape(0.dp),
+                                    modifier = Modifier.width(80.dp),
+                                    singleLine = true
+                                )
+                            }
+
+                            // Show normalized result if minutes overflow
+                            if (totalMinutes > 0 && ((timedMinutes.toLongOrNull() ?: 0) >= 60)) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    "= ${normalizedH}H ${normalizedM}M",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF555555),
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (selectedOption == 1) {
+                        val deactivateAt = System.currentTimeMillis() + (totalMinutes * 60 * 1000)
+                        onActivate(deactivateAt)
+                    } else {
+                        onActivate(null)
+                    }
+                },
+                enabled = selectedOption == 0 || totalMinutes > 0
+            ) {
+                Text("ACTIVATE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         },
         dismissButton = {
