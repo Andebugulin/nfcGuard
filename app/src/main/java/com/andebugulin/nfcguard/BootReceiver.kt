@@ -67,6 +67,7 @@ class BootReceiver : BroadcastReceiver() {
                 }
 
                 AppLogger.log("BOOT", "BlockerService started after boot")
+                ScheduleAlarmReceiver.scheduleWatchdog(context)
             } catch (e: Exception) {
                 AppLogger.log("BOOT", "ERROR: ${e.javaClass.simpleName} - ${e.message}")
                 android.util.Log.e("BOOT_RECEIVER", "Error processing boot", e)

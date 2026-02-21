@@ -183,6 +183,7 @@ class BlockerService : Service() {
                 putExtra("mode_names", HashMap(modeNames))
             }
             context.startForegroundService(intent)
+            ScheduleAlarmReceiver.scheduleWatchdog(context)
             android.util.Log.d("BLOCKER_SERVICE", "--- Service start intent sent")
         }
 
@@ -359,7 +360,7 @@ class BlockerService : Service() {
 
             overlayAnimating = true
 
-            withContext(Dispatchers.Main) {
+            withContext(Dispatchers.Main + NonCancellable) {
                 try {
                     // Double-check in main thread
                     if (overlayView != null) {

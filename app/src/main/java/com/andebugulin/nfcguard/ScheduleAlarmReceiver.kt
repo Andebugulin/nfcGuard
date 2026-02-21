@@ -14,6 +14,29 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    private fun ensureServiceRunning(context: Context) {
+        if (BlockerService.isRunning()) {
+            AppLogger.log("ALARM", "Watchdog: service alive ✓")
+            return
+        }
+
+        val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
+        val stateJson = prefs.getString("app_state", null) ?: return
+
+        try {
+            val appState = json.decodeFromString<AppState>(stateJson)
+            if (appState.activeModes.isEmpty()) {
+                AppLogger.log("ALARM", "Watchdog: no active modes, skip")
+                return
+            }
+
+            AppLogger.log("ALARM", "Watchdog: SERVICE DEAD — restarting with ${appState.activeModes.size} active modes")
+            updateBlockerService(context, appState)
+        } catch (e: Exception) {
+            AppLogger.log("ALARM", "Watchdog restart error: ${e.message}")
+        }
+    }
+
     override fun onReceive(context: Context, intent: Intent) {
         AppLogger.init(context)  // Ensure logger is ready (receivers run independently)
         android.util.Log.d("SCHEDULE_ALARM", "=== ALARM RECEIVED ===")
@@ -22,6 +45,12 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
         android.util.Log.d("SCHEDULE_ALARM", "Time: ${java.util.Date()}")
 
         when (intent.action) {
+            ACTION_CHECK_SCHEDULE -> {
+                AppLogger.log("ALARM", "Watchdog CHECK fired")
+                ensureServiceRunning(context)
+                // Self-chain: schedule the next watchdog
+                scheduleWatchdog(context)
+            }
             ACTION_ACTIVATE_SCHEDULE -> {
                 val scheduleId = intent.getStringExtra(EXTRA_SCHEDULE_ID) ?: return
                 val day = intent.getIntExtra(EXTRA_DAY, -1)
@@ -29,7 +58,6 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 android.util.Log.d("SCHEDULE_ALARM", "Schedule ID: $scheduleId, Day: $day")
                 if (day != -1) {
                     activateSpecificSchedule(context, scheduleId, day)
-                    // Reschedule THIS SPECIFIC alarm for next week
                     scheduleAlarmForSchedule(context, scheduleId, day, isStart = true, forNextWeek = true)
                 }
             }
@@ -40,7 +68,6 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 android.util.Log.d("SCHEDULE_ALARM", "Schedule ID: $scheduleId, Day: $day")
                 if (day != -1) {
                     deactivateSpecificSchedule(context, scheduleId)
-                    // Reschedule THIS SPECIFIC alarm for next week
                     scheduleAlarmForSchedule(context, scheduleId, day, isStart = false, forNextWeek = true)
                 }
             }
@@ -205,6 +232,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     timedModeDeactivations = appState.timedModeDeactivations,
                     modeNames = modeNamesMap)
             }
+            scheduleWatchdog(context)
         } else {
             if (appState.schedules.isNotEmpty()) {
                 android.util.Log.d("SCHEDULE_ALARM", "No active modes, keeping service for schedules")
@@ -212,6 +240,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             } else {
                 android.util.Log.d("SCHEDULE_ALARM", "No modes or schedules, stopping service")
                 BlockerService.stop(context)
+                cancelWatchdog(context)
             }
         }
     }
@@ -268,6 +297,44 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
         private const val ACTION_TIMED_DEACTIVATE_MODE = "com.andebugulin.nfcguard.TIMED_DEACTIVATE_MODE"
         private const val EXTRA_SCHEDULE_ID = "schedule_id"
         private const val EXTRA_DAY = "day"
+
+        private const val ACTION_CHECK_SCHEDULE = "com.andebugulin.nfcguard.CHECK_SCHEDULE"
+        private const val WATCHDOG_INTERVAL_MS = 15L * 60 * 1000  // 15 minutes
+
+        fun scheduleWatchdog(context: Context) {
+            val intent = Intent(context, ScheduleAlarmReceiver::class.java).apply {
+                action = ACTION_CHECK_SCHEDULE
+            }
+            val pendingIntent = PendingIntent.getBroadcast(
+                context, 99999, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val triggerAt = System.currentTimeMillis() + WATCHDOG_INTERVAL_MS
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent
+                )
+            } else {
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
+            }
+            AppLogger.log("ALARM", "Watchdog scheduled for ${java.util.Date(triggerAt)}")
+        }
+
+        fun cancelWatchdog(context: Context) {
+            val intent = Intent(context, ScheduleAlarmReceiver::class.java).apply {
+                action = ACTION_CHECK_SCHEDULE
+            }
+            val pendingIntent = PendingIntent.getBroadcast(
+                context, 99999, intent,
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            )
+            pendingIntent?.let {
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                alarmManager.cancel(it)
+            }
+        }
 
         private fun scheduleAlarmForSchedule(
             context: Context,

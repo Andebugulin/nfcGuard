@@ -89,6 +89,7 @@ class ServiceRestartReceiver : BroadcastReceiver() {
                 appState.activeModes
             )
 
+            ScheduleAlarmReceiver.scheduleWatchdog(context)
             android.util.Log.d("SERVICE_RESTART", "✓✓✓ SERVICE RESTART COMPLETE ✓✓✓")
         } catch (e: Exception) {
             android.util.Log.e("SERVICE_RESTART", "❌❌❌ RESTART FAILED ❌❌❌")
