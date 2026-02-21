@@ -48,6 +48,8 @@ class MainActivity : ComponentActivity() {
     private var pendingIntent: PendingIntent? = null
     private var scannedNfcTagId = mutableStateOf<String?>(null)
     private var wrongTagScanned = mutableStateOf(false)
+    var nfcRegistrationMode = mutableStateOf(false)
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,7 +76,8 @@ class MainActivity : ComponentActivity() {
                 MainNavigation(
                     viewModel = viewModel,
                     scannedNfcTagId = scannedNfcTagId,
-                    wrongTagScanned = wrongTagScanned
+                    wrongTagScanned = wrongTagScanned,
+                    nfcRegistrationMode = nfcRegistrationMode
                 )
             }
         }
@@ -122,7 +125,7 @@ class MainActivity : ComponentActivity() {
                         val activeModes = appState.modes.filter { appState.activeModes.contains(it.id) }
                         val hasNfcLockedMode = activeModes.any { it.nfcTagId != null }
 
-                        if (hasNfcLockedMode) {
+                        if (hasNfcLockedMode && !nfcRegistrationMode.value) {
                             val validTag = activeModes.any { it.nfcTagId == tagId || it.nfcTagId == null }
                             if (!validTag && appState.activeModes.isNotEmpty()) {
                                 // Wrong tag scanned!
@@ -408,7 +411,8 @@ fun MinimalistTheme(content: @Composable () -> Unit) {
 fun MainNavigation(
     viewModel: GuardianViewModel,
     scannedNfcTagId: MutableState<String?>,
-    wrongTagScanned: MutableState<Boolean>
+    wrongTagScanned: MutableState<Boolean>,
+    nfcRegistrationMode: MutableState<Boolean>
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE) }
@@ -421,7 +425,7 @@ fun MainNavigation(
     // Handle NFC tag scans when modes are active (for unlocking)
     LaunchedEffect(scannedNfcTagId.value, appState.activeModes) {
         val tagId = scannedNfcTagId.value
-        if (tagId != null && appState.activeModes.isNotEmpty()) {
+        if (tagId != null && appState.activeModes.isNotEmpty() && !nfcRegistrationMode.value) {
             android.util.Log.d("MAIN_NAV", "NFC tag scanned with active modes - unlocking")
             viewModel.handleNfcTag(tagId)
             scannedNfcTagId.value = null
@@ -464,6 +468,7 @@ fun MainNavigation(
                 Screen.NFC_TAGS -> NfcTagsScreen(
                     viewModel = viewModel,
                     scannedNfcTagId = scannedNfcTagId,
+                    nfcRegistrationMode = nfcRegistrationMode,
                     onBack = { currentScreen = Screen.HOME }
                 )
                 Screen.INFO -> InfoScreen(

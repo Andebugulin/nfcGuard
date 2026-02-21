@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 fun NfcTagsScreen(
     viewModel: GuardianViewModel,
     scannedNfcTagId: MutableState<String?>,
+    nfcRegistrationMode: MutableState<Boolean>,
     onBack: () -> Unit
 ) {
     val appState by viewModel.appState.collectAsState()
@@ -31,6 +32,14 @@ fun NfcTagsScreen(
     var showDeleteConfirmDialog by remember { mutableStateOf<NfcTag?>(null) }
     var deleteConfirmText by remember { mutableStateOf("") }
     var deleteCountdown by remember { mutableStateOf(60) }
+
+    // Signal to MainActivity that we're registering — skip wrong-tag validation
+    LaunchedEffect(showAddDialog) {
+        nfcRegistrationMode.value = showAddDialog
+    }
+    DisposableEffect(Unit) {
+        onDispose { nfcRegistrationMode.value = false }
+    }
 
     LaunchedEffect(scannedNfcTagId.value) {
         val scannedId = scannedNfcTagId.value
