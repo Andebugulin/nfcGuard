@@ -15,6 +15,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +55,7 @@ fun NfcTagsScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary)) {
+    Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary).windowInsetsPadding(WindowInsets.systemBars)) {
         Column(Modifier.fillMaxSize()) {
             // Header
             Row(
@@ -386,15 +389,15 @@ fun NfcTagsScreen(
     if (showDeleteChallenge && pendingDeleteTag != null) {
         SafeRegimeChallengeDialog(
             actionDescription = "Deleting NFC tag ${pendingDeleteTag!!.name} while modes are active could make it impossible to deactivate them normally.",
-        onComplete = {
-            pendingDeleteTag?.let { viewModel.deleteNfcTag(it.id) }
-            showDeleteChallenge = false
-            pendingDeleteTag = null
-        },
-        onCancel = {
-            showDeleteChallenge = false
-            pendingDeleteTag = null
-        }
+            onComplete = {
+                pendingDeleteTag?.let { viewModel.deleteNfcTag(it.id) }
+                showDeleteChallenge = false
+                pendingDeleteTag = null
+            },
+            onCancel = {
+                showDeleteChallenge = false
+                pendingDeleteTag = null
+            }
         )
     }
 }
