@@ -62,6 +62,18 @@
                 android:value="App blocking service for digital wellbeing" />
         </service>
 
+        <service
+            android:name=".ForegroundDetectorService"
+            android:exported="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
         <!-- FileProvider for sharing bug reports -->
         <provider
             android:name="androidx.core.content.FileProvider"
