@@ -3,6 +3,7 @@ package com.andebugulin.nfcguard
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -92,7 +93,10 @@ fun HomeScreen(
             val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
             pm.isIgnoringBatteryOptimizations(context.packageName)
         } catch (_: Exception) { false }
-        usageStatsOk && overlayOk && batteryOk
+        val accessibilityOk = if (android.os.Build.MANUFACTURER.equals("Google", ignoreCase = true)) {
+            ForegroundDetectorService.isEnabled(context)
+        } else true
+        usageStatsOk && overlayOk && batteryOk && accessibilityOk
     }
 
     Column(
@@ -890,7 +894,22 @@ fun SettingsDialog(
                         }
                     )
                 }
-
+// Accessibility Service (optional - for Pixel recents fix)
+                val accessibilityGranted = remember(permRefreshKey) {
+                    ForegroundDetectorService.isEnabled(context)
+                }
+                PermissionRow(
+                    name = if (Build.MANUFACTURER.equals("Google", ignoreCase = true))
+                        "ACCESSIBILITY (RECOMMENDED)" else "ACCESSIBILITY (PIXEL DEVICES)",
+                    granted = accessibilityGranted,
+                    onClick = {
+                        try {
+                            context.startActivity(
+                                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                            )
+                        } catch (_: Exception) {}
+                    }
+                )
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(0.dp),

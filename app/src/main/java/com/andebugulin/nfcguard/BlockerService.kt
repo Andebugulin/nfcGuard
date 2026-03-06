@@ -293,17 +293,46 @@ class BlockerService : Service() {
         return CRITICAL_SYSTEM_APPS.contains(packageName)
     }
 
-
-    // Primary: original queryUsageStats (proven reliable and consistent)
-// Secondary: queryEvents ONLY to detect recents/system navigation
+    /**
+     * Detect the current foreground app.
+     *
+     * Strategy:
+     *   1. If AccessibilityService reports a fresh event (< 2s), trust it.
+     *   2. If AccessibilityService is stale BUT overlay is currently showing,
+     *      keep returning the last accessibility value — don't fall through to
+     *      UsageStatsManager which gives wrong results on Pixel after recents.
+     *      The overlay will only hide when accessibility fires a NEW event
+     *      with a different (non-blocked) package.
+     *   3. Otherwise fall back to UsageStatsManager.
+     */
     private fun getForegroundApp(): String? {
+        // ── PRIMARY: AccessibilityService (if available) ──
+        if (ForegroundDetectorService.isRunning) {
+            val accessibilityPkg = ForegroundDetectorService.lastDetectedPackage
+            val accessibilityTime = ForegroundDetectorService.lastDetectedTime
+            val age = System.currentTimeMillis() - accessibilityTime
+
+            if (accessibilityPkg != null && age < 2000) {
+                android.util.Log.v("BLOCKER_SERVICE",
+                    "   --- Accessibility source: $accessibilityPkg (${age}ms ago)")
+                return accessibilityPkg
+            }
+
+            // Stale accessibility data BUT overlay is showing — trust last value.
+            // This prevents UsageStatsManager (which reports launcher incorrectly
+            // on Pixel after recents) from hiding the overlay prematurely.
+            // The overlay will hide when accessibility fires a NEW different package.
+            if (accessibilityPkg != null && isOverlayShowing && activeModeIds.isNotEmpty()) {
+                android.util.Log.v("BLOCKER_SERVICE",
+                    "   --- Accessibility HELD (overlay showing): $accessibilityPkg (${age}ms ago)")
+                return accessibilityPkg
+            }
+        }
+
+        // ── FALLBACK: UsageStatsManager (original logic) ──
         val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val time = System.currentTimeMillis()
 
-        // Step 1: Query events for the last 60s to find the most recently resumed activity.
-        // We use queryEvents (not queryUsageStats) as the primary source because it reflects
-        // the actual foreground state even when the user is idle — queryUsageStats with a narrow
-        // window returns null after ~10s of inactivity, causing 25s+ activation delays.
         try {
             val usageEvents = usageStatsManager.queryEvents(time - 60_000, time)
             var lastResumedApp: String? = null
@@ -326,10 +355,7 @@ class BlockerService : Service() {
                 }
             }
 
-            // If the most recently resumed app is currently paused (user left it), fall through.
-            // If it's still resumed (no matching pause after it), it's the foreground app.
             if (lastResumedApp != null && lastResumedApp != lastPausedApp) {
-                // System/launcher = user is in recents/home, not in a blocked app
                 if (isCriticalSystemApp(lastResumedApp) || isSystemLauncher(lastResumedApp)) {
                     return lastResumedApp
                 }
@@ -339,8 +365,6 @@ class BlockerService : Service() {
             android.util.Log.e("BLOCKER_SERVICE", "queryEvents (primary) failed: ${e.message}")
         }
 
-        // Step 2: Fallback — queryUsageStats with a wider 5-minute window.
-        // Covers edge cases where queryEvents returns nothing (e.g. MIUI permission quirks).
         val stats = usageStatsManager.queryUsageStats(
             UsageStatsManager.INTERVAL_DAILY,
             time - 1000 * 60 * 5,
@@ -374,10 +398,6 @@ class BlockerService : Service() {
                     }
 
                     val shown = showOverlay()
-                    // Only mark as showing if addView actually succeeded.
-                    // showOverlay() returns false on failure (e.g. MIUI PermissionDenied),
-                    // so we must NOT set isOverlayShowing=true — otherwise all future
-                    // ticks see "already showing" and skip indefinitely.
                     isOverlayShowing = shown
                 } finally {
                     overlayAnimating = false
@@ -386,23 +406,12 @@ class BlockerService : Service() {
         }
     }
 
-    // CRITICAL FIX: Thread-safe overlay hiding with mutex.
-    // State flags are cleared ONLY inside the onComplete callback — i.e. after
-    // removeView actually executes — not before. This prevents the overlay from
-    // getting permanently stuck when withEndAction throws or is never called.
     private suspend fun hideOverlaySafe() {
         overlayMutex.withLock {
             if (!isOverlayShowing || overlayAnimating) {
                 return
             }
             overlayAnimating = true
-            // NonCancellable: prevents CancellationException (from double onStartCommand cancelling
-            // the old monitoring job) from aborting the hide mid-way and leaving overlayAnimating=true
-            // permanently. Without this, job A sets overlayAnimating=true, gets cancelled before
-            // hideOverlay() runs, and job B sees overlayAnimating=true forever.
-            //
-            // suspendCoroutine: holds the mutex until onComplete fires (animation done ~250ms),
-            // so state flags are guaranteed reset before the next hideOverlaySafe() call can enter.
             withContext(Dispatchers.Main + NonCancellable) {
                 suspendCoroutine { cont ->
                     hideOverlay(onComplete = {
@@ -448,7 +457,6 @@ class BlockerService : Service() {
 
             overlayView = createBlockerView()
 
-            // Start invisible and slightly scaled down
             overlayView?.apply {
                 alpha = 0f
                 scaleX = 0.95f
@@ -457,13 +465,12 @@ class BlockerService : Service() {
 
             windowManager?.addView(overlayView, params)
 
-            // Buttery smooth fade + scale animation
             overlayView?.animate()
                 ?.alpha(1f)
                 ?.scaleX(1f)
                 ?.scaleY(1f)
-                ?.setDuration(400)  // Slightly longer for smoothness
-                ?.setInterpolator(android.view.animation.DecelerateInterpolator(1.5f))  // Smooth deceleration
+                ?.setDuration(400)
+                ?.setInterpolator(android.view.animation.DecelerateInterpolator(1.5f))
                 ?.start()
 
             android.util.Log.d("BLOCKER_SERVICE", "------- OVERLAY SUCCESSFULLY SHOWN -------")
@@ -480,7 +487,6 @@ class BlockerService : Service() {
         }
     }
 
-    // onComplete is guaranteed to be called exactly once, whether removal succeeds or fails.
     private fun hideOverlay(onComplete: () -> Unit) {
         android.util.Log.d("BLOCKER_SERVICE", "------------------------------------------------------------------------------")
         android.util.Log.d("BLOCKER_SERVICE", "HIDING OVERLAY")
@@ -509,7 +515,6 @@ class BlockerService : Service() {
                 ?.setDuration(250)
                 ?.setInterpolator(android.view.animation.AccelerateInterpolator(1.2f))
                 ?.withEndAction {
-                    // Runs on main thread ~250ms later. State is cleared here.
                     try {
                         windowManager?.removeView(view)
                         overlayView = null
@@ -553,8 +558,7 @@ class BlockerService : Service() {
             }
 
             setOnTouchListener { _, event ->
-                android.util.Log.d("BLOCKER_SERVICE", "--‘† TOUCH EVENT DETECTED ON OVERLAY")
-                // Launch in monitoring scope to avoid creating extra coroutines
+                android.util.Log.d("BLOCKER_SERVICE", "--'† TOUCH EVENT DETECTED ON OVERLAY")
                 monitoringJob?.let { job ->
                     if (job.isActive) {
                         serviceScope.launch {
@@ -775,7 +779,6 @@ class BlockerService : Service() {
             }
         }
 
-        // Build expanded style with mode details
         val bigTextStyle = NotificationCompat.BigTextStyle()
         if (activeModeIds.isNotEmpty()) {
             val details = buildString {
@@ -884,20 +887,20 @@ class BlockerService : Service() {
         }
 
         // Force cleanup on destroy
-        runBlocking {
-            overlayMutex.withLock {
-                overlayView?.let { view ->
-                    try {
-                        withContext(Dispatchers.Main) {
-                            windowManager?.removeView(view)
-                        }
-                    } catch (e: Exception) {
-                        android.util.Log.e("BLOCKER_SERVICE", "Error cleaning up overlay: ${e.message}")
-                    }
-                    overlayView = null
-                    isOverlayShowing = false
-                }
+        // Force cleanup on destroy — runs on main thread already, so remove directly.
+        // Do NOT use overlayMutex here: hideOverlaySafe() may hold it waiting for
+        // an animation callback on this same main thread → deadlock.
+        try {
+            overlayView?.let { view ->
+                windowManager?.removeView(view)
+                overlayView = null
+                isOverlayShowing = false
+                android.util.Log.d("BLOCKER_SERVICE", "--- Overlay force-removed in onDestroy")
             }
+        } catch (e: Exception) {
+            android.util.Log.e("BLOCKER_SERVICE", "Error cleaning up overlay in onDestroy: ${e.message}")
+            overlayView = null
+            isOverlayShowing = false
         }
 
         serviceScope.cancel()
