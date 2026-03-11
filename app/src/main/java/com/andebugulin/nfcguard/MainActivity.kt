@@ -349,10 +349,12 @@ class MainActivity : ComponentActivity() {
 
                 val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
                 prefs.edit().putBoolean("initial_permissions_granted", true).apply()
+                showAccessibilityRecommendation()
             }
             .setNegativeButton("OK") { _, _ ->
                 val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
                 prefs.edit().putBoolean("initial_permissions_granted", true).apply()
+                showAccessibilityRecommendation()
             }
 
         val dialog = builder.create()
@@ -368,6 +370,53 @@ class MainActivity : ComponentActivity() {
         }
         dialog.show()
 
+        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.apply {
+            setTextColor(android.graphics.Color.WHITE)
+            setBackgroundColor(android.graphics.Color.BLACK)
+        }
+        dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.apply {
+            setTextColor(android.graphics.Color.parseColor("#808080"))
+            setBackgroundColor(android.graphics.Color.BLACK)
+        }
+    }
+
+    private fun showAccessibilityRecommendation() {
+        if (!android.os.Build.MANUFACTURER.equals("Google", ignoreCase = true)) return
+
+        val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("accessibility_recommendation_shown", false)) return
+        if (ForegroundDetectorService.isEnabled(this)) return
+
+        val builder = createStyledDialog(
+            "PIXEL DEVICE DETECTED",
+            "Android on Pixel phones has a known issue where app detection fails " +
+                    "after using the recent apps screen.\n\n" +
+                    "To ensure Guardian blocks apps reliably, please enable the " +
+                    "Accessibility Service permission.\n\n" +
+                    "Guardian only reads which app is in the foreground — it does NOT " +
+                    "read any screen content or personal data."
+        )
+            .setPositiveButton("OPEN SETTINGS") { _, _ ->
+                prefs.edit().putBoolean("accessibility_recommendation_shown", true).apply()
+                try {
+                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                } catch (_: Exception) {}
+            }
+            .setNegativeButton("SKIP") { _, _ ->
+                prefs.edit().putBoolean("accessibility_recommendation_shown", true).apply()
+            }
+            .setCancelable(false)
+
+        val dialog = builder.create()
+        dialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.black)
+            decorView.setBackgroundColor(android.graphics.Color.BLACK)
+            val drawable = android.graphics.drawable.GradientDrawable()
+            drawable.setColor(android.graphics.Color.BLACK)
+            drawable.setStroke(6, android.graphics.Color.parseColor("#340000"))
+            setBackgroundDrawable(drawable)
+        }
+        dialog.show()
         dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.apply {
             setTextColor(android.graphics.Color.WHITE)
             setBackgroundColor(android.graphics.Color.BLACK)
