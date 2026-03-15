@@ -93,7 +93,9 @@ fun HomeScreen(
             val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
             pm.isIgnoringBatteryOptimizations(context.packageName)
         } catch (_: Exception) { false }
-        val accessibilityOk = if (android.os.Build.MANUFACTURER.equals("Google", ignoreCase = true)) {
+        val accessibilityRequired = Build.MANUFACTURER.equals("Google", ignoreCase = true) ||
+                Build.MANUFACTURER.equals("Samsung", ignoreCase = true)
+        val accessibilityOk = if (accessibilityRequired) {
             ForegroundDetectorService.isEnabled(context)
         } else true
         usageStatsOk && overlayOk && batteryOk && accessibilityOk
@@ -894,14 +896,17 @@ fun SettingsDialog(
                         }
                     )
                 }
-// Accessibility Service (optional - for Pixel recents fix)
+// Accessibility Service — required on Google/Samsung, recommended elsewhere
                 val accessibilityGranted = remember(permRefreshKey) {
                     ForegroundDetectorService.isEnabled(context)
                 }
+                val accessibilityIsRequired = Build.MANUFACTURER.equals("Google", ignoreCase = true) ||
+                        Build.MANUFACTURER.equals("Samsung", ignoreCase = true)
                 PermissionRow(
-                    name = if (Build.MANUFACTURER.equals("Google", ignoreCase = true))
-                        "ACCESSIBILITY (RECOMMENDED)" else "ACCESSIBILITY (PIXEL DEVICES)",
+                    name = if (accessibilityIsRequired) "ACCESSIBILITY SERVICE"
+                    else "ACCESSIBILITY (RECOMMENDED)",
                     granted = accessibilityGranted,
+                    optional = !accessibilityIsRequired,
                     onClick = {
                         try {
                             context.startActivity(
@@ -1329,7 +1334,8 @@ fun SettingsDialog(
 private fun PermissionRow(
     name: String,
     granted: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    optional: Boolean = false
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1342,9 +1348,17 @@ private fun PermissionRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                if (granted) Icons.Default.CheckCircle else Icons.Default.Error,
+                when {
+                    granted -> Icons.Default.CheckCircle
+                    optional -> Icons.Default.Info
+                    else -> Icons.Default.Error
+                },
                 contentDescription = null,
-                tint = if (granted) GuardianTheme.Success else Color(0xFF8B0000),
+                tint = when {
+                    granted -> GuardianTheme.Success
+                    optional -> GuardianTheme.TextSecondary
+                    else -> Color(0xFF8B0000)
+                },
                 modifier = Modifier.size(16.dp)
             )
             Spacer(Modifier.width(10.dp))
@@ -1357,10 +1371,18 @@ private fun PermissionRow(
                 modifier = Modifier.weight(1f)
             )
             Text(
-                if (granted) "GRANTED" else "TAP TO GRANT",
+                when {
+                    granted -> "GRANTED"
+                    optional -> "TAP TO ENABLE"
+                    else -> "TAP TO GRANT"
+                },
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (granted) GuardianTheme.TextSecondary else Color(0xFF8B0000),
+                color = when {
+                    granted -> GuardianTheme.TextSecondary
+                    optional -> GuardianTheme.TextSecondary
+                    else -> Color(0xFF8B0000)
+                },
                 letterSpacing = 0.5.sp
             )
         }

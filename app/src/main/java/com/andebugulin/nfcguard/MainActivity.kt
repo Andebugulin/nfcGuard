@@ -175,7 +175,8 @@ class MainActivity : ComponentActivity() {
                         "- USAGE ACCESS - Detect which apps you're using\n\n" +
                         "- DISPLAY OVER APPS - Show the block screen\n\n" +
                         "- BATTERY OPTIMIZATION - Run reliably in background\n\n" +
-                        "- PAUSE APP ACTIVITY - Must be disabled for Guardian\n\n\n\n" +
+                        "- PAUSE APP ACTIVITY - Must be disabled for Guardian\n\n" +
+                        "- ACCESSIBILITY SERVICE - More reliable app detection\n\n\n\n" +
                         "Let's set these up now."
             )
             .setPositiveButton("CONTINUE") { _, _ ->
@@ -381,22 +382,40 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showAccessibilityRecommendation() {
-        if (!android.os.Build.MANUFACTURER.equals("Google", ignoreCase = true)) return
-
         val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
         if (prefs.getBoolean("accessibility_recommendation_shown", false)) return
         if (ForegroundDetectorService.isEnabled(this)) return
 
-        val builder = createStyledDialog(
-            "PIXEL DEVICE DETECTED",
-            "Android on Pixel phones has a known issue where app detection fails " +
-                    "after using the recent apps screen.\n\n" +
-                    "To ensure Guardian blocks apps reliably, please enable the " +
-                    "Accessibility Service permission.\n\n" +
-                    "Guardian only reads which app is in the foreground — it does NOT " +
-                    "read any screen content or personal data."
-        )
-            .setPositiveButton("OPEN SETTINGS") { _, _ ->
+        val manufacturer = android.os.Build.MANUFACTURER
+        val isRequired = manufacturer.equals("Google", ignoreCase = true) ||
+                manufacturer.equals("Samsung", ignoreCase = true)
+
+        val title = when {
+            manufacturer.equals("Google", ignoreCase = true) -> "PIXEL DEVICE DETECTED"
+            manufacturer.equals("Samsung", ignoreCase = true) -> "SAMSUNG DEVICE DETECTED"
+            else -> "IMPROVE RELIABILITY"
+        }
+
+        val message = when {
+            isRequired ->
+                "Your device has a known issue where app detection can fail " +
+                        "during certain transitions.\n\n" +
+                        "To ensure Guardian blocks apps reliably, please enable the " +
+                        "Accessibility Service permission.\n\n" +
+                        "Guardian only reads which app is in the foreground — it does NOT " +
+                        "read any screen content or personal data."
+            else ->
+                "Enabling the Accessibility Service makes app detection faster " +
+                        "and more reliable.\n\n" +
+                        "This is optional but recommended for the best experience.\n\n" +
+                        "Guardian only reads which app is in the foreground — it does NOT " +
+                        "read any screen content or personal data."
+        }
+
+        val positiveLabel = if (isRequired) "OPEN SETTINGS" else "ENABLE"
+
+        val builder = createStyledDialog(title, message)
+            .setPositiveButton(positiveLabel) { _, _ ->
                 prefs.edit().putBoolean("accessibility_recommendation_shown", true).apply()
                 try {
                     startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))

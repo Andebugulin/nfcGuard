@@ -103,7 +103,33 @@ class BlockerService : Service() {
         }
 
         lastCheckedApp = null
-        // Don't spawn new coroutine - just check immediately
+
+        // FIX: When no active modes arrive, force-hide any in-flight overlay
+        // immediately. This prevents the race condition where the OLD monitoring
+        // loop showed the overlay using stale blocklist data right before this
+        // intent was processed. Without this, the overlay flashes for ~400ms
+        // and on Samsung devices that flash kills the accessibility service.
+        if (activeModeIds.isEmpty()) {
+            android.util.Log.d("BLOCKER_SERVICE", "---- No active modes — force-hiding overlay if visible")
+            try {
+                overlayView?.let { view ->
+                    // Cancel any running animation first
+                    view.animate()?.cancel()
+                    windowManager?.removeView(view)
+                    overlayView = null
+                    isOverlayShowing = false
+                    overlayAnimating = false
+                    android.util.Log.d("BLOCKER_SERVICE", "---- Force-removed stale overlay on mode transition")
+                    AppLogger.log("SERVICE", "Force-removed stale overlay (0 active modes)")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("BLOCKER_SERVICE", "---- Error force-removing overlay: ${e.message}")
+                overlayView = null
+                isOverlayShowing = false
+                overlayAnimating = false
+            }
+        }
+
         startMonitoring()
 
         // Refresh notification to reflect current mode state
@@ -227,6 +253,15 @@ class BlockerService : Service() {
     }
 
     private suspend fun checkCurrentApp() {
+        // FIX: If no modes are active, nothing can possibly be blocked.
+        // Skip detection entirely to avoid the race condition where we
+        // evaluate with stale blocklist data during mode transitions.
+        if (activeModeIds.isEmpty() && blockedApps.isEmpty()) {
+            // Still hide overlay in case one is lingering from the race
+            hideOverlaySafe()
+            return
+        }
+
         val currentApp = getForegroundApp()
 
         android.util.Log.v("BLOCKER_SERVICE", "---- Current foreground app: $currentApp")
@@ -312,7 +347,7 @@ class BlockerService : Service() {
             val accessibilityTime = ForegroundDetectorService.lastDetectedTime
             val age = System.currentTimeMillis() - accessibilityTime
 
-            if (accessibilityPkg != null && age < 2000) {
+            if (accessibilityPkg != null && age < 5000) {
                 android.util.Log.v("BLOCKER_SERVICE",
                     "   --- Accessibility source: $accessibilityPkg (${age}ms ago)")
                 return accessibilityPkg
@@ -338,6 +373,7 @@ class BlockerService : Service() {
             var lastResumedApp: String? = null
             var lastResumedTime = 0L
             var lastPausedApp: String? = null
+            var lastPausedTime = 0L
             val event = android.app.usage.UsageEvents.Event()
 
             while (usageEvents.hasNextEvent()) {
@@ -350,16 +386,25 @@ class BlockerService : Service() {
                         }
                     }
                     android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED -> {
-                        lastPausedApp = event.packageName
+                        if (event.timeStamp >= lastPausedTime) {
+                            lastPausedApp = event.packageName
+                            lastPausedTime = event.timeStamp
+                        }
                     }
                 }
             }
 
-            if (lastResumedApp != null && lastResumedApp != lastPausedApp) {
-                if (isCriticalSystemApp(lastResumedApp) || isSystemLauncher(lastResumedApp)) {
+            // FIX: The old check `lastResumedApp != lastPausedApp` returns null
+            // when the same app is both last-resumed AND last-paused (e.g. Chrome
+            // was paused by the overlay then not resumed via a new event).
+            // Instead, compare timestamps: if resume happened AFTER pause, the
+            // app is still in the foreground.
+            if (lastResumedApp != null) {
+                val isStillForeground = lastResumedApp != lastPausedApp ||
+                        lastResumedTime >= lastPausedTime
+                if (isStillForeground) {
                     return lastResumedApp
                 }
-                return lastResumedApp
             }
         } catch (e: Exception) {
             android.util.Log.e("BLOCKER_SERVICE", "queryEvents (primary) failed: ${e.message}")
