@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — nfcGuard</title>
+<meta name="description" content="nfcGuard Privacy Policy. No data collected, no tracking, no servers.">
+<link rel="icon" href="assets/ic_launcher-playstore.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #000;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: #fff; color: #000; }
+a { color: #808080; transition: color 0.2s; }
+a:hover { color: #fff; }
+
+nav {
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: #fff;
+}
+.nav-brand img { width: 32px; height: 32px; }
+.nav-brand span {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.nav-back {
+  color: #808080;
+  text-decoration: none;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.nav-back:hover { color: #fff; }
+
+.content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 80px 24px 120px;
+}
+.label {
+  font-size: 10px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #808080;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.label::before {
+  content: '';
+  width: 40px;
+  height: 1px;
+  background: #404040;
+}
+h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(40px, 7vw, 72px);
+  letter-spacing: 4px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+.updated {
+  font-size: 11px;
+  color: #404040;
+  letter-spacing: 1px;
+  margin-bottom: 64px;
+}
+h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 48px 0 16px;
+  padding-top: 24px;
+  border-top: 1px solid #1a1a1a;
+}
+h2:first-of-type { border-top: none; margin-top: 0; }
+p {
+  font-size: 13px;
+  line-height: 1.9;
+  color: #808080;
+  margin-bottom: 16px;
+}
+p strong { color: #fff; font-weight: 700; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 12px;
+}
+th {
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid #404040;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #808080;
+}
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #1a1a1a;
+  color: #808080;
+  line-height: 1.6;
+  vertical-align: top;
+}
+td strong { color: #fff; }
+
+footer {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 32px 40px;
+  text-align: center;
+  font-size: 10px;
+  color: #404040;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 768px) {
+  nav { padding: 16px 24px; }
+  .content { padding: 48px 20px 80px; }
+  table { font-size: 11px; }
+  th, td { padding: 10px 8px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="./" class="nav-brand">
+    <img src="assets/ic_launcher-playstore.png" alt="nfcGuard" onerror="this.style.display='none'">
+    <span>nfcGuard</span>
+  </a>
+  <a href="./" class="nav-back">&larr; Back to Home</a>
+</nav>
+
+<div class="content">
+  <div class="label">Legal</div>
+  <h1>PRIVACY POLICY</h1>
+  <div class="updated">Last updated: February 2026</div>
+
+  <h2>Overview</h2>
+  <p>nfcGuard is a digital wellbeing app that blocks access to distracting applications on your Android device. This policy explains what data nfcGuard accesses and how it is handled.</p>
+
+  <h2>Data Collection</h2>
+  <p><strong>nfcGuard does not collect, transmit, or share any personal data.</strong></p>
+  <p>All data stays on your device. There are no servers, no analytics, no tracking, and no network requests made by nfcGuard.</p>
+
+  <h2>Data Stored on Device</h2>
+  <p>nfcGuard stores the following data locally on your device using Android SharedPreferences:</p>
+  <table>
+    <tr><td><strong>Mode configurations</strong></td><td>Names, selected apps, block mode type</td></tr>
+    <tr><td><strong>Schedule configurations</strong></td><td>Names, days, times, linked modes</td></tr>
+    <tr><td><strong>NFC tag identifiers</strong></td><td>Hardware IDs of registered NFC tags</td></tr>
+    <tr><td><strong>Runtime state</strong></td><td>Which modes and schedules are currently active</td></tr>
+  </table>
+  <p>This data never leaves your device unless you explicitly export it using the Export Config feature.</p>
+
+  <h2>Permissions</h2>
+  <table>
+    <tr><th>Permission</th><th>Purpose</th></tr>
+    <tr><td><strong>Usage Access</strong></td><td>Detect which app is currently in the foreground to determine if it should be blocked</td></tr>
+    <tr><td><strong>Display Over Apps</strong></td><td>Show a full-screen overlay when a blocked app is opened</td></tr>
+    <tr><td><strong>Battery Optimization Exemption</strong></td><td>Ensure the blocking service runs reliably in the background</td></tr>
+    <tr><td><strong>NFC</strong></td><td>Read NFC tag hardware IDs for mode activation/deactivation</td></tr>
+    <tr><td><strong>Foreground Service</strong></td><td>Keep the app blocking service running persistently</td></tr>
+    <tr><td><strong>Boot Completed</strong></td><td>Restart the blocking service and reschedule alarms after device reboot</td></tr>
+    <tr><td><strong>Exact Alarm</strong></td><td>Fire schedule start/end events at precise times</td></tr>
+  </table>
+  <p>nfcGuard does <strong>not</strong> request internet access for its own functionality. The INTERNET permission in the manifest is inherited from dependencies and is not actively used by the app.</p>
+
+  <h2>Third-Party Services</h2>
+  <p>nfcGuard does not integrate any third-party services, SDKs, analytics platforms, or advertising networks.</p>
+
+  <h2>Data Export</h2>
+  <p>When you use the Export Config feature, a JSON or YAML file is created and saved to a location you choose on your device. This file contains your mode, schedule, and NFC tag configurations. nfcGuard does not upload this file anywhere.</p>
+
+  <h2>Children's Privacy</h2>
+  <p>nfcGuard does not knowingly collect any data from children. The app does not collect data from anyone.</p>
+
+  <h2>Changes to This Policy</h2>
+  <p>If this policy is updated, the changes will be reflected in this document with an updated date.</p>
+
+  <h2>Contact</h2>
+  <p>If you have questions about this privacy policy, please open an issue on the <a href="https://github.com/Andebugulin/nfcGuard/issues" target="_blank">GitHub repository</a>.</p>
+</div>
+
+<footer>&copy; 2025 nfcGuard. Open source under MIT.</footer>
+
+</body>
+</html>

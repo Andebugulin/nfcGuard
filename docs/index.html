@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>nfcGuard — Physical Friction for Digital Wellbeing</title>
+<meta name="description" content="nfcGuard blocks distracting apps using NFC tags. Place a tag somewhere inconvenient — your kitchen, gym bag, a friend's house — and think twice before mindlessly scrolling.">
+<meta name="theme-color" content="#000000">
+<meta property="og:title" content="nfcGuard — Physical Friction for Digital Wellbeing">
+<meta property="og:description" content="Break free from mindless scrolling. Block distracting apps with NFC tags as physical keys.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/app/src/main/ic_launcher-playstore.png">
+<link rel="icon" href="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/app/src/main/ic_launcher-playstore.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --black: #000000;
+  --white: #FFFFFF;
+  --gray: #808080;
+  --gray-dark: #404040;
+  --gray-darker: #1a1a1a;
+  --red: #8B0000;
+  --green: #4CAF50;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-heading: 'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: var(--font-mono);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--white);
+  color: var(--black);
+}
+
+/* ═══ SCANLINE OVERLAY ═══ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255,255,255,0.008) 2px,
+    rgba(255,255,255,0.008) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ═══ GRID BACKGROUND ═══ */
+.grid-bg {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ═══ NAVIGATION ═══ */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(0,0,0,0.8);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  transition: all 0.3s ease;
+}
+
+nav.scrolled {
+  padding: 14px 40px;
+  background: rgba(0,0,0,0.95);
+  border-bottom-color: rgba(255,255,255,0.1);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--white);
+}
+
+.nav-brand img {
+  width: 32px;
+  height: 32px;
+}
+
+.nav-brand span {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.nav-links {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+}
+
+.nav-links a {
+  color: var(--gray);
+  text-decoration: none;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: color 0.2s;
+  font-weight: 500;
+}
+
+.nav-links a:hover { color: var(--white); }
+
+.nav-cta {
+  background: var(--white) !important;
+  color: var(--black) !important;
+  padding: 10px 24px !important;
+  font-weight: 700 !important;
+  display: inline-block;
+  transition: all 0.2s !important;
+}
+
+.nav-cta:hover {
+  background: var(--gray) !important;
+  color: var(--black) !important;
+}
+
+.mobile-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--gray-dark);
+  color: var(--white);
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  letter-spacing: 2px;
+}
+
+/* ═══ HERO ═══ */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 120px 40px 80px;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--gray-dark);
+  padding: 8px 20px;
+  margin-bottom: 40px;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gray);
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 0.8s 0.2s forwards;
+}
+
+.hero-badge .dot {
+  width: 6px;
+  height: 6px;
+  background: var(--green);
+  display: inline-block;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(80px, 15vw, 200px);
+  line-height: 0.9;
+  letter-spacing: 8px;
+  margin-bottom: 32px;
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fadeUp 0.8s 0.4s forwards;
+}
+
+.hero-subtitle {
+  font-family: var(--font-heading);
+  font-size: clamp(14px, 2vw, 20px);
+  font-weight: 600;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 40px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 0.8s 0.6s forwards;
+}
+
+.hero-desc {
+  max-width: 560px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--gray);
+  margin-bottom: 48px;
+  letter-spacing: 0.3px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 0.8s 0.8s forwards;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 0.8s 1s forwards;
+}
+
+.btn-primary {
+  background: var(--white);
+  color: var(--black);
+  padding: 16px 40px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-primary:hover {
+  background: var(--gray);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--white);
+  padding: 16px 40px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1px solid var(--gray-dark);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-secondary:hover {
+  border-color: var(--white);
+  transform: translateY(-2px);
+}
+
+.hero-scroll {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--gray-dark);
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: fadeUp 0.8s 1.4s forwards;
+}
+
+.scroll-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--gray-dark), transparent);
+  animation: scrollPulse 2s infinite;
+}
+
+@keyframes scrollPulse {
+  0%, 100% { opacity: 1; height: 40px; }
+  50% { opacity: 0.3; height: 30px; }
+}
+
+@keyframes fadeUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══ SECTIONS ═══ */
+section {
+  position: relative;
+  z-index: 1;
+  padding: 120px 40px;
+}
+
+.section-label {
+  font-size: 10px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.section-label::before {
+  content: '';
+  width: 40px;
+  height: 1px;
+  background: var(--gray-dark);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 7vw, 90px);
+  line-height: 1;
+  letter-spacing: 4px;
+  margin-bottom: 24px;
+}
+
+.section-desc {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--gray);
+  max-width: 540px;
+  letter-spacing: 0.3px;
+}
+
+/* ═══ REVEAL ANIMATION ═══ */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+
+/* ═══ PROBLEM SECTION ═══ */
+.problem {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.problem-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  margin-top: 64px;
+  align-items: center;
+}
+
+.stat-block {
+  border-left: 1px solid var(--gray-dark);
+  padding-left: 32px;
+  margin-bottom: 40px;
+}
+
+.stat-number {
+  font-family: var(--font-display);
+  font-size: 64px;
+  letter-spacing: 2px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gray);
+}
+
+.stat-desc {
+  font-size: 12px;
+  color: var(--gray-dark);
+  margin-top: 8px;
+  line-height: 1.6;
+}
+
+/* ═══ HOW IT WORKS ═══ */
+.how-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  border-top: 1px solid var(--gray-dark);
+  padding-top: 120px;
+}
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  margin-top: 64px;
+}
+
+.step {
+  background: var(--gray-darker);
+  padding: 48px 32px;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.step:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.step-number {
+  font-family: var(--font-display);
+  font-size: 72px;
+  color: rgba(255,255,255,0.06);
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  line-height: 1;
+}
+
+.step-icon {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--gray-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  font-size: 20px;
+}
+
+.step h3 {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.step p {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--gray);
+}
+
+/* ═══ FEATURES ═══ */
+.features-section {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-top: 64px;
+}
+
+.feature-card {
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 48px 36px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--white);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s;
+}
+
+.feature-card:hover::before {
+  transform: scaleX(1);
+}
+
+.feature-card:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.feature-icon {
+  font-size: 28px;
+  margin-bottom: 24px;
+  display: block;
+}
+
+.feature-card h3 {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.feature-card p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--gray);
+}
+
+/* ═══ SCREENSHOTS ═══ */
+.screenshots-section {
+  max-width: 1400px;
+  margin: 0 auto;
+  border-top: 1px solid var(--gray-dark);
+  padding-top: 120px;
+}
+
+.screenshots-strip {
+  display: flex;
+  gap: 24px;
+  margin-top: 64px;
+  overflow-x: auto;
+  padding-bottom: 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-dark) transparent;
+  scroll-snap-type: x mandatory;
+}
+
+.screenshots-strip::-webkit-scrollbar { height: 4px; }
+.screenshots-strip::-webkit-scrollbar-track { background: transparent; }
+.screenshots-strip::-webkit-scrollbar-thumb { background: var(--gray-dark); }
+
+.screenshot-item {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  text-align: center;
+}
+
+.screenshot-item img {
+  height: 480px;
+  width: auto;
+  border: 1px solid var(--gray-dark);
+  display: block;
+  transition: all 0.4s;
+  filter: brightness(0.9);
+}
+
+.screenshot-item:hover img {
+  filter: brightness(1);
+  border-color: var(--gray);
+}
+
+.screenshot-label {
+  margin-top: 16px;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gray-dark);
+}
+
+/* ═══ OPEN SOURCE BANNER ═══ */
+.oss-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+  border-top: 1px solid var(--gray-dark);
+  padding-top: 120px;
+}
+
+.oss-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--gray-dark);
+  padding: 12px 28px;
+  margin-bottom: 48px;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gray);
+}
+
+.oss-section .section-title {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.oss-section .section-desc {
+  margin: 0 auto 48px;
+  text-align: center;
+}
+
+.oss-stats {
+  display: flex;
+  justify-content: center;
+  gap: 64px;
+  margin-top: 48px;
+}
+
+.oss-stat {
+  text-align: center;
+}
+
+.oss-stat-num {
+  font-family: var(--font-display);
+  font-size: 48px;
+  letter-spacing: 2px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.oss-stat-label {
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gray);
+}
+
+/* ═══ CTA SECTION ═══ */
+.cta-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 160px 40px;
+}
+
+.cta-section .section-title {
+  margin-bottom: 16px;
+}
+
+.cta-tagline {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 48px;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ═══ FOOTER ═══ */
+footer {
+  position: relative;
+  z-index: 1;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 48px 40px;
+}
+
+.footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-left img {
+  width: 24px;
+  height: 24px;
+  opacity: 0.6;
+}
+
+.footer-left span {
+  font-size: 11px;
+  color: var(--gray-dark);
+  letter-spacing: 1px;
+}
+
+.footer-links {
+  display: flex;
+  gap: 32px;
+}
+
+.footer-links a {
+  color: var(--gray-dark);
+  text-decoration: none;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+
+.footer-links a:hover { color: var(--gray); }
+
+.footer-copy {
+  font-size: 10px;
+  color: var(--gray-dark);
+  letter-spacing: 1px;
+}
+
+/* ═══ MARQUEE ═══ */
+.marquee-strip {
+  overflow: hidden;
+  white-space: nowrap;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  padding: 16px 0;
+  position: relative;
+  z-index: 1;
+}
+
+.marquee-inner {
+  display: inline-flex;
+  animation: marquee 40s linear infinite;
+}
+
+.marquee-inner span {
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 8px;
+  color: var(--gray-dark);
+  padding: 0 40px;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ═══ NFC ANIMATION (HERO VISUAL) ═══ */
+.hero-visual {
+  margin-top: 64px;
+  opacity: 0;
+  animation: fadeUp 0.8s 1.2s forwards;
+}
+
+.nfc-anim {
+  width: 200px;
+  height: 200px;
+  position: relative;
+  margin: 0 auto;
+}
+
+.nfc-ring {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 50%;
+  animation: nfcPulse 3s ease-out infinite;
+}
+
+.nfc-ring:nth-child(2) {
+  inset: 20px;
+  animation-delay: 0.5s;
+}
+
+.nfc-ring:nth-child(3) {
+  inset: 40px;
+  animation-delay: 1s;
+}
+
+.nfc-core {
+  position: absolute;
+  inset: 60px;
+  border: 2px solid var(--white);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nfc-core svg {
+  width: 36px;
+  height: 36px;
+  fill: var(--white);
+}
+
+@keyframes nfcPulse {
+  0% { transform: scale(1); opacity: 0.3; }
+  50% { opacity: 0.1; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 1024px) {
+  .steps-grid { grid-template-columns: repeat(2, 1fr); }
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .problem-grid { gap: 48px; }
+}
+
+@media (max-width: 768px) {
+  section { padding: 80px 24px; }
+  nav { padding: 16px 24px; }
+  .nav-links { display: none; }
+  .nav-links.open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.98);
+    padding: 24px;
+    border-bottom: 1px solid var(--gray-dark);
+    gap: 20px;
+  }
+  .mobile-toggle { display: block; }
+  .hero { padding: 100px 24px 60px; min-height: auto; min-height: 100svh; }
+  .hero h1 { letter-spacing: 4px; }
+  .problem-grid { grid-template-columns: 1fr; gap: 48px; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .features-grid { grid-template-columns: 1fr; }
+  .stat-number { font-size: 48px; }
+  .oss-stats { gap: 32px; flex-wrap: wrap; }
+  .screenshot-item img { height: 360px; }
+  .cta-section { padding: 100px 24px; }
+  .footer-inner { flex-direction: column; text-align: center; }
+  .footer-links { flex-wrap: wrap; justify-content: center; gap: 20px; }
+}
+
+@media (max-width: 480px) {
+  .hero h1 { letter-spacing: 2px; }
+  .hero-actions { flex-direction: column; width: 100%; }
+  .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+  .cta-buttons { flex-direction: column; align-items: center; }
+  .cta-buttons .btn-primary, .cta-buttons .btn-secondary { width: 100%; max-width: 320px; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<!-- ═══ NAVIGATION ═══ -->
+<nav id="nav">
+  <a href="#" class="nav-brand">
+    <img src="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/app/src/main/ic_launcher-playstore.png" alt="nfcGuard" onerror="this.style.display='none'">
+    <span>nfcGuard</span>
+  </a>
+  <div class="nav-links" id="navLinks">
+    <a href="#problem">Why</a>
+    <a href="#how">How it Works</a>
+    <a href="#features">Features</a>
+    <a href="#screenshots">Screenshots</a>
+    <a href="https://github.com/Andebugulin/nfcGuard" target="_blank">GitHub</a>
+    <a href="#download" class="nav-cta">Download</a>
+  </div>
+  <button class="mobile-toggle" id="mobileToggle" aria-label="Menu">MENU</button>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="dot"></span>
+    Open Source &middot; Free Forever
+  </div>
+  <h1>nfcGuard</h1>
+  <div class="hero-subtitle">Physical Friction for Digital Wellbeing</div>
+  <p class="hero-desc">
+    Block distracting apps with NFC tags as physical keys. Place a tag somewhere inconvenient — your kitchen, gym bag, a friend's house — and think twice before mindlessly scrolling.
+  </p>
+  <div class="hero-actions">
+    <a href="https://play.google.com/store/apps/details?id=com.andebugulin.nfcguard" class="btn-primary" target="_blank">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5v-17c0-.83.52-1.28 1-1.5l10 10-10 10c-.48-.22-1-.67-1-1.5zm14.5-8.5L6.27 2.15l-.03-.02L15.5 10.5l2-1.5zm-2 2L6.24 21.87l.03-.02L15.5 13.5l-2-1.5zM21 12l-3-2-2.5 2L18 14l3-2z"/></svg>
+      Get on Google Play
+    </a>
+    <a href="https://github.com/Andebugulin/nfcGuard" target="_blank" class="btn-secondary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.605-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12"/></svg>
+      View Source
+    </a>
+  </div>
+  <div class="hero-visual">
+    <div class="nfc-anim">
+      <div class="nfc-ring"></div>
+      <div class="nfc-ring"></div>
+      <div class="nfc-ring"></div>
+      <div class="nfc-core">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.37-1-1.72V8h3v8H8V8h2V6H6v12h12V6z"/></svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ MARQUEE ═══ -->
+<div class="marquee-strip">
+  <div class="marquee-inner">
+    <span>NFC TAGS</span><span>&bull;</span>
+    <span>BLOCK MODES</span><span>&bull;</span>
+    <span>SCHEDULES</span><span>&bull;</span>
+    <span>OPEN SOURCE</span><span>&bull;</span>
+    <span>DIGITAL WELLBEING</span><span>&bull;</span>
+    <span>PHYSICAL FRICTION</span><span>&bull;</span>
+    <span>FOCUS</span><span>&bull;</span>
+    <span>ANDROID</span><span>&bull;</span>
+    <span>NFC TAGS</span><span>&bull;</span>
+    <span>BLOCK MODES</span><span>&bull;</span>
+    <span>SCHEDULES</span><span>&bull;</span>
+    <span>OPEN SOURCE</span><span>&bull;</span>
+    <span>DIGITAL WELLBEING</span><span>&bull;</span>
+    <span>PHYSICAL FRICTION</span><span>&bull;</span>
+    <span>FOCUS</span><span>&bull;</span>
+    <span>ANDROID</span><span>&bull;</span>
+  </div>
+</div>
+
+<!-- ═══ PROBLEM ═══ -->
+<section id="problem" class="problem">
+  <div class="reveal">
+    <div class="section-label">The Problem</div>
+    <div class="section-title">YOUR WILLPOWER<br>ISN'T ENOUGH</div>
+    <p class="section-desc">
+      The average person unlocks their phone 150+ times a day. App blockers that use timers, PIN codes, or "are you sure?" prompts fail because the override is always one tap away. nfcGuard is different.
+    </p>
+  </div>
+
+  <div class="problem-grid">
+    <div>
+      <div class="stat-block reveal reveal-delay-1">
+        <div class="stat-number">150+</div>
+        <div class="stat-label">Daily Phone Unlocks</div>
+        <div class="stat-desc">Most are unconscious — muscle memory, not intention.</div>
+      </div>
+      <div class="stat-block reveal reveal-delay-2">
+        <div class="stat-number">4.5H</div>
+        <div class="stat-label">Average Screen Time</div>
+        <div class="stat-desc">Hours spent on apps designed to be addictive.</div>
+      </div>
+      <div class="stat-block reveal reveal-delay-3">
+        <div class="stat-number">88%</div>
+        <div class="stat-label">Override Rate</div>
+        <div class="stat-desc">Software-only blockers get bypassed almost immediately.</div>
+      </div>
+    </div>
+    <div class="reveal reveal-delay-2" style="border: 1px solid var(--gray-dark); padding: 48px;">
+      <div style="font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--gray); margin-bottom: 24px;">nfcGuard's Approach</div>
+      <div style="font-family: var(--font-heading); font-size: 24px; font-weight: 700; letter-spacing: 1px; margin-bottom: 20px;">Physical friction changes the equation.</div>
+      <p style="font-size: 13px; line-height: 1.8; color: var(--gray);">
+        When unlocking requires walking to another room to tap an NFC tag, the cost of giving in becomes real. You don't need more willpower — you need a better system.
+      </p>
+      <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--gray-dark);">
+        <div style="font-size: 10px; letter-spacing: 3px; color: var(--gray-dark); text-transform: uppercase; margin-bottom: 12px;">The result</div>
+        <div style="font-family: var(--font-display); font-size: 36px;">INTENTIONAL USAGE</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ HOW IT WORKS ═══ -->
+<section id="how" class="how-section">
+  <div class="reveal">
+    <div class="section-label">How It Works</div>
+    <div class="section-title">FOUR STEPS<br>TO FOCUS</div>
+  </div>
+  <div class="steps-grid">
+    <div class="step reveal reveal-delay-1">
+      <div class="step-number">01</div>
+      <div class="step-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="0"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15" x2="12" y2="15"/></svg>
+      </div>
+      <h3>Create Modes</h3>
+      <p>Choose apps to block — or allow only essential ones. Create different modes for work, sleep, study, or any context.</p>
+    </div>
+    <div class="step reveal reveal-delay-2">
+      <div class="step-number">02</div>
+      <div class="step-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="0"/><circle cx="12" cy="12" r="3"/><line x1="6" y1="12" x2="6" y2="12.01"/></svg>
+      </div>
+      <h3>Link NFC Tags</h3>
+      <p>Register physical NFC tags as unlock keys. Place them in inconvenient locations — your kitchen, gym, or a friend's house.</p>
+    </div>
+    <div class="step reveal reveal-delay-3">
+      <div class="step-number">03</div>
+      <div class="step-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <h3>Set Schedules</h3>
+      <p>Automate blocking with per-day schedules. Different times for weekdays vs weekends. Set it and forget it.</p>
+    </div>
+    <div class="step reveal reveal-delay-4">
+      <div class="step-number">04</div>
+      <div class="step-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+      </div>
+      <h3>Stay Focused</h3>
+      <p>Blocked apps show a full-screen overlay. To unlock, physically walk to your NFC tag and tap. Friction is the feature.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FEATURES ═══ -->
+<section id="features" class="features-section">
+  <div class="reveal">
+    <div class="section-label">Features</div>
+    <div class="section-title">BUILT TO<br>BE UNBEATABLE</div>
+    <p class="section-desc">
+      Every feature is designed around one principle: make it physically harder to give in to distraction.
+    </p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card reveal reveal-delay-1">
+      <span class="feature-icon">⊘</span>
+      <h3>Block Mode</h3>
+      <p>Block specific distracting apps while everything else stays accessible. Target Instagram, TikTok, YouTube — whatever your weaknesses.</p>
+    </div>
+    <div class="feature-card reveal reveal-delay-2">
+      <span class="feature-icon">◉</span>
+      <h3>Allow Mode</h3>
+      <p>Nuclear option. Block everything except a whitelist of essential apps. Only phone, messages, and maps? Done.</p>
+    </div>
+    <div class="feature-card reveal reveal-delay-3">
+      <span class="feature-icon">⬡</span>
+      <h3>NFC Tag Lock</h3>
+      <p>Each mode can require a specific NFC tag to unlock. Wrong tag? Denied. No tag linked? Any NFC device works.</p>
+    </div>
+    <div class="feature-card reveal reveal-delay-1">
+      <span class="feature-icon">⏀</span>
+      <h3>Smart Schedules</h3>
+      <p>Per-day configuration with different start and end times. Auto-activate for work hours, auto-release when you're done.</p>
+    </div>
+    <div class="feature-card reveal reveal-delay-2">
+      <span class="feature-icon">↻</span>
+      <h3>Persistent Service</h3>
+      <p>Survives reboots, task kills, and app restarts. nfcGuard comes back every time. No escape routes.</p>
+    </div>
+    <div class="feature-card reveal reveal-delay-3">
+      <span class="feature-icon">⚿</span>
+      <h3>Emergency Reset</h3>
+      <p>Lost your tag? A 60-second cooldown + confirmation text safety flow lets you recover without losing your configurations.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SCREENSHOTS ═══ -->
+<section id="screenshots" class="screenshots-section">
+  <div class="reveal">
+    <div class="section-label">App Preview</div>
+    <div class="section-title">SEE IT<br>IN ACTION</div>
+  </div>
+  <div class="screenshots-strip reveal">
+    <div class="screenshot-item">
+      <img src="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/assets/nfcGuard_home_screen.png" alt="Home Screen" loading="lazy">
+      <div class="screenshot-label">Home</div>
+    </div>
+    <div class="screenshot-item">
+      <img src="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/assets/nfcGuard_modes_screen.png" alt="Modes Screen" loading="lazy">
+      <div class="screenshot-label">Modes</div>
+    </div>
+    <div class="screenshot-item">
+      <img src="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/assets/nfcGuard_schedules_screen.png" alt="Schedules Screen" loading="lazy">
+      <div class="screenshot-label">Schedules</div>
+    </div>
+    <div class="screenshot-item">
+      <img src="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/assets/nfcGuard_nfctags_screen.png" alt="NFC Tags Screen" loading="lazy">
+      <div class="screenshot-label">NFC Tags</div>
+    </div>
+    <div class="screenshot-item">
+      <img src="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/assets/nfcGuard_settings_screen.png" alt="Settings Screen" loading="lazy">
+      <div class="screenshot-label">Settings</div>
+    </div>
+    <div class="screenshot-item">
+      <img src="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/assets/nfcGuard_app_with_overlay.png" alt="Blocking Overlay" loading="lazy">
+      <div class="screenshot-label">Blocking</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ OPEN SOURCE ═══ -->
+<section class="oss-section">
+  <div class="reveal">
+    <div class="oss-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.605-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12"/></svg>
+      Free &middot; Open Source &middot; MIT License
+    </div>
+    <div class="section-title">BUILT IN THE OPEN</div>
+    <p class="section-desc">
+      nfcGuard is fully open source. Inspect the code, submit issues, contribute features. No tracking, no ads, no subscriptions.
+    </p>
+  </div>
+  <div class="oss-stats reveal">
+    <div class="oss-stat">
+      <div class="oss-stat-num">100%</div>
+      <div class="oss-stat-label">Kotlin</div>
+    </div>
+    <div class="oss-stat">
+      <div class="oss-stat-num">0</div>
+      <div class="oss-stat-label">Ads / Tracking</div>
+    </div>
+    <div class="oss-stat">
+      <div class="oss-stat-num">FREE</div>
+      <div class="oss-stat-label">Forever</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ DOWNLOAD CTA ═══ -->
+<section id="download" class="cta-section">
+  <div class="reveal">
+    <div class="section-title">TAKE BACK<br>YOUR TIME</div>
+    <div class="cta-tagline">Android 8.0+ &middot; NFC Required</div>
+    <div class="cta-buttons">
+      <a href="https://play.google.com/store/apps/details?id=com.andebugulin.nfcguard" class="btn-primary" target="_blank">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20.5v-17c0-.83.52-1.28 1-1.5l10 10-10 10c-.48-.22-1-.67-1-1.5zm14.5-8.5L6.27 2.15l-.03-.02L15.5 10.5l2-1.5zm-2 2L6.24 21.87l.03-.02L15.5 13.5l-2-1.5zM21 12l-3-2-2.5 2L18 14l3-2z"/></svg>
+        Google Play
+      </a>
+      <a href="https://github.com/Andebugulin/nfcGuard/releases/latest" class="btn-secondary" target="_blank">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download APK
+      </a>
+      <a href="https://github.com/Andebugulin/nfcGuard" class="btn-secondary" target="_blank">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.605-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12"/></svg>
+        Star on GitHub
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <img src="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/app/src/main/ic_launcher-playstore.png" alt="nfcGuard" onerror="this.style.display='none'">
+      <span>NFCGUARD</span>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/Andebugulin/nfcGuard" target="_blank">GitHub</a>
+      <a href="https://github.com/Andebugulin/nfcGuard/releases" target="_blank">Releases</a>
+      <a href="https://github.com/Andebugulin/nfcGuard/issues" target="_blank">Issues</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+    <div class="footer-copy">&copy; 2025 nfcGuard. Open source under MIT.</div>
+  </div>
+</footer>
+
+<script>
+// ═══ SCROLL REVEAL ═══
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ═══ NAV SCROLL EFFECT ═══
+const nav = document.getElementById('nav');
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 60);
+  lastScroll = window.scrollY;
+}, { passive: true });
+
+// ═══ MOBILE MENU ═══
+const toggle = document.getElementById('mobileToggle');
+const links = document.getElementById('navLinks');
+toggle.addEventListener('click', () => {
+  links.classList.toggle('open');
+  toggle.textContent = links.classList.contains('open') ? 'CLOSE' : 'MENU';
+});
+
+// Close mobile menu on link click
+links.querySelectorAll('a').forEach(a => {
+  a.addEventListener('click', () => {
+    links.classList.remove('open');
+    toggle.textContent = 'MENU';
+  });
+});
+
+// ═══ SMOOTH SCROLL FOR ANCHOR LINKS ═══
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+</script>
+</body>
+</html>
