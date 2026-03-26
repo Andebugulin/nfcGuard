@@ -905,8 +905,7 @@ class BlockerService : Service() {
                         .mapNotNull { timedModeDeactivations[it] }
                         .minOrNull()
                     if (nextExpiry != null) {
-                        val remaining = (nextExpiry - System.currentTimeMillis()) / 60000
-                        if (remaining > 0) append(" · ${remaining}m left")
+                        append(" · until ${formatNotificationTime(nextExpiry)}")
                     }
                 }
             }
@@ -914,15 +913,27 @@ class BlockerService : Service() {
 
         val bigTextStyle = NotificationCompat.BigTextStyle()
         if (activeModeIds.isNotEmpty()) {
+            // Resolve mode names: prefer the intent-passed map, fall back to SharedPreferences
+            val resolvedNames = if (modeNames.isNotEmpty()) modeNames else {
+                try {
+                    val prefs = getSharedPreferences("guardian_prefs", MODE_PRIVATE)
+                    val stateJson = prefs.getString("app_state", null)
+                    if (stateJson != null) {
+                        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                        val state = json.decodeFromString<AppState>(stateJson)
+                        state.modes.associate { it.id to it.name }
+                    } else emptyMap()
+                } catch (_: Exception) { emptyMap() }
+            }
             val details = buildString {
                 activeModeIds.forEach { modeId ->
-                    val name = modeNames[modeId]?.uppercase() ?: modeId.take(8)
+                    val name = resolvedNames[modeId]?.uppercase() ?: modeId.take(8)
                     val isManual = manuallyActivatedModeIds.contains(modeId)
                     val isTimed = timedModeDeactivations.containsKey(modeId)
                     append("• $name")
                     if (isManual && isTimed) {
-                        val remaining = ((timedModeDeactivations[modeId] ?: 0) - System.currentTimeMillis()) / 60000
-                        append(" — manual, ${remaining}m left")
+                        val endTime = timedModeDeactivations[modeId] ?: 0
+                        append(" — manual, until ${formatNotificationTime(endTime)}")
                     } else if (isManual) {
                         append(" — manual (NFC to unlock)")
                     } else {
@@ -943,6 +954,11 @@ class BlockerService : Service() {
             .setOngoing(true)
             .setContentIntent(pendingIntent)
             .build()
+    }
+
+    private fun formatNotificationTime(epochMillis: Long): String {
+        val cal = java.util.Calendar.getInstance().apply { timeInMillis = epochMillis }
+        return String.format("%02d:%02d:%02d", cal.get(java.util.Calendar.HOUR_OF_DAY), cal.get(java.util.Calendar.MINUTE), cal.get(java.util.Calendar.SECOND))
     }
 
     private fun createNotificationChannel() {

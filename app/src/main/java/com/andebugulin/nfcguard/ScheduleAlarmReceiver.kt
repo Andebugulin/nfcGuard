@@ -142,6 +142,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
             android.util.Log.d("SCHEDULE_ALARM", "- Active schedules: $newActiveSchedules")
             updateBlockerService(context, newState)
+            GuardianWidget.notifyAllWidgets(context)
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error activating schedule: ${e.message}", e)
         }
@@ -197,6 +198,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             android.util.Log.d("SCHEDULE_ALARM", "- Active modes updated to: $newActiveModes")
 
             updateBlockerService(context, newState)
+            GuardianWidget.notifyAllWidgets(context)
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error deactivating schedule: ${e.message}", e)
         }
@@ -292,6 +294,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             prefs.edit().putString("app_state", newStateJson).apply()
 
             updateBlockerService(context, newState)
+            GuardianWidget.notifyAllWidgets(context)
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error deactivating timed mode: ${e.message}", e)
         }
@@ -350,6 +353,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             prefs.edit().putString("app_state", newStateJson).apply()
 
             updateBlockerService(context, newState)
+            GuardianWidget.notifyAllWidgets(context)
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error reactivating timed mode: ${e.message}", e)
         }

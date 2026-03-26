@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">nfcGuard</string>
     <string name="accessibility_service_description">Guardian uses this to reliably detect which app is in the foreground. This is needed on some devices (like Pixel) where the standard detection method fails when returning from the recent apps screen. Guardian does NOT read any screen content or user data.</string>
+    <string name="widget_description">Quickly activate Guardian modes from your home screen</string>
 </resources>

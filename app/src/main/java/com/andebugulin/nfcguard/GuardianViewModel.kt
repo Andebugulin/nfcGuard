@@ -182,6 +182,9 @@ class GuardianViewModel : ViewModel() {
 
         // IMPORTANT: Reschedule alarms when state changes
         ScheduleAlarmReceiver.scheduleAllUpcomingAlarms(context)
+
+        // Refresh home screen widget
+        GuardianWidget.notifyAllWidgets(context)
     }
 
     private fun updateBlockerService() {
