@@ -77,6 +77,12 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 AppLogger.log("ALARM", "Timed deactivation alarm for mode $modeId")
                 deactivateTimedMode(context, modeId)
             }
+            ACTION_TIMED_REACTIVATE_MODE -> {
+                val modeId = intent.getStringExtra("mode_id") ?: return
+                android.util.Log.d("SCHEDULE_ALARM", "- TIMED REACTIVATE alarm fired for mode $modeId")
+                AppLogger.log("ALARM", "Timed reactivation alarm for mode $modeId")
+                reactivateTimedMode(context, modeId)
+            }
         }
     }
 
@@ -291,10 +297,69 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
         }
     }
 
+    private fun reactivateTimedMode(context: Context, modeId: String) {
+        android.util.Log.d("SCHEDULE_ALARM", ">>> Reactivating timed mode $modeId")
+        AppLogger.log("ALARM", "Reactivating timed mode $modeId")
+        val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
+        val stateJson = prefs.getString("app_state", null) ?: return
+
+        try {
+            val appState = json.decodeFromString<AppState>(stateJson)
+
+            if (appState.activeModes.contains(modeId)) {
+                android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId already active, just cleaning up reactivation timer")
+                val newState = appState.copy(
+                    timedModeReactivations = appState.timedModeReactivations - modeId
+                )
+                val newStateJson = json.encodeToString(newState)
+                prefs.edit().putString("app_state", newStateJson).apply()
+                return
+            }
+
+            val mode = appState.modes.find { it.id == modeId }
+            if (mode == null) {
+                android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId not found, cleaning up")
+                val newState = appState.copy(
+                    timedModeReactivations = appState.timedModeReactivations - modeId
+                )
+                val newStateJson = json.encodeToString(newState)
+                prefs.edit().putString("app_state", newStateJson).apply()
+                return
+            }
+
+            // Check for BLOCK/ALLOW conflict
+            val currentlyActiveModes = appState.modes.filter { appState.activeModes.contains(it.id) }
+            if (currentlyActiveModes.isNotEmpty() && currentlyActiveModes.any { it.blockMode != mode.blockMode }) {
+                android.util.Log.w("SCHEDULE_ALARM", "Reactivation conflict for ${mode.name} — skipping")
+                AppLogger.log("ALARM", "CONFLICT: Skipping reactivation of ${mode.name}")
+                val newState = appState.copy(
+                    timedModeReactivations = appState.timedModeReactivations - modeId
+                )
+                val newStateJson = json.encodeToString(newState)
+                prefs.edit().putString("app_state", newStateJson).apply()
+                return
+            }
+
+            AppLogger.log("ALARM", "Reactivating mode '${mode.name}' after timed unlock expired")
+            val newState = appState.copy(
+                activeModes = appState.activeModes + modeId,
+                timedModeReactivations = appState.timedModeReactivations - modeId
+            )
+
+            val newStateJson = json.encodeToString(newState)
+            prefs.edit().putString("app_state", newStateJson).apply()
+
+            updateBlockerService(context, newState)
+        } catch (e: Exception) {
+            android.util.Log.e("SCHEDULE_ALARM", "Error reactivating timed mode: ${e.message}", e)
+        }
+    }
+
     companion object {
         private const val ACTION_ACTIVATE_SCHEDULE = "com.andebugulin.nfcguard.ACTIVATE_SCHEDULE"
         private const val ACTION_DEACTIVATE_SCHEDULE = "com.andebugulin.nfcguard.DEACTIVATE_SCHEDULE"
         private const val ACTION_TIMED_DEACTIVATE_MODE = "com.andebugulin.nfcguard.TIMED_DEACTIVATE_MODE"
+        private const val ACTION_TIMED_REACTIVATE_MODE = "com.andebugulin.nfcguard.TIMED_REACTIVATE_MODE"
         private const val EXTRA_SCHEDULE_ID = "schedule_id"
         private const val EXTRA_DAY = "day"
 

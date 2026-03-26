@@ -492,15 +492,30 @@ fun MainNavigation(
     }
     var currentScreen by remember { mutableStateOf(Screen.HOME) }
     val appState by viewModel.appState.collectAsState()
+    val pendingUnlock by viewModel.pendingUnlock.collectAsState()
 
     // Handle NFC tag scans when modes are active (for unlocking)
     LaunchedEffect(scannedNfcTagId.value, appState.activeModes) {
         val tagId = scannedNfcTagId.value
         if (tagId != null && appState.activeModes.isNotEmpty() && !nfcRegistrationMode.value) {
-            android.util.Log.d("MAIN_NAV", "NFC tag scanned with active modes - unlocking")
+            android.util.Log.d("MAIN_NAV", "NFC tag scanned with active modes - showing unlock dialog")
             viewModel.handleNfcTag(tagId)
             scannedNfcTagId.value = null
         }
+    }
+
+    // Show unlock duration dialog when pending
+    pendingUnlock?.let { pending ->
+        val modeNames = pending.modeIds.mapNotNull { id ->
+            appState.modes.find { it.id == id }?.name
+        }
+        UnlockDurationDialog(
+            modeNames = modeNames,
+            onDismiss = { viewModel.dismissUnlock() },
+            onConfirm = { reactivateAtMillis ->
+                viewModel.confirmUnlock(reactivateAtMillis)
+            }
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {

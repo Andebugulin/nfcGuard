@@ -56,8 +56,8 @@ fun HomeScreen(
 
     // Tick every 30s to keep timer countdowns fresh
     var timeTick by remember { mutableStateOf(0L) }
-    LaunchedEffect(appState.timedModeDeactivations) {
-        while (appState.timedModeDeactivations.isNotEmpty()) {
+    LaunchedEffect(appState.timedModeDeactivations, appState.timedModeReactivations) {
+        while (appState.timedModeDeactivations.isNotEmpty() || appState.timedModeReactivations.isNotEmpty()) {
             kotlinx.coroutines.delay(30_000)
             timeTick = System.currentTimeMillis()
         }
@@ -329,6 +329,66 @@ fun HomeScreen(
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = Color(0xFF555555),
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Temporarily unlocked modes (pending reactivation)
+    if (appState.timedModeReactivations.isNotEmpty()) {
+        Spacer(Modifier.height(8.dp))
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(0.dp),
+            color = GuardianTheme.BackgroundSurface
+        ) {
+            Column(Modifier.padding(20.dp)) {
+                Text(
+                    "TEMPORARILY UNLOCKED",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GuardianTheme.TextSecondary,
+                    letterSpacing = 1.sp
+                )
+                Spacer(Modifier.height(12.dp))
+                appState.timedModeReactivations.forEach { (modeId, reactivateAt) ->
+                    val mode = appState.modes.find { it.id == modeId }
+                    if (mode != null) {
+                        val remaining = ((reactivateAt - now) / 60000).coerceAtLeast(0)
+                        val remainH = remaining / 60
+                        val remainM = remaining % 60
+                        val remainText = if (remainH > 0) "${remainH}H ${remainM}M" else "${remainM}M"
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.LockOpen,
+                                contentDescription = null,
+                                tint = GuardianTheme.TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    mode.name.uppercase(),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = GuardianTheme.TextPrimary,
+                                    letterSpacing = 1.sp
+                                )
+                                Text(
+                                    "RE-ENABLES IN $remainText",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = GuardianTheme.TextSecondary,
                                     letterSpacing = 1.sp
                                 )
                             }

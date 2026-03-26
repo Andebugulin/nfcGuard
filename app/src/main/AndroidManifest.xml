@@ -113,6 +113,7 @@
                 <action android:name="com.andebugulin.nfcguard.ACTIVATE_SCHEDULE" />
                 <action android:name="com.andebugulin.nfcguard.DEACTIVATE_SCHEDULE" />
                 <action android:name="com.andebugulin.nfcguard.TIMED_DEACTIVATE_MODE" />
+                <action android:name="com.andebugulin.nfcguard.TIMED_REACTIVATE_MODE" />
                 <action android:name="com.andebugulin.nfcguard.CHECK_SCHEDULE" />
             </intent-filter>
         </receiver>
