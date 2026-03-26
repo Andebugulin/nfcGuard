@@ -238,7 +238,7 @@ fun NfcTagsScreen(
     }
 
     showDeleteDialog?.let { tag ->
-        val linkedModes = appState.modes.filter { it.nfcTagId == tag.id }
+        val linkedModes = appState.modes.filter { it.effectiveNfcTagIds.contains(tag.id) }
         val hasActiveMode = linkedModes.any { appState.activeModes.contains(it.id) }
 
         AlertDialog(
@@ -410,7 +410,7 @@ fun NfcTagCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val linkedModes = modes.filter { it.nfcTagId == tag.id }
+    val linkedModes = modes.filter { it.effectiveNfcTagIds.contains(tag.id) }
     val hasActiveMode = linkedModes.any { activeModes.contains(it.id) }
     val backgroundColor = if (hasActiveMode) Color.White else GuardianTheme.BackgroundSurface
     val textColor = if (hasActiveMode) Color.Black else Color.White

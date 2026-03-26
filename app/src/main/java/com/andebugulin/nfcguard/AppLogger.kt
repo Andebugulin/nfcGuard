@@ -163,7 +163,7 @@ object AppLogger {
                 sb.appendLine("Modes: ${state.modes.size}")
                 state.modes.forEach { m ->
                     val active = if (state.activeModes.contains(m.id)) " [ACTIVE]" else ""
-                    sb.appendLine("  - ${m.name} (${m.blockMode}, ${m.blockedApps.size} apps, nfc=${m.nfcTagId?.take(8) ?: "none"})$active")
+                    sb.appendLine("  - ${m.name} (${m.blockMode}, ${m.blockedApps.size} apps, nfc=${m.effectiveNfcTagIds.ifEmpty { listOf("any") }})$active")
                 }
                 sb.appendLine("Schedules: ${state.schedules.size}")
                 state.schedules.forEach { s ->

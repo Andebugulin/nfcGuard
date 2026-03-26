@@ -66,12 +66,12 @@ fun ModeEditorScreen(
     availableNfcTags: List<NfcTag>,
     allModes: List<Mode> = emptyList(),  // FIX #8: Pass all modes for NFC usage count
     onBack: () -> Unit,
-    onSave: (List<String>, BlockMode, String?) -> Unit
+    onSave: (List<String>, BlockMode, List<String>) -> Unit
 ) {
     val context = LocalContext.current
     var selectedApps by remember { mutableStateOf(mode.blockedApps.toSet()) }
     var blockMode by remember { mutableStateOf(mode.blockMode) }
-    var selectedNfcTagId by remember { mutableStateOf(mode.nfcTagId) }
+    var selectedNfcTagIds by remember { mutableStateOf(mode.effectiveNfcTagIds.toSet()) }
     var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
@@ -94,10 +94,13 @@ fun ModeEditorScreen(
 
     // FIX #8: Count how many OTHER modes use each NFC tag (excluding the current mode being edited)
     val nfcTagUsageCounts = remember(allModes, mode.id) {
-        allModes
-            .filter { it.id != mode.id && it.nfcTagId != null }
-            .groupingBy { it.nfcTagId!! }
-            .eachCount()
+        val counts = mutableMapOf<String, Int>()
+        allModes.filter { it.id != mode.id }.forEach { m ->
+            m.effectiveNfcTagIds.forEach { tagId ->
+                counts[tagId] = (counts[tagId] ?: 0) + 1
+            }
+        }
+        counts
     }
 
     Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary).windowInsetsPadding(WindowInsets.systemBars)) {
@@ -122,7 +125,7 @@ fun ModeEditorScreen(
                 // FIX #5: Disable SAVE when no apps selected
                 Button(
                     onClick = {
-                        onSave(selectedApps.toList(), blockMode, selectedNfcTagId)
+                        onSave(selectedApps.toList(), blockMode, selectedNfcTagIds.toList())
                     },
                     enabled = selectedApps.isNotEmpty(),
                     colors = ButtonDefaults.buttonColors(
@@ -230,7 +233,7 @@ fun ModeEditorScreen(
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Optional: Require specific NFC tag to unlock",
+                        "Optional: Require specific NFC tag(s) to unlock",
                         fontSize = 10.sp,
                         color = GuardianTheme.TextSecondary,
                         letterSpacing = 0.5.sp
@@ -247,11 +250,11 @@ fun ModeEditorScreen(
                         )
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // "No specific tag" option
+                            // "Any tag can unlock" option (when no specific tags are selected)
                             Surface(
-                                onClick = { selectedNfcTagId = null },
+                                onClick = { selectedNfcTagIds = emptySet() },
                                 shape = RoundedCornerShape(0.dp),
-                                color = if (selectedNfcTagId == null) Color.White else Color.Black
+                                color = if (selectedNfcTagIds.isEmpty()) Color.White else Color.Black
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -263,11 +266,11 @@ fun ModeEditorScreen(
                                         "ANY TAG CAN UNLOCK",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (selectedNfcTagId == null) Color.Black else Color.White,
+                                        color = if (selectedNfcTagIds.isEmpty()) Color.Black else Color.White,
                                         letterSpacing = 1.sp,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    if (selectedNfcTagId == null) {
+                                    if (selectedNfcTagIds.isEmpty()) {
                                         Icon(
                                             Icons.Default.Check,
                                             contentDescription = null,
@@ -277,14 +280,21 @@ fun ModeEditorScreen(
                                 }
                             }
 
-                            // Available tags
+                            // Available tags — multi-select
                             availableNfcTags.forEach { tag ->
                                 val usageCount = nfcTagUsageCounts[tag.id] ?: 0  // FIX #8
+                                val isSelected = selectedNfcTagIds.contains(tag.id)
 
                                 Surface(
-                                    onClick = { selectedNfcTagId = tag.id },
+                                    onClick = {
+                                        selectedNfcTagIds = if (isSelected) {
+                                            selectedNfcTagIds - tag.id
+                                        } else {
+                                            selectedNfcTagIds + tag.id
+                                        }
+                                    },
                                     shape = RoundedCornerShape(0.dp),
-                                    color = if (selectedNfcTagId == tag.id) Color.White else Color.Black
+                                    color = if (isSelected) Color.White else Color.Black
                                 ) {
                                     Row(
                                         modifier = Modifier
@@ -297,7 +307,7 @@ fun ModeEditorScreen(
                                                 tag.name.uppercase(),
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = if (selectedNfcTagId == tag.id) Color.Black else Color.White,
+                                                color = if (isSelected) Color.Black else Color.White,
                                                 letterSpacing = 1.sp
                                             )
                                             // FIX #8: Show usage count
@@ -305,12 +315,12 @@ fun ModeEditorScreen(
                                                 Text(
                                                     "USED BY $usageCount OTHER MODE${if (usageCount > 1) "S" else ""}",
                                                     fontSize = 9.sp,
-                                                    color = if (selectedNfcTagId == tag.id) Color(0xFFE65100) else Color(0xFFFF9800),
+                                                    color = if (isSelected) Color(0xFFE65100) else Color(0xFFFF9800),
                                                     letterSpacing = 0.5.sp
                                                 )
                                             }
                                         }
-                                        if (selectedNfcTagId == tag.id) {
+                                        if (isSelected) {
                                             Icon(
                                                 Icons.Default.Check,
                                                 contentDescription = null,

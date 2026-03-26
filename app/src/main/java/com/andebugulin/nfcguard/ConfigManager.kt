@@ -59,10 +59,14 @@ object ConfigManager {
                 sb.appendLine("  - id: \"${escapeYaml(mode.id)}\"")
                 sb.appendLine("    name: \"${escapeYaml(mode.name)}\"")
                 sb.appendLine("    blockMode: ${mode.blockMode.name}")
-                if (mode.nfcTagId != null) {
-                    sb.appendLine("    nfcTagId: \"${escapeYaml(mode.nfcTagId)}\"")
+                sb.appendLine("    nfcTagIds:")
+                val effectiveIds = mode.effectiveNfcTagIds
+                if (effectiveIds.isEmpty()) {
+                    sb.appendLine("      []")
                 } else {
-                    sb.appendLine("    nfcTagId: null")
+                    for (tagId in effectiveIds) {
+                        sb.appendLine("      - \"${escapeYaml(tagId)}\"")
+                    }
                 }
                 sb.appendLine("    blockedApps:")
                 if (mode.blockedApps.isEmpty()) {
@@ -190,7 +194,7 @@ object ConfigManager {
                 val trimmed = line.trim()
                 if (trimmed.startsWith("- id:")) {
                     var id = ""; var name = ""; var blockMode = BlockMode.BLOCK_SELECTED
-                    var nfcTagId: String? = null; var blockedApps = listOf<String>()
+                    var nfcTagIds = listOf<String>(); var blockedApps = listOf<String>()
                     id = parseQuotedString(trimmed.removePrefix("- id:"))
                     advance()
                     while (currentLine() != null) {
@@ -206,9 +210,16 @@ object ConfigManager {
                                 blockMode = if (bm == "ALLOW_SELECTED") BlockMode.ALLOW_SELECTED else BlockMode.BLOCK_SELECTED
                                 advance()
                             }
+                            mt.startsWith("nfcTagIds:") -> {
+                                advance()
+                                nfcTagIds = parseStringList(6)
+                            }
                             mt.startsWith("nfcTagId:") -> {
+                                // Legacy single-tag format migration
                                 val v = mt.removePrefix("nfcTagId:").trim()
-                                nfcTagId = if (v == "null") null else parseQuotedString(v)
+                                if (v != "null") {
+                                    nfcTagIds = listOf(parseQuotedString(v))
+                                }
                                 advance()
                             }
                             mt.startsWith("blockedApps:") -> {
@@ -218,7 +229,7 @@ object ConfigManager {
                             else -> advance()
                         }
                     }
-                    modes.add(Mode(id, name, blockedApps, blockMode, nfcTagId))
+                    modes.add(Mode(id, name, blockedApps, blockMode, nfcTagIds = nfcTagIds))
                 } else {
                     advance()
                 }

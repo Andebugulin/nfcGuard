@@ -126,10 +126,10 @@ class MainActivity : ComponentActivity() {
 
                         // Check if any active mode requires this specific tag
                         val activeModes = appState.modes.filter { appState.activeModes.contains(it.id) }
-                        val hasNfcLockedMode = activeModes.any { it.nfcTagId != null }
+                        val hasNfcLockedMode = activeModes.any { it.effectiveNfcTagIds.isNotEmpty() }
 
                         if (hasNfcLockedMode && !nfcRegistrationMode.value) {
-                            val validTag = activeModes.any { it.nfcTagId == tagId || it.nfcTagId == null }
+                            val validTag = activeModes.any { it.effectiveNfcTagIds.contains(tagId) || it.effectiveNfcTagIds.isEmpty() }
                             if (!validTag && appState.activeModes.isNotEmpty()) {
                                 // Wrong tag scanned!
                                 AppLogger.log("NFC", "WRONG TAG for active modes (tag=$tagId, activeModes=${appState.activeModes})")
@@ -492,15 +492,30 @@ fun MainNavigation(
     }
     var currentScreen by remember { mutableStateOf(Screen.HOME) }
     val appState by viewModel.appState.collectAsState()
+    val pendingUnlock by viewModel.pendingUnlock.collectAsState()
 
     // Handle NFC tag scans when modes are active (for unlocking)
     LaunchedEffect(scannedNfcTagId.value, appState.activeModes) {
         val tagId = scannedNfcTagId.value
         if (tagId != null && appState.activeModes.isNotEmpty() && !nfcRegistrationMode.value) {
-            android.util.Log.d("MAIN_NAV", "NFC tag scanned with active modes - unlocking")
+            android.util.Log.d("MAIN_NAV", "NFC tag scanned with active modes - showing unlock dialog")
             viewModel.handleNfcTag(tagId)
             scannedNfcTagId.value = null
         }
+    }
+
+    // Show unlock duration dialog when pending
+    pendingUnlock?.let { pending ->
+        val modeNames = pending.modeIds.mapNotNull { id ->
+            appState.modes.find { it.id == id }?.name
+        }
+        UnlockDurationDialog(
+            modeNames = modeNames,
+            onDismiss = { viewModel.dismissUnlock() },
+            onConfirm = { reactivateAtMillis ->
+                viewModel.confirmUnlock(reactivateAtMillis)
+            }
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {

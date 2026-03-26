@@ -40,8 +40,16 @@ data class Mode(
     val name: String,
     val blockedApps: List<String>,
     val blockMode: BlockMode = BlockMode.BLOCK_SELECTED,
-    val nfcTagId: String? = null
-)
+    @Deprecated("Use nfcTagIds instead. Kept for migration from older versions.")
+    val nfcTagId: String? = null,
+    val nfcTagIds: List<String> = emptyList()
+) {
+    /** Resolved tag list: migrates legacy single-tag field automatically. */
+    val effectiveNfcTagIds: List<String>
+        get() = if (nfcTagIds.isNotEmpty()) nfcTagIds
+        else if (@Suppress("DEPRECATION") nfcTagId != null) listOf(@Suppress("DEPRECATION") nfcTagId!!)
+        else emptyList()
+}
 
 @Serializable
 data class Schedule(
@@ -74,7 +82,14 @@ data class AppState(
     val activeSchedules: Set<String> = emptySet(), // Schedules that activated their modes
     val deactivatedSchedules: Set<String> = emptySet(), // Schedules manually deactivated by user
     val manuallyActivatedModes: Set<String> = emptySet(), // Modes activated by user tap (not by schedule)
-    val timedModeDeactivations: Map<String, Long> = emptyMap() // modeId -> epoch millis when it should auto-deactivate
+    val timedModeDeactivations: Map<String, Long> = emptyMap(), // modeId -> epoch millis when it should auto-deactivate
+    val timedModeReactivations: Map<String, Long> = emptyMap() // modeId -> epoch millis when it should auto-reactivate after NFC unlock
+)
+
+/** Pending NFC unlock awaiting user duration choice (not persisted) */
+data class PendingUnlock(
+    val modeIds: Set<String>,
+    val schedulesToDeactivate: Set<String>
 )
 
 /** Result of attempting to activate a mode */
@@ -91,6 +106,10 @@ class GuardianViewModel : ViewModel() {
     /** Safe Regime — stored separately from AppState to prevent bypass via config import */
     private val _safeRegimeEnabled = MutableStateFlow(true)
     val safeRegimeEnabled: StateFlow<Boolean> = _safeRegimeEnabled
+
+    /** Pending NFC unlock awaiting user duration choice */
+    private val _pendingUnlock = MutableStateFlow<PendingUnlock?>(null)
+    val pendingUnlock: StateFlow<PendingUnlock?> = _pendingUnlock
 
     private lateinit var prefs: SharedPreferences
     private lateinit var context: Context
@@ -120,6 +139,7 @@ class GuardianViewModel : ViewModel() {
                 delay(5000)  // Check every 5 seconds
                 loadState()
                 checkTimedDeactivations()
+                checkTimedReactivations()
             }
         }
     }
@@ -206,14 +226,14 @@ class GuardianViewModel : ViewModel() {
         }
     }
 
-    fun addMode(name: String, blockedApps: List<String>, blockMode: BlockMode = BlockMode.BLOCK_SELECTED, nfcTagId: String? = null) {
+    fun addMode(name: String, blockedApps: List<String>, blockMode: BlockMode = BlockMode.BLOCK_SELECTED, nfcTagIds: List<String> = emptyList()) {
         viewModelScope.launch {
             val newMode = Mode(
                 id = java.util.UUID.randomUUID().toString(),
                 name = name,
                 blockedApps = blockedApps,
                 blockMode = blockMode,
-                nfcTagId = nfcTagId
+                nfcTagIds = nfcTagIds
             )
             _appState.value = _appState.value.copy(
                 modes = _appState.value.modes + newMode
@@ -222,7 +242,7 @@ class GuardianViewModel : ViewModel() {
         }
     }
 
-    fun updateMode(id: String, name: String, blockedApps: List<String>, blockMode: BlockMode, nfcTagId: String?) {
+    fun updateMode(id: String, name: String, blockedApps: List<String>, blockMode: BlockMode, nfcTagIds: List<String>) {
         viewModelScope.launch {
             _appState.value = _appState.value.copy(
                 modes = _appState.value.modes.map { mode ->
@@ -230,7 +250,8 @@ class GuardianViewModel : ViewModel() {
                         name = name,
                         blockedApps = blockedApps,
                         blockMode = blockMode,
-                        nfcTagId = nfcTagId
+                        nfcTagId = null,
+                        nfcTagIds = nfcTagIds
                     ) else mode
                 }
             )
@@ -250,9 +271,11 @@ class GuardianViewModel : ViewModel() {
                     tag.copy(linkedModeIds = tag.linkedModeIds.filter { it != id })
                 },
                 manuallyActivatedModes = _appState.value.manuallyActivatedModes - id,
-                timedModeDeactivations = _appState.value.timedModeDeactivations - id
+                timedModeDeactivations = _appState.value.timedModeDeactivations - id,
+                timedModeReactivations = _appState.value.timedModeReactivations - id
             )
             cancelTimedDeactivation(id)
+            cancelTimedReactivation(id)
             saveState()
         }
     }
@@ -273,7 +296,7 @@ class GuardianViewModel : ViewModel() {
             }
         }
 
-        AppLogger.log("MODE", "Activating: '${modeToActivate.name}' (${modeToActivate.blockMode}, ${modeToActivate.blockedApps.size} apps, nfc=${modeToActivate.nfcTagId ?: "none"}, timed=${timedUntilMillis != null})")
+        AppLogger.log("MODE", "Activating: '${modeToActivate.name}' (${modeToActivate.blockMode}, ${modeToActivate.blockedApps.size} apps, nfc=${modeToActivate.effectiveNfcTagIds.ifEmpty { listOf("any") }}, timed=${timedUntilMillis != null})")
 
         viewModelScope.launch {
             val newTimedDeactivations = if (timedUntilMillis != null) {
@@ -284,9 +307,13 @@ class GuardianViewModel : ViewModel() {
             _appState.value = currentState.copy(
                 activeModes = currentState.activeModes + modeId,
                 manuallyActivatedModes = currentState.manuallyActivatedModes + modeId,
-                timedModeDeactivations = newTimedDeactivations
+                timedModeDeactivations = newTimedDeactivations,
+                timedModeReactivations = currentState.timedModeReactivations - modeId
             )
             saveState()
+
+            // Cancel any pending reactivation alarm — mode is active now
+            cancelTimedReactivation(modeId)
 
             // Schedule timed deactivation alarm for reliability
             if (timedUntilMillis != null) {
@@ -324,12 +351,15 @@ class GuardianViewModel : ViewModel() {
                 activeSchedules = currentState.activeSchedules - schedulesToDeactivate,
                 deactivatedSchedules = currentState.deactivatedSchedules + schedulesToDeactivate,
                 manuallyActivatedModes = currentState.manuallyActivatedModes - modeId,
-                timedModeDeactivations = currentState.timedModeDeactivations - modeId
+                timedModeDeactivations = currentState.timedModeDeactivations - modeId,
+                timedModeReactivations = currentState.timedModeReactivations - modeId
             )
             saveState()
 
             // Cancel timed deactivation alarm if any
             cancelTimedDeactivation(modeId)
+            // Cancel timed reactivation alarm if any
+            cancelTimedReactivation(modeId)
         }
     }
 
@@ -427,7 +457,10 @@ class GuardianViewModel : ViewModel() {
             _appState.value = _appState.value.copy(
                 nfcTags = _appState.value.nfcTags.filter { it.id != tagId },
                 modes = _appState.value.modes.map { mode ->
-                    if (mode.nfcTagId == tagId) mode.copy(nfcTagId = null) else mode
+                    if (mode.effectiveNfcTagIds.contains(tagId)) mode.copy(
+                        nfcTagId = null,
+                        nfcTagIds = mode.effectiveNfcTagIds.filter { it != tagId }
+                    ) else mode
                 }
             )
             saveState()
@@ -438,7 +471,6 @@ class GuardianViewModel : ViewModel() {
         viewModelScope.launch {
             AppLogger.log("NFC", "handleNfcTag: tagId=$tagId, activeModes=${_appState.value.activeModes}")
             val calendar = java.util.Calendar.getInstance()
-            val today = "${calendar.get(java.util.Calendar.YEAR)}-${calendar.get(java.util.Calendar.DAY_OF_YEAR)}"
             val currentDayOfWeek = when (calendar.get(java.util.Calendar.DAY_OF_WEEK)) {
                 java.util.Calendar.MONDAY -> 1
                 java.util.Calendar.TUESDAY -> 2
@@ -460,8 +492,10 @@ class GuardianViewModel : ViewModel() {
                 val mode = _appState.value.modes.find { it.id == modeId }
 
                 if (mode != null) {
-                    if (mode.nfcTagId != null) {
-                        if (mode.nfcTagId == tagId) {
+                    val tagIds = mode.effectiveNfcTagIds
+                    if (tagIds.isNotEmpty()) {
+                        // Specific tags required — check if scanned tag is in the list
+                        if (tagIds.contains(tagId)) {
                             modesToDeactivate.add(modeId)
 
                             _appState.value.schedules.forEach { schedule ->
@@ -479,7 +513,7 @@ class GuardianViewModel : ViewModel() {
                             }
                         }
                     } else {
-                        // No NFC tag linked — any tag can unlock this mode
+                        // No NFC tags linked — any tag can unlock this mode
                         modesToDeactivate.add(modeId)
 
                         _appState.value.schedules.forEach { schedule ->
@@ -499,20 +533,158 @@ class GuardianViewModel : ViewModel() {
                 }
             }
 
-            if (modesToDeactivate.isNotEmpty() || schedulesToDeactivate.isNotEmpty()) {
-                AppLogger.log("NFC", "Deactivating modes=$modesToDeactivate, schedules=$schedulesToDeactivate")
-                _appState.value = _appState.value.copy(
-                    activeModes = _appState.value.activeModes - modesToDeactivate,
-                    activeSchedules = _appState.value.activeSchedules - schedulesToDeactivate,
-                    deactivatedSchedules = _appState.value.deactivatedSchedules + schedulesToDeactivate,
-                    manuallyActivatedModes = _appState.value.manuallyActivatedModes - modesToDeactivate,
-                    timedModeDeactivations = _appState.value.timedModeDeactivations - modesToDeactivate
+            if (modesToDeactivate.isNotEmpty()) {
+                AppLogger.log("NFC", "Pending unlock: modes=$modesToDeactivate, schedules=$schedulesToDeactivate")
+                _pendingUnlock.value = PendingUnlock(
+                    modeIds = modesToDeactivate,
+                    schedulesToDeactivate = schedulesToDeactivate
+                )
+            }
+        }
+    }
+
+    /** User confirmed unlock duration from dialog. null = permanent, otherwise epoch millis to reactivate. */
+    fun confirmUnlock(reactivateAtMillis: Long? = null) {
+        val pending = _pendingUnlock.value ?: return
+        _pendingUnlock.value = null
+
+        viewModelScope.launch {
+            AppLogger.log("NFC", "Confirming unlock: modes=${pending.modeIds}, reactivate=${reactivateAtMillis != null}")
+
+            val newReactivations = if (reactivateAtMillis != null) {
+                _appState.value.timedModeReactivations + pending.modeIds.associateWith { reactivateAtMillis }
+            } else {
+                _appState.value.timedModeReactivations
+            }
+
+            _appState.value = _appState.value.copy(
+                activeModes = _appState.value.activeModes - pending.modeIds,
+                activeSchedules = _appState.value.activeSchedules - pending.schedulesToDeactivate,
+                deactivatedSchedules = _appState.value.deactivatedSchedules + pending.schedulesToDeactivate,
+                manuallyActivatedModes = _appState.value.manuallyActivatedModes - pending.modeIds,
+                timedModeDeactivations = _appState.value.timedModeDeactivations - pending.modeIds,
+                timedModeReactivations = newReactivations
+            )
+            saveState()
+
+            // Cancel any timed deactivation alarms for unlocked modes
+            pending.modeIds.forEach { cancelTimedDeactivation(it) }
+
+            // Schedule reactivation alarms if timed
+            if (reactivateAtMillis != null) {
+                pending.modeIds.forEach { modeId ->
+                    scheduleTimedReactivation(modeId, reactivateAtMillis)
+                }
+            }
+        }
+    }
+
+    /** User dismissed the unlock dialog — do nothing, modes stay active */
+    fun dismissUnlock() {
+        _pendingUnlock.value = null
+    }
+
+    /** Schedule a timed reactivation alarm via AlarmManager */
+    private fun scheduleTimedReactivation(modeId: String, reactivateAtMillis: Long) {
+        try {
+            val intent = android.content.Intent(context, ScheduleAlarmReceiver::class.java).apply {
+                action = "com.andebugulin.nfcguard.TIMED_REACTIVATE_MODE"
+                putExtra("mode_id", modeId)
+            }
+            val requestCode = ("reactivate_$modeId").hashCode()
+            val pendingIntent = android.app.PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    android.app.AlarmManager.RTC_WAKEUP,
+                    reactivateAtMillis,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.setExact(
+                    android.app.AlarmManager.RTC_WAKEUP,
+                    reactivateAtMillis,
+                    pendingIntent
+                )
+            }
+            AppLogger.log("TIMER", "Scheduled timed reactivation for mode $modeId at ${java.util.Date(reactivateAtMillis)}")
+        } catch (e: Exception) {
+            AppLogger.log("TIMER", "Error scheduling timed reactivation: ${e.message}")
+        }
+    }
+
+    /** Cancel a timed reactivation alarm */
+    private fun cancelTimedReactivation(modeId: String) {
+        try {
+            val intent = android.content.Intent(context, ScheduleAlarmReceiver::class.java).apply {
+                action = "com.andebugulin.nfcguard.TIMED_REACTIVATE_MODE"
+                putExtra("mode_id", modeId)
+            }
+            val requestCode = ("reactivate_$modeId").hashCode()
+            val pendingIntent = android.app.PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                android.app.PendingIntent.FLAG_NO_CREATE or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            pendingIntent?.let {
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+                alarmManager.cancel(it)
+            }
+        } catch (e: Exception) {
+            AppLogger.log("TIMER", "Error cancelling timed reactivation: ${e.message}")
+        }
+    }
+
+    /** Check for expired timed reactivations and re-enable modes (called from polling loop) */
+    private fun checkTimedReactivations() {
+        val currentState = _appState.value
+        if (currentState.timedModeReactivations.isEmpty()) return
+
+        val now = System.currentTimeMillis()
+        val expired = currentState.timedModeReactivations.filter { (_, deadline) -> now >= deadline }
+        if (expired.isNotEmpty()) {
+            AppLogger.log("TIMER", "Timed reactivation: ${expired.keys}")
+            expired.keys.forEach { modeId -> reactivateMode(modeId) }
+        }
+    }
+
+    /** Reactivate a mode after timed unlock expires */
+    fun reactivateMode(modeId: String) {
+        viewModelScope.launch {
+            val currentState = _appState.value
+            val mode = currentState.modes.find { it.id == modeId } ?: return@launch
+            if (currentState.activeModes.contains(modeId)) {
+                // Already active (e.g. schedule re-activated it), just clean up the reactivation entry
+                _appState.value = currentState.copy(
+                    timedModeReactivations = currentState.timedModeReactivations - modeId
                 )
                 saveState()
-
-                // Cancel any timed deactivation alarms for deactivated modes
-                modesToDeactivate.forEach { cancelTimedDeactivation(it) }
+                return@launch
             }
+
+            // Check for BLOCK/ALLOW conflict before reactivating
+            val currentlyActiveModes = currentState.modes.filter { currentState.activeModes.contains(it.id) }
+            if (currentlyActiveModes.isNotEmpty() && currentlyActiveModes.any { it.blockMode != mode.blockMode }) {
+                AppLogger.log("TIMER", "Reactivation conflict for '${mode.name}' — skipping, clearing timer")
+                _appState.value = currentState.copy(
+                    timedModeReactivations = currentState.timedModeReactivations - modeId
+                )
+                saveState()
+                return@launch
+            }
+
+            AppLogger.log("TIMER", "Reactivating mode '${mode.name}' after timed unlock")
+            _appState.value = currentState.copy(
+                activeModes = currentState.activeModes + modeId,
+                timedModeReactivations = currentState.timedModeReactivations - modeId
+            )
+            saveState()
         }
     }
 
@@ -533,8 +705,8 @@ class GuardianViewModel : ViewModel() {
                 val mergedModes = _appState.value.modes.map { existing ->
                     val imported = importModeMap[existing.id]
                     if (imported != null) {
-                        // Restore NFC tag link from import
-                        existing.copy(nfcTagId = imported.nfcTagId)
+                        // Restore NFC tag links from import
+                        existing.copy(nfcTagId = null, nfcTagIds = imported.effectiveNfcTagIds)
                     } else existing
                 } + data.modes.filter { it.id !in existingModeIds }
 
@@ -569,16 +741,18 @@ class GuardianViewModel : ViewModel() {
                     activeSchedules = emptySet(),
                     deactivatedSchedules = emptySet(),
                     manuallyActivatedModes = emptySet(),
-                    timedModeDeactivations = emptyMap()
+                    timedModeDeactivations = emptyMap(),
+                    timedModeReactivations = emptyMap()
                 )
             }
 
-            // FIX #11: Clean up orphaned nfcTagId references after import
+            // FIX #11: Clean up orphaned nfcTagIds references after import
             val validTagIds = _appState.value.nfcTags.map { it.id }.toSet()
             _appState.value = _appState.value.copy(
                 modes = _appState.value.modes.map { mode ->
-                    if (mode.nfcTagId != null && mode.nfcTagId !in validTagIds) {
-                        mode.copy(nfcTagId = null)
+                    val cleaned = mode.effectiveNfcTagIds.filter { it in validTagIds }
+                    if (cleaned != mode.effectiveNfcTagIds) {
+                        mode.copy(nfcTagId = null, nfcTagIds = cleaned)
                     } else mode
                 }
             )
