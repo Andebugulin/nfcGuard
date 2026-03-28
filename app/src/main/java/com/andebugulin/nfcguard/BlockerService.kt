@@ -192,7 +192,7 @@ class BlockerService : Service() {
             manuallyActivatedModeIds: Set<String> = emptySet(),
             timedModeDeactivations: Map<String, Long> = emptyMap(),
             modeNames: Map<String, String> = emptyMap(),
-            timedModeReactivations: Map<String, Long>
+            timedModeReactivations: Map<String, Long> = emptyMap()
         ) {
             android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
             android.util.Log.d("BLOCKER_SERVICE", "START REQUEST RECEIVED")
