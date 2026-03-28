@@ -92,7 +92,6 @@ data class AppState(
     val manuallyActivatedModes: Set<String> = emptySet(), // Modes activated by user tap (not by schedule)
     val timedModeDeactivations: Map<String, Long> = emptyMap(), // modeId -> epoch millis when it should auto-deactivate
     val timedModeReactivations: Map<String, Long> = emptyMap(), // modeId -> epoch millis when it should auto-reactivate after NFC unlock
-    val safeRegimeEnabled: Boolean = false
 )
 
 /** Pending NFC unlock awaiting user duration choice (not persisted) */
