@@ -2,7 +2,6 @@ package com.andebugulin.nfcguard
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
