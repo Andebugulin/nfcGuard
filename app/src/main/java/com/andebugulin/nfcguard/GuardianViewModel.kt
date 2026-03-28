@@ -806,12 +806,12 @@ class GuardianViewModel : ViewModel() {
             _appState.value = _appState.value.copy(
                 modes = _appState.value.modes.map { mode ->
                     val cleaned = mode.effectiveNfcTagIds.filter { it in validTagIds || it == "ANY" }
-                    if (cleaned != mode.effectiveNfcTagIds) {
-                        mode.copy(nfcTagId = null, nfcTagIds = cleaned)
+                    val cleanedLimits = mode.tagUnlockLimits.filterKeys { it in validTagIds || it == "ANY" }
+                    if (cleaned != mode.effectiveNfcTagIds || cleanedLimits != mode.tagUnlockLimits) {
+                        mode.copy(nfcTagId = null, nfcTagIds = cleaned, tagUnlockLimits = cleanedLimits)
                     } else mode
                 }
             )
-
             saveState()
         }
     }
