@@ -317,12 +317,32 @@ fun HomeScreen(
                                     letterSpacing = 1.sp
                                 )
                                 val sourceLabel = when {
-                                    isManual && isTimed -> {
+                                    isTimed -> {
                                         val remaining = ((appState.timedModeDeactivations[mode.id] ?: 0) - now) / 60000
-                                        "MANUAL · ${remaining.coerceAtLeast(0)}M LEFT"
+                                        val endCal = java.util.Calendar.getInstance().apply {
+                                            timeInMillis = appState.timedModeDeactivations[mode.id] ?: 0
+                                        }
+                                        val endStr = String.format("%02d:%02d", endCal.get(java.util.Calendar.HOUR_OF_DAY), endCal.get(java.util.Calendar.MINUTE))
+                                        val prefix = if (isManual) "MANUAL" else "ACTIVE"
+                                        "$prefix · ${remaining.coerceAtLeast(0)}M LEFT · UNTIL $endStr"
                                     }
                                     isManual -> "MANUAL · NFC TO UNLOCK"
-                                    else -> "BY SCHEDULE"
+                                    else -> {
+                                        val cal = java.util.Calendar.getInstance()
+                                        val currentDay = when (cal.get(java.util.Calendar.DAY_OF_WEEK)) {
+                                            java.util.Calendar.MONDAY -> 1; java.util.Calendar.TUESDAY -> 2
+                                            java.util.Calendar.WEDNESDAY -> 3; java.util.Calendar.THURSDAY -> 4
+                                            java.util.Calendar.FRIDAY -> 5; java.util.Calendar.SATURDAY -> 6
+                                            java.util.Calendar.SUNDAY -> 7; else -> 1
+                                        }
+                                        val endTimeStr = appState.schedules.firstOrNull { schedule ->
+                                            schedule.linkedModeIds.contains(mode.id) &&
+                                                    schedule.hasEndTime
+                                        }?.timeSlot?.getTimeForDay(currentDay)?.let { dt ->
+                                            String.format(" · UNTIL %02d:%02d", dt.endHour, dt.endMinute)
+                                        } ?: ""
+                                        "BY SCHEDULE$endTimeStr"
+                                    }
                                 }
                                 Text(
                                     sourceLabel,
@@ -337,60 +357,74 @@ fun HomeScreen(
                 }
             }
         }
-    }
 
-    // Temporarily unlocked modes (pending reactivation)
-    if (appState.timedModeReactivations.isNotEmpty()) {
-        Spacer(Modifier.height(8.dp))
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(0.dp),
-            color = GuardianTheme.BackgroundSurface
-        ) {
-            Column(Modifier.padding(20.dp)) {
-                Text(
-                    "TEMPORARILY UNLOCKED",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = GuardianTheme.TextSecondary,
-                    letterSpacing = 1.sp
-                )
-                Spacer(Modifier.height(12.dp))
-                appState.timedModeReactivations.forEach { (modeId, reactivateAt) ->
-                    val mode = appState.modes.find { it.id == modeId }
-                    if (mode != null) {
-                        val remaining = ((reactivateAt - now) / 60000).coerceAtLeast(0)
-                        val remainH = remaining / 60
-                        val remainM = remaining % 60
-                        val remainText = if (remainH > 0) "${remainH}H ${remainM}M" else "${remainM}M"
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.LockOpen,
-                                contentDescription = null,
-                                tint = GuardianTheme.TextSecondary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    mode.name.uppercase(),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = GuardianTheme.TextPrimary,
-                                    letterSpacing = 1.sp
+        // Temporarily unlocked modes — yellow panel inside Column
+        if (appState.timedModeReactivations.isNotEmpty()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(0.dp),
+                color = GuardianTheme.Warning
+            ) {
+                Column(Modifier.padding(20.dp)) {
+                    Text(
+                        "TEMPORARILY UNLOCKED",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    appState.timedModeReactivations.forEach { (modeId, reactivateAt) ->
+                        val mode = appState.modes.find { it.id == modeId }
+                        if (mode != null) {
+                            val remaining = ((reactivateAt - now) / 60000).coerceAtLeast(0)
+                            val remainH = remaining / 60
+                            val remainM = remaining % 60
+                            val remainText = if (remainH > 0) "${remainH}H ${remainM}M" else "${remainM}M"
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.LockOpen,
+                                    contentDescription = null,
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(16.dp)
                                 )
-                                Text(
-                                    "RE-ENABLES IN $remainText",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = GuardianTheme.TextSecondary,
-                                    letterSpacing = 1.sp
-                                )
+                                Spacer(Modifier.width(8.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        mode.name.uppercase(),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Black,
+                                        letterSpacing = 1.sp
+                                    )
+                                    Text(
+                                        "RE-ENABLES IN $remainText",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(0xFF555500),
+                                        letterSpacing = 1.sp
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                Surface(
+                                    onClick = { viewModel.reactivateMode(modeId) },
+                                    color = Color.Black,
+                                    shape = RoundedCornerShape(0.dp)
+                                ) {
+                                    Text(
+                                        "RE-ENABLE",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        letterSpacing = 1.sp,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                    )
+                                }
                             }
                         }
                     }

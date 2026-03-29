@@ -916,8 +916,9 @@ class BlockerService : Service() {
         }
 
         val bigTextStyle = NotificationCompat.BigTextStyle()
-        
-        // Resolve mode names: prefer the intent-passed map, fall back to SharedPreferences
+
+        // Resolve mode names and schedule info from SharedPreferences
+        var resolvedAppState: AppState? = null
         val resolvedNames = if (modeNames.isNotEmpty()) modeNames else {
             try {
                 val prefs = getSharedPreferences("guardian_prefs", MODE_PRIVATE)
@@ -925,9 +926,35 @@ class BlockerService : Service() {
                 if (stateJson != null) {
                     val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
                     val state = json.decodeFromString<AppState>(stateJson)
+                    resolvedAppState = state
                     state.modes.associate { it.id to it.name }
                 } else emptyMap()
             } catch (_: Exception) { emptyMap() }
+        }
+
+        // Helper to find schedule end time for a mode
+        fun getScheduleEndTimeForMode(modeId: String): String? {
+            val state = resolvedAppState ?: run {
+                try {
+                    val prefs = getSharedPreferences("guardian_prefs", MODE_PRIVATE)
+                    val stateJson = prefs.getString("app_state", null) ?: return null
+                    val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                    json.decodeFromString<AppState>(stateJson).also { resolvedAppState = it }
+                } catch (_: Exception) { return null }
+            }
+            val cal = java.util.Calendar.getInstance()
+            val currentDay = when (cal.get(java.util.Calendar.DAY_OF_WEEK)) {
+                java.util.Calendar.MONDAY -> 1; java.util.Calendar.TUESDAY -> 2
+                java.util.Calendar.WEDNESDAY -> 3; java.util.Calendar.THURSDAY -> 4
+                java.util.Calendar.FRIDAY -> 5; java.util.Calendar.SATURDAY -> 6
+                java.util.Calendar.SUNDAY -> 7; else -> 1
+            }
+            return state.schedules.firstOrNull { schedule ->
+                schedule.linkedModeIds.contains(modeId) &&
+                        schedule.hasEndTime
+            }?.timeSlot?.getTimeForDay(currentDay)?.let { dt ->
+                String.format("%02d:%02d", dt.endHour, dt.endMinute)
+            }
         }
 
         if (activeModeIds.isNotEmpty() || timedModeReactivations.isNotEmpty()) {
@@ -938,18 +965,24 @@ class BlockerService : Service() {
                         val isManual = manuallyActivatedModeIds.contains(modeId)
                         val isTimed = timedModeDeactivations.containsKey(modeId)
                         append("• $name")
-                        if (isManual && isTimed) {
+                        if (isTimed) {
                             val endTime = timedModeDeactivations[modeId] ?: 0
-                            append(" — manual, until ${formatNotificationTime(endTime)}")
+                            val prefix = if (isManual) "manual" else "active"
+                            append(" — $prefix, until ${formatNotificationTime(endTime)}")
                         } else if (isManual) {
                             append(" — manual")
                         } else {
-                            append(" — by schedule")
+                            val schedEnd = getScheduleEndTimeForMode(modeId)
+                            if (schedEnd != null) {
+                                append(" — by schedule, until $schedEnd")
+                            } else {
+                                append(" — by schedule")
+                            }
                         }
                         append("\n")
                     }
                 }
-                
+
                 if (timedModeReactivations.isNotEmpty()) {
                     if (isNotEmpty()) append("\n")
                     timedModeReactivations.forEach { (modeId, reactivateAt) ->
