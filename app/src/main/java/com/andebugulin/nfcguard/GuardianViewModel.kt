@@ -92,6 +92,7 @@ data class AppState(
     val manuallyActivatedModes: Set<String> = emptySet(), // Modes activated by user tap (not by schedule)
     val timedModeDeactivations: Map<String, Long> = emptyMap(), // modeId -> epoch millis when it should auto-deactivate
     val timedModeReactivations: Map<String, Long> = emptyMap(), // modeId -> epoch millis when it should auto-reactivate after NFC unlock
+    val pausedModeRemainingMs: Map<String, Long> = emptyMap() // modeId -> remaining deactivation ms saved when mode was paused
 )
 
 /** Pending NFC unlock awaiting user duration choice (not persisted) */
@@ -99,7 +100,8 @@ data class PendingUnlock(
     val modeIds: Set<String>,
     val schedulesToDeactivate: Set<String>,
     val tagId: String? = null, // Store which tag was scanned to apply its specific limit
-    val maxLimitMinutes: Long? = null // The most restrictive limit among all modes being unlocked
+    val maxLimitMinutes: Long? = null, // The most restrictive limit among all modes being unlocked
+    val modeLimits: Map<String, Long?> = emptyMap() // per-mode limit: modeId -> limit (null = permanent)
 )
 
 /** Result of attempting to activate a mode */
@@ -305,7 +307,8 @@ class GuardianViewModel : ViewModel() {
                 },
                 manuallyActivatedModes = _appState.value.manuallyActivatedModes - id,
                 timedModeDeactivations = _appState.value.timedModeDeactivations - id,
-                timedModeReactivations = _appState.value.timedModeReactivations - id
+                timedModeReactivations = _appState.value.timedModeReactivations - id,
+                pausedModeRemainingMs = _appState.value.pausedModeRemainingMs - id
             )
             cancelTimedDeactivation(id)
             cancelTimedReactivation(id)
@@ -341,7 +344,8 @@ class GuardianViewModel : ViewModel() {
                 activeModes = currentState.activeModes + modeId,
                 manuallyActivatedModes = currentState.manuallyActivatedModes + modeId,
                 timedModeDeactivations = newTimedDeactivations,
-                timedModeReactivations = currentState.timedModeReactivations - modeId
+                timedModeReactivations = currentState.timedModeReactivations - modeId,
+                pausedModeRemainingMs = currentState.pausedModeRemainingMs - modeId
             )
             saveState()
 
@@ -385,7 +389,8 @@ class GuardianViewModel : ViewModel() {
                 deactivatedSchedules = currentState.deactivatedSchedules + schedulesToDeactivate,
                 manuallyActivatedModes = currentState.manuallyActivatedModes - modeId,
                 timedModeDeactivations = currentState.timedModeDeactivations - modeId,
-                timedModeReactivations = currentState.timedModeReactivations - modeId
+                timedModeReactivations = currentState.timedModeReactivations - modeId,
+                pausedModeRemainingMs = currentState.pausedModeRemainingMs - modeId
             )
             saveState()
 
@@ -520,7 +525,8 @@ class GuardianViewModel : ViewModel() {
 
             val modesToDeactivate = mutableSetOf<String>()
             val schedulesToDeactivate = mutableSetOf<String>()
-            
+            val perModeLimits = mutableMapOf<String, Long?>() // per-mode limit tracking
+
             var aggregateLimit: Long? = null
             var limitInitialized = false
 
@@ -531,13 +537,14 @@ class GuardianViewModel : ViewModel() {
                     val tagIds = mode.effectiveNfcTagIds
                     // Check if tag matches specific tag OR any tag wildcard "ANY"
                     val tagMatches = tagIds.contains(tagId) || tagIds.contains("ANY")
-                    
+
                     if (tagIds.isNotEmpty()) {
                         if (tagMatches) {
                             modesToDeactivate.add(modeId)
 
                             // Track the most restrictive limit among all modes being unlocked
                             val modeLimit = mode.getLimitForTag(tagId)
+                            perModeLimits[modeId] = modeLimit
                             if (!limitInitialized) {
                                 aggregateLimit = modeLimit
                                 limitInitialized = true
@@ -564,6 +571,7 @@ class GuardianViewModel : ViewModel() {
                     } else {
                         // No NFC tags linked — any tag can unlock this mode (legacy behavior)
                         modesToDeactivate.add(modeId)
+                        perModeLimits[modeId] = null // no limit
 
                         _appState.value.schedules.forEach { schedule ->
                             if (schedule.linkedModeIds.contains(modeId)) {
@@ -588,42 +596,93 @@ class GuardianViewModel : ViewModel() {
                     modeIds = modesToDeactivate,
                     schedulesToDeactivate = schedulesToDeactivate,
                     tagId = tagId,
-                    maxLimitMinutes = aggregateLimit
+                    maxLimitMinutes = aggregateLimit,
+                    modeLimits = perModeLimits
                 )
             }
         }
     }
 
-    /** User confirmed unlock duration from dialog. null = permanent, otherwise epoch millis to reactivate. */
-    fun confirmUnlock(reactivateAtMillis: Long? = null) {
+    /** User confirmed unlock duration from dialog. null = permanent, otherwise epoch millis to reactivate.
+     *  selectedModeIds = which modes to actually unlock (subset of pending.modeIds). null = all. */
+    fun confirmUnlock(reactivateAtMillis: Long? = null, selectedModeIds: Set<String>? = null) {
         val pending = _pendingUnlock.value ?: return
         _pendingUnlock.value = null
 
-        viewModelScope.launch {
-            AppLogger.log("NFC", "Confirming unlock: modes=${pending.modeIds}, reactivate=${reactivateAtMillis != null}")
+        val modeIdsToUnlock = selectedModeIds ?: pending.modeIds
 
-            val newReactivations = if (reactivateAtMillis != null) {
-                _appState.value.timedModeReactivations + pending.modeIds.associateWith { reactivateAtMillis }
-            } else {
-                _appState.value.timedModeReactivations
+        viewModelScope.launch {
+            AppLogger.log("NFC", "Confirming unlock: modes=$modeIdsToUnlock (of ${pending.modeIds}), reactivate=${reactivateAtMillis != null}")
+
+            // Recompute schedules to deactivate based on the actual modes being unlocked
+            val currentState = _appState.value
+            val calendar = java.util.Calendar.getInstance()
+            val currentDayOfWeek = when (calendar.get(java.util.Calendar.DAY_OF_WEEK)) {
+                java.util.Calendar.MONDAY -> 1; java.util.Calendar.TUESDAY -> 2
+                java.util.Calendar.WEDNESDAY -> 3; java.util.Calendar.THURSDAY -> 4
+                java.util.Calendar.FRIDAY -> 5; java.util.Calendar.SATURDAY -> 6
+                java.util.Calendar.SUNDAY -> 7; else -> 1
+            }
+            val currentTime = calendar.get(java.util.Calendar.HOUR_OF_DAY) * 60 + calendar.get(java.util.Calendar.MINUTE)
+
+            val schedulesToDeactivate = mutableSetOf<String>()
+            modeIdsToUnlock.forEach { modeId ->
+                currentState.schedules.forEach { schedule ->
+                    if (schedule.linkedModeIds.contains(modeId) && currentState.activeSchedules.contains(schedule.id)) {
+                        val dayTime = schedule.timeSlot.getTimeForDay(currentDayOfWeek)
+                        if (dayTime != null) {
+                            val startTime = dayTime.startHour * 60 + dayTime.startMinute
+                            if (currentTime >= startTime) {
+                                // Only deactivate schedule if ALL its linked modes will be inactive
+                                val allLinkedWillBeInactive = schedule.linkedModeIds.all { linkedId ->
+                                    modeIdsToUnlock.contains(linkedId) || !currentState.activeModes.contains(linkedId)
+                                }
+                                if (allLinkedWillBeInactive) {
+                                    schedulesToDeactivate.add(schedule.id)
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
-            _appState.value = _appState.value.copy(
-                activeModes = _appState.value.activeModes - pending.modeIds,
-                activeSchedules = _appState.value.activeSchedules - pending.schedulesToDeactivate,
-                deactivatedSchedules = _appState.value.deactivatedSchedules + pending.schedulesToDeactivate,
-                manuallyActivatedModes = _appState.value.manuallyActivatedModes - pending.modeIds,
-                timedModeDeactivations = _appState.value.timedModeDeactivations - pending.modeIds,
-                timedModeReactivations = newReactivations
+            val newReactivations = if (reactivateAtMillis != null) {
+                currentState.timedModeReactivations + modeIdsToUnlock.associateWith { reactivateAtMillis }
+            } else {
+                currentState.timedModeReactivations
+            }
+
+            // Save remaining deactivation time for modes that had a timed deactivation
+            val now = System.currentTimeMillis()
+            val newPausedRemaining = currentState.pausedModeRemainingMs.toMutableMap()
+            modeIdsToUnlock.forEach { modeId ->
+                val deadline = currentState.timedModeDeactivations[modeId]
+                if (deadline != null) {
+                    val remaining = (deadline - now).coerceAtLeast(0)
+                    if (remaining > 0) {
+                        newPausedRemaining[modeId] = remaining
+                        AppLogger.log("TIMER", "Saving remaining ${remaining / 60000}m for mode $modeId")
+                    }
+                }
+            }
+
+            _appState.value = currentState.copy(
+                activeModes = currentState.activeModes - modeIdsToUnlock,
+                activeSchedules = currentState.activeSchedules - schedulesToDeactivate,
+                deactivatedSchedules = currentState.deactivatedSchedules + schedulesToDeactivate,
+                manuallyActivatedModes = currentState.manuallyActivatedModes - modeIdsToUnlock,
+                timedModeDeactivations = currentState.timedModeDeactivations - modeIdsToUnlock,
+                timedModeReactivations = newReactivations,
+                pausedModeRemainingMs = newPausedRemaining
             )
             saveState()
 
             // Cancel any timed deactivation alarms for unlocked modes
-            pending.modeIds.forEach { cancelTimedDeactivation(it) }
+            modeIdsToUnlock.forEach { cancelTimedDeactivation(it) }
 
             // Schedule reactivation alarms if timed
             if (reactivateAtMillis != null) {
-                pending.modeIds.forEach { modeId ->
+                modeIdsToUnlock.forEach { modeId ->
                     scheduleTimedReactivation(modeId, reactivateAtMillis)
                 }
             }
@@ -731,11 +790,38 @@ class GuardianViewModel : ViewModel() {
             }
 
             AppLogger.log("TIMER", "Reactivating mode '${mode.name}' after timed unlock")
+            val remainingMs = currentState.pausedModeRemainingMs[modeId]
+            val newTimedDeactivations = if (remainingMs != null && remainingMs > 0) {
+                val newDeadline = System.currentTimeMillis() + remainingMs
+                AppLogger.log("TIMER", "Restoring timed deactivation for '${mode.name}': ${remainingMs / 60000}m remaining")
+                currentState.timedModeDeactivations + (modeId to newDeadline)
+            } else {
+                currentState.timedModeDeactivations
+            }
+
+            // Restore schedules that were deactivated when this mode was paused
+            val schedulesToRestore = currentState.schedules
+                .filter { schedule ->
+                    schedule.linkedModeIds.contains(modeId) &&
+                            currentState.deactivatedSchedules.contains(schedule.id)
+                }
+                .map { it.id }
+                .toSet()
+
             _appState.value = currentState.copy(
                 activeModes = currentState.activeModes + modeId,
-                timedModeReactivations = currentState.timedModeReactivations - modeId
+                timedModeReactivations = currentState.timedModeReactivations - modeId,
+                timedModeDeactivations = newTimedDeactivations,
+                pausedModeRemainingMs = currentState.pausedModeRemainingMs - modeId,
+                activeSchedules = currentState.activeSchedules + schedulesToRestore,
+                deactivatedSchedules = currentState.deactivatedSchedules - schedulesToRestore
             )
             saveState()
+
+            // Re-schedule deactivation alarm if time was restored
+            if (remainingMs != null && remainingMs > 0) {
+                scheduleTimedDeactivation(modeId, System.currentTimeMillis() + remainingMs)
+            }
         }
     }
 
@@ -758,7 +844,7 @@ class GuardianViewModel : ViewModel() {
                     if (imported != null) {
                         // Restore NFC tag links and limits from import
                         existing.copy(
-                            nfcTagId = null, 
+                            nfcTagId = null,
                             nfcTagIds = imported.effectiveNfcTagIds,
                             tagUnlockLimits = imported.tagUnlockLimits
                         )
@@ -797,7 +883,8 @@ class GuardianViewModel : ViewModel() {
                     deactivatedSchedules = emptySet(),
                     manuallyActivatedModes = emptySet(),
                     timedModeDeactivations = emptyMap(),
-                    timedModeReactivations = emptyMap()
+                    timedModeReactivations = emptyMap(),
+                    pausedModeRemainingMs = emptyMap()
                 )
             }
 
@@ -841,12 +928,18 @@ class GuardianViewModel : ViewModel() {
         AppLogger.log("SCHEDULE", "Manually activating schedule '${schedule.name}' with ${schedule.linkedModeIds.size} modes")
 
         viewModelScope.launch {
+            val linkedModeIdSet = schedule.linkedModeIds.toSet()
             _appState.value = currentState.copy(
-                activeModes = currentState.activeModes + schedule.linkedModeIds.toSet(),
+                activeModes = currentState.activeModes + linkedModeIdSet,
                 activeSchedules = currentState.activeSchedules + scheduleId,
-                deactivatedSchedules = currentState.deactivatedSchedules - scheduleId
+                deactivatedSchedules = currentState.deactivatedSchedules - scheduleId,
+                timedModeReactivations = currentState.timedModeReactivations - linkedModeIdSet,
+                pausedModeRemainingMs = currentState.pausedModeRemainingMs - linkedModeIdSet
             )
             saveState()
+
+            // Cancel any pending reactivation alarms for these modes
+            linkedModeIdSet.forEach { cancelTimedReactivation(it) }
         }
         return ActivationResult.SUCCESS
     }

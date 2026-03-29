@@ -128,11 +128,14 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             val newActiveModes = appState.activeModes + modesToActivate
             val newActiveSchedules = appState.activeSchedules + scheduleId
             val newDeactivatedSchedules = appState.deactivatedSchedules - scheduleId
+            val activatedSet = modesToActivate.toSet()
 
             val newState = appState.copy(
                 activeModes = newActiveModes,
                 activeSchedules = newActiveSchedules,
-                deactivatedSchedules = newDeactivatedSchedules
+                deactivatedSchedules = newDeactivatedSchedules,
+                timedModeReactivations = appState.timedModeReactivations - activatedSet,
+                pausedModeRemainingMs = appState.pausedModeRemainingMs - activatedSet
             )
             AppLogger.log("ALARM", "Schedule activated: activeModes=$newActiveModes, activeSchedules=$newActiveSchedules")
             val newStateJson = json.encodeToString(newState)
@@ -362,9 +365,33 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             }
 
             AppLogger.log("ALARM", "Reactivating mode '${mode.name}' after timed unlock expired")
+
+            // Restore remaining deactivation time if the mode was on a timer before being paused
+            val remainingMs = appState.pausedModeRemainingMs[modeId]
+            val newTimedDeactivations = if (remainingMs != null && remainingMs > 0) {
+                val newDeadline = System.currentTimeMillis() + remainingMs
+                AppLogger.log("ALARM", "Restoring timed deactivation for '${mode.name}': ${remainingMs / 60000}m remaining")
+                appState.timedModeDeactivations + (modeId to newDeadline)
+            } else {
+                appState.timedModeDeactivations
+            }
+
+            // Restore schedules that were deactivated when this mode was paused
+            val schedulesToRestore = appState.schedules
+                .filter { schedule ->
+                    schedule.linkedModeIds.contains(modeId) &&
+                            appState.deactivatedSchedules.contains(schedule.id)
+                }
+                .map { it.id }
+                .toSet()
+
             val newState = appState.copy(
                 activeModes = appState.activeModes + modeId,
-                timedModeReactivations = appState.timedModeReactivations - modeId
+                timedModeReactivations = appState.timedModeReactivations - modeId,
+                timedModeDeactivations = newTimedDeactivations,
+                pausedModeRemainingMs = appState.pausedModeRemainingMs - modeId,
+                activeSchedules = appState.activeSchedules + schedulesToRestore,
+                deactivatedSchedules = appState.deactivatedSchedules - schedulesToRestore
             )
 
             val newStateJson = json.encodeToString(newState)
@@ -372,8 +399,47 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
             updateBlockerService(context, newState)
             GuardianWidget.notifyAllWidgets(context)
+
+            // Schedule deactivation alarm if remaining time was restored
+            if (remainingMs != null && remainingMs > 0) {
+                val deactivateAt = System.currentTimeMillis() + remainingMs
+                scheduleTimedDeactivationAlarm(context, modeId, deactivateAt)
+            }
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error reactivating timed mode: ${e.message}", e)
+        }
+    }
+
+    private fun scheduleTimedDeactivationAlarm(context: Context, modeId: String, deactivateAtMillis: Long) {
+        try {
+            val intent = Intent(context, ScheduleAlarmReceiver::class.java).apply {
+                action = ACTION_TIMED_DEACTIVATE_MODE
+                putExtra("mode_id", modeId)
+            }
+            val requestCode = ("timed_$modeId").hashCode()
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    deactivateAtMillis,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.setExact(
+                    AlarmManager.RTC_WAKEUP,
+                    deactivateAtMillis,
+                    pendingIntent
+                )
+            }
+            AppLogger.log("ALARM", "Scheduled timed deactivation for mode $modeId at ${java.util.Date(deactivateAtMillis)}")
+        } catch (e: Exception) {
+            AppLogger.log("ALARM", "Error scheduling timed deactivation from receiver: ${e.message}")
         }
     }
 

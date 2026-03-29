@@ -506,15 +506,16 @@ fun MainNavigation(
 
     // Show unlock duration dialog when pending
     pendingUnlock?.let { pending ->
-        val modeNames = pending.modeIds.mapNotNull { id ->
-            appState.modes.find { it.id == id }?.name
+        val unlockModes = pending.modeIds.mapNotNull { id ->
+            val mode = appState.modes.find { it.id == id }
+            if (mode != null) UnlockModeInfo(id, mode.name, pending.modeLimits[id])
+            else null
         }
         UnlockDurationDialog(
-            modeNames = modeNames,
-            maxLimitMinutes = pending.maxLimitMinutes,
+            modes = unlockModes,
             onDismiss = { viewModel.dismissUnlock() },
-            onConfirm = { reactivateAtMillis ->
-                viewModel.confirmUnlock(reactivateAtMillis)
+            onConfirm = { reactivateAtMillis, selectedModeIds ->
+                viewModel.confirmUnlock(reactivateAtMillis, selectedModeIds)
             }
         )
     }

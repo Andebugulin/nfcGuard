@@ -80,7 +80,7 @@ fun ModeEditorScreen(
     var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
-    
+
     var tagToConfigureLimit by remember { mutableStateOf<String?>(null) } // tagId or "ANY"
     var showPermanentUnlockWarning by remember { mutableStateOf(false) }
 
@@ -262,7 +262,7 @@ fun ModeEditorScreen(
                     )
 
                     Spacer(Modifier.height(12.dp))
-                    
+
                     // Constrain the height of the tag list to prevent it from pushing app list off screen
                     Column(
                         modifier = Modifier
@@ -413,7 +413,7 @@ fun ModeEditorScreen(
             }
         }
     }
-    
+
     // Tag limit configuration dialog
     tagToConfigureLimit?.let { tagId ->
         TagLimitConfigDialog(
@@ -546,12 +546,13 @@ fun TagLimitItem(
                     }
                 }
             }
-            
+
             // Right part: Duration (Configure max limit)
             Surface(
                 onClick = onConfigureLimit,
-                color = if (isSelected) Color(0xFFEEEEEE) else Color(0xFF1A1A1A),
-                shape = RoundedCornerShape(0.dp)
+                color = Color.Black,
+                shape = RoundedCornerShape(0.dp),
+                modifier = Modifier.border(1.dp, Color.White, RoundedCornerShape(0.dp))
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
@@ -562,13 +563,13 @@ fun TagLimitItem(
                         Icons.Default.Timer,
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
-                        tint = if (isSelected) Color.Black else Color.White
+                        tint = Color.White
                     )
                     Text(
                         if (limitMinutes == null) "PERMANENT" else "${limitMinutes / 60}H ${limitMinutes % 60}M",
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isSelected) Color.Black else Color.White,
+                        color = Color.White,
                         letterSpacing = 1.sp
                     )
                 }
