@@ -54,13 +54,14 @@ Automate mode activation with flexible scheduling:
 - Per-day time configuration (different start/end times for each day of the week)
 - Optional automatic deactivation at end time
 - Multiple modes can be linked to a single schedule
-- Visual status badges: **ACTIVE** when a schedule is running, **DEACTIVATED** when dismissed early via NFC
+- Visual status badges: **ACTIVE** when a schedule is running, **PAUSED** when dismissed temporarily via NFC
 
 ### NFC Integration
 
 - Register physical NFC tags by tapping them to your device
 - Tap a registered tag to deactivate active modes
 - Modes with a linked tag _require_ that specific tag — other tags won't work
+- A tag can be set with a time limit to allow a break without giving the ability to fully unlock a schedule
 - Wrong-tag feedback when an incorrect tag is scanned
 
 ### Settings & Permissions
@@ -145,12 +146,42 @@ Some manufacturers (Xiaomi, Samsung, Huawei) aggressively kill background servic
       "name": "Work Focus",
       "blockedApps": ["com.instagram.android", "com.twitter.android"],
       "blockMode": "BLOCK_SELECTED",
-      "nfcTagId": null
+      "nfcTagId": null,
+      "nfcTagIds": ["1234abcd", "ANY"],
+      "tagUnlockLimits": {
+        "1234abcd": null,
+        "ANY": 15
+      }
     }
   ],
-  "schedules": [],
-  "nfcTags": []
+  "schedules": [
+    {
+      "id": "123-abc",
+      "name": "Schedule",
+      "timeSlot": {
+        "dayTimes": [
+          {
+            "day": 1,
+            "startHour": 0,
+            "startMinute": 0,
+            "endHour": 23,
+            "endMinute": 59
+          }
+        ]
+      },
+      "linkedModeIds": ["a4f74781-f6f4-47be-9b64-7c67b8c5e554"],
+      "hasEndTime": true
+    }
+  ],
+  "nfcTags": [
+    {
+      "id": "1234abcd",
+      "name": "NFC Card",
+      "linkedModeIds": []
+    }
+  ]
 }
+
 ```
 
 ### YAML
@@ -177,7 +208,7 @@ nfcTags: []
 <details>
   <summary>Click to view my personal configuration</summary>
 
-```yaml
+```json
 {
   "version": 1,
   "modes":

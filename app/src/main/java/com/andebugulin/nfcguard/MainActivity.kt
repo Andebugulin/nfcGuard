@@ -129,7 +129,7 @@ class MainActivity : ComponentActivity() {
                         val hasNfcLockedMode = activeModes.any { it.effectiveNfcTagIds.isNotEmpty() }
 
                         if (hasNfcLockedMode && !nfcRegistrationMode.value) {
-                            val validTag = activeModes.any { it.effectiveNfcTagIds.contains(tagId) || it.effectiveNfcTagIds.isEmpty() }
+                            val validTag = activeModes.any { it.effectiveNfcTagIds.contains(tagId) || it.effectiveNfcTagIds.isEmpty() || it.effectiveNfcTagIds.contains("ANY") }
                             if (!validTag && appState.activeModes.isNotEmpty()) {
                                 // Wrong tag scanned!
                                 AppLogger.log("NFC", "WRONG TAG for active modes (tag=$tagId, activeModes=${appState.activeModes})")
@@ -511,6 +511,7 @@ fun MainNavigation(
         }
         UnlockDurationDialog(
             modeNames = modeNames,
+            maxLimitMinutes = pending.maxLimitMinutes,
             onDismiss = { viewModel.dismissUnlock() },
             onConfirm = { reactivateAtMillis ->
                 viewModel.confirmUnlock(reactivateAtMillis)

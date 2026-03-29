@@ -264,10 +264,17 @@ class GuardianWidget : AppWidgetProvider() {
                 activeModes.map { it.id }.toSet(),
                 manuallyActivatedModeIds = appState.manuallyActivatedModes,
                 timedModeDeactivations = appState.timedModeDeactivations,
-                modeNames = modeNames
+                modeNames = modeNames,
+                timedModeReactivations = appState.timedModeReactivations
             )
         } else if (appState.schedules.isNotEmpty()) {
-            BlockerService.start(context, emptySet(), BlockMode.BLOCK_SELECTED, emptySet())
+            BlockerService.start(
+                context,
+                emptySet(),
+                BlockMode.BLOCK_SELECTED,
+                emptySet(),
+                timedModeReactivations = appState.timedModeReactivations
+            )
         }
     }
 

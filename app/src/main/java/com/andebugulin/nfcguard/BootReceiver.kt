@@ -56,14 +56,30 @@ class BootReceiver : BroadcastReceiver() {
                         }
                     }
                     AppLogger.log("BOOT", "Restoring ALLOW_SELECTED: ${allAllowedApps.size} apps, modes=${appState.activeModes}")
-                    BlockerService.start(context, allAllowedApps, BlockMode.ALLOW_SELECTED, appState.activeModes)
+                    BlockerService.start(
+                        context,
+                        allAllowedApps,
+                        BlockMode.ALLOW_SELECTED,
+                        appState.activeModes,
+                        appState.manuallyActivatedModes,
+                        appState.timedModeDeactivations,
+                        timedModeReactivations = appState.timedModeReactivations
+                    )
                 } else {
                     val allBlockedApps = mutableSetOf<String>()
                     activeModes.forEach { mode ->
                         allBlockedApps.addAll(mode.blockedApps)
                     }
                     AppLogger.log("BOOT", "Restoring BLOCK_SELECTED: ${allBlockedApps.size} apps, modes=${appState.activeModes}")
-                    BlockerService.start(context, allBlockedApps, BlockMode.BLOCK_SELECTED, appState.activeModes)
+                    BlockerService.start(
+                        context,
+                        allBlockedApps,
+                        BlockMode.BLOCK_SELECTED,
+                        appState.activeModes,
+                        appState.manuallyActivatedModes,
+                        appState.timedModeDeactivations,
+                        timedModeReactivations = appState.timedModeReactivations
+                    )
                 }
 
                 AppLogger.log("BOOT", "BlockerService started after boot")

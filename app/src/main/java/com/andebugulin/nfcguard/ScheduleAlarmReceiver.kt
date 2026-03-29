@@ -225,26 +225,44 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     }
                 }
                 android.util.Log.d("SCHEDULE_ALARM", "Starting service in ALLOW mode")
-                BlockerService.start(context, allAllowedApps, BlockMode.ALLOW_SELECTED, activeModes.map { it.id }.toSet(),
+                BlockerService.start(
+                    context,
+                    allAllowedApps,
+                    BlockMode.ALLOW_SELECTED,
+                    activeModes.map { it.id }.toSet(),
                     manuallyActivatedModeIds = appState.manuallyActivatedModes,
                     timedModeDeactivations = appState.timedModeDeactivations,
-                    modeNames = modeNamesMap)
+                    modeNames = modeNamesMap,
+                    appState.timedModeReactivations
+                )
             } else {
                 val allBlockedApps = mutableSetOf<String>()
                 activeModes.forEach { mode ->
                     allBlockedApps.addAll(mode.blockedApps)
                 }
                 android.util.Log.d("SCHEDULE_ALARM", "Starting service in BLOCK mode")
-                BlockerService.start(context, allBlockedApps, BlockMode.BLOCK_SELECTED, activeModes.map { it.id }.toSet(),
+                BlockerService.start(
+                    context,
+                    allBlockedApps,
+                    BlockMode.BLOCK_SELECTED,
+                    activeModes.map { it.id }.toSet(),
                     manuallyActivatedModeIds = appState.manuallyActivatedModes,
                     timedModeDeactivations = appState.timedModeDeactivations,
-                    modeNames = modeNamesMap)
+                    modeNames = modeNamesMap,
+                    appState.timedModeReactivations
+                )
             }
             scheduleWatchdog(context)
         } else {
             if (appState.schedules.isNotEmpty()) {
                 android.util.Log.d("SCHEDULE_ALARM", "No active modes, keeping service for schedules")
-                BlockerService.start(context, emptySet(), BlockMode.BLOCK_SELECTED, emptySet())
+                BlockerService.start(
+                    context,
+                    emptySet(),
+                    BlockMode.BLOCK_SELECTED,
+                    emptySet(),
+                    timedModeReactivations = appState.timedModeReactivations
+                )
             } else {
                 android.util.Log.d("SCHEDULE_ALARM", "No modes or schedules, stopping service")
                 BlockerService.stop(context)

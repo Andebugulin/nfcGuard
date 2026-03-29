@@ -42,13 +42,21 @@ data class Mode(
     val blockMode: BlockMode = BlockMode.BLOCK_SELECTED,
     @Deprecated("Use nfcTagIds instead. Kept for migration from older versions.")
     val nfcTagId: String? = null,
-    val nfcTagIds: List<String> = emptyList()
+    val nfcTagIds: List<String> = emptyList(),
+    val tagUnlockLimits: Map<String, Long?> = emptyMap() // tagId -> max unlock duration in minutes (null = permanent). Key "ANY" for any other tag.
 ) {
     /** Resolved tag list: migrates legacy single-tag field automatically. */
     val effectiveNfcTagIds: List<String>
         get() = if (nfcTagIds.isNotEmpty()) nfcTagIds
         else if (@Suppress("DEPRECATION") nfcTagId != null) listOf(@Suppress("DEPRECATION") nfcTagId!!)
         else emptyList()
+
+    /** Returns the limit for a specific tag, prioritizing exact match over wildcard. */
+    fun getLimitForTag(tagId: String): Long? {
+        if (tagUnlockLimits.containsKey(tagId)) return tagUnlockLimits[tagId]
+        if (tagUnlockLimits.containsKey("ANY")) return tagUnlockLimits["ANY"]
+        return null
+    }
 }
 
 @Serializable
@@ -83,13 +91,15 @@ data class AppState(
     val deactivatedSchedules: Set<String> = emptySet(), // Schedules manually deactivated by user
     val manuallyActivatedModes: Set<String> = emptySet(), // Modes activated by user tap (not by schedule)
     val timedModeDeactivations: Map<String, Long> = emptyMap(), // modeId -> epoch millis when it should auto-deactivate
-    val timedModeReactivations: Map<String, Long> = emptyMap() // modeId -> epoch millis when it should auto-reactivate after NFC unlock
+    val timedModeReactivations: Map<String, Long> = emptyMap(), // modeId -> epoch millis when it should auto-reactivate after NFC unlock
 )
 
 /** Pending NFC unlock awaiting user duration choice (not persisted) */
 data class PendingUnlock(
     val modeIds: Set<String>,
-    val schedulesToDeactivate: Set<String>
+    val schedulesToDeactivate: Set<String>,
+    val tagId: String? = null, // Store which tag was scanned to apply its specific limit
+    val maxLimitMinutes: Long? = null // The most restrictive limit among all modes being unlocked
 )
 
 /** Result of attempting to activate a mode */
@@ -207,36 +217,55 @@ class GuardianViewModel : ViewModel() {
                     }
                 }
                 AppLogger.log("SERVICE", "Starting ALLOW_SELECTED with ${allAllowedApps.size} allowed apps")
-                BlockerService.start(context, allAllowedApps, BlockMode.ALLOW_SELECTED, activeModes.map { it.id }.toSet(),
+                BlockerService.start(
+                    context,
+                    allAllowedApps,
+                    BlockMode.ALLOW_SELECTED,
+                    activeModes.map { it.id }.toSet(),
                     manuallyActivatedModeIds = _appState.value.manuallyActivatedModes,
                     timedModeDeactivations = _appState.value.timedModeDeactivations,
-                    modeNames = modeNamesMap)
+                    modeNames = modeNamesMap,
+                    timedModeReactivations = _appState.value.timedModeReactivations
+                )
             } else {
                 val allBlockedApps = mutableSetOf<String>()
                 activeModes.forEach { mode ->
                     allBlockedApps.addAll(mode.blockedApps)
                 }
                 AppLogger.log("SERVICE", "Starting BLOCK_SELECTED with ${allBlockedApps.size} blocked apps")
-                BlockerService.start(context, allBlockedApps, BlockMode.BLOCK_SELECTED, activeModes.map { it.id }.toSet(),
+                BlockerService.start(
+                    context,
+                    allBlockedApps,
+                    BlockMode.BLOCK_SELECTED,
+                    activeModes.map { it.id }.toSet(),
                     manuallyActivatedModeIds = _appState.value.manuallyActivatedModes,
                     timedModeDeactivations = _appState.value.timedModeDeactivations,
-                    modeNames = modeNamesMap)
+                    modeNames = modeNamesMap,
+                    timedModeReactivations = _appState.value.timedModeReactivations
+                )
             }
         } else {
             AppLogger.log("SERVICE", "No active modes — starting empty service for schedule monitoring")
             // Keep service running even with no active modes to handle schedules
-            BlockerService.start(context, emptySet(), BlockMode.BLOCK_SELECTED, emptySet())
+            BlockerService.start(
+                context,
+                emptySet(),
+                BlockMode.BLOCK_SELECTED,
+                emptySet(),
+                timedModeReactivations = _appState.value.timedModeReactivations
+            )
         }
     }
 
-    fun addMode(name: String, blockedApps: List<String>, blockMode: BlockMode = BlockMode.BLOCK_SELECTED, nfcTagIds: List<String> = emptyList()) {
+    fun addMode(name: String, blockedApps: List<String>, blockMode: BlockMode = BlockMode.BLOCK_SELECTED, nfcTagIds: List<String> = emptyList(), tagUnlockLimits: Map<String, Long?> = emptyMap()) {
         viewModelScope.launch {
             val newMode = Mode(
                 id = java.util.UUID.randomUUID().toString(),
                 name = name,
                 blockedApps = blockedApps,
                 blockMode = blockMode,
-                nfcTagIds = nfcTagIds
+                nfcTagIds = nfcTagIds,
+                tagUnlockLimits = tagUnlockLimits
             )
             _appState.value = _appState.value.copy(
                 modes = _appState.value.modes + newMode
@@ -245,7 +274,7 @@ class GuardianViewModel : ViewModel() {
         }
     }
 
-    fun updateMode(id: String, name: String, blockedApps: List<String>, blockMode: BlockMode, nfcTagIds: List<String>) {
+    fun updateMode(id: String, name: String, blockedApps: List<String>, blockMode: BlockMode, nfcTagIds: List<String>, tagUnlockLimits: Map<String, Long?> = emptyMap()) {
         viewModelScope.launch {
             _appState.value = _appState.value.copy(
                 modes = _appState.value.modes.map { mode ->
@@ -254,7 +283,8 @@ class GuardianViewModel : ViewModel() {
                         blockedApps = blockedApps,
                         blockMode = blockMode,
                         nfcTagId = null,
-                        nfcTagIds = nfcTagIds
+                        nfcTagIds = nfcTagIds,
+                        tagUnlockLimits = tagUnlockLimits
                     ) else mode
                 }
             )
@@ -490,16 +520,32 @@ class GuardianViewModel : ViewModel() {
 
             val modesToDeactivate = mutableSetOf<String>()
             val schedulesToDeactivate = mutableSetOf<String>()
+            
+            var aggregateLimit: Long? = null
+            var limitInitialized = false
 
             _appState.value.activeModes.forEach { modeId ->
                 val mode = _appState.value.modes.find { it.id == modeId }
 
                 if (mode != null) {
                     val tagIds = mode.effectiveNfcTagIds
+                    // Check if tag matches specific tag OR any tag wildcard "ANY"
+                    val tagMatches = tagIds.contains(tagId) || tagIds.contains("ANY")
+                    
                     if (tagIds.isNotEmpty()) {
-                        // Specific tags required — check if scanned tag is in the list
-                        if (tagIds.contains(tagId)) {
+                        if (tagMatches) {
                             modesToDeactivate.add(modeId)
+
+                            // Track the most restrictive limit among all modes being unlocked
+                            val modeLimit = mode.getLimitForTag(tagId)
+                            if (!limitInitialized) {
+                                aggregateLimit = modeLimit
+                                limitInitialized = true
+                            } else {
+                                if (modeLimit != null) {
+                                    aggregateLimit = if (aggregateLimit == null) modeLimit else minOf(aggregateLimit!!, modeLimit)
+                                }
+                            }
 
                             _appState.value.schedules.forEach { schedule ->
                                 if (schedule.linkedModeIds.contains(modeId)) {
@@ -516,7 +562,7 @@ class GuardianViewModel : ViewModel() {
                             }
                         }
                     } else {
-                        // No NFC tags linked — any tag can unlock this mode
+                        // No NFC tags linked — any tag can unlock this mode (legacy behavior)
                         modesToDeactivate.add(modeId)
 
                         _appState.value.schedules.forEach { schedule ->
@@ -537,10 +583,12 @@ class GuardianViewModel : ViewModel() {
             }
 
             if (modesToDeactivate.isNotEmpty()) {
-                AppLogger.log("NFC", "Pending unlock: modes=$modesToDeactivate, schedules=$schedulesToDeactivate")
+                AppLogger.log("NFC", "Pending unlock: modes=$modesToDeactivate, schedules=$schedulesToDeactivate, limit=$aggregateLimit")
                 _pendingUnlock.value = PendingUnlock(
                     modeIds = modesToDeactivate,
-                    schedulesToDeactivate = schedulesToDeactivate
+                    schedulesToDeactivate = schedulesToDeactivate,
+                    tagId = tagId,
+                    maxLimitMinutes = aggregateLimit
                 )
             }
         }
@@ -708,8 +756,12 @@ class GuardianViewModel : ViewModel() {
                 val mergedModes = _appState.value.modes.map { existing ->
                     val imported = importModeMap[existing.id]
                     if (imported != null) {
-                        // Restore NFC tag links from import
-                        existing.copy(nfcTagId = null, nfcTagIds = imported.effectiveNfcTagIds)
+                        // Restore NFC tag links and limits from import
+                        existing.copy(
+                            nfcTagId = null, 
+                            nfcTagIds = imported.effectiveNfcTagIds,
+                            tagUnlockLimits = imported.tagUnlockLimits
+                        )
                     } else existing
                 } + data.modes.filter { it.id !in existingModeIds }
 
@@ -753,13 +805,13 @@ class GuardianViewModel : ViewModel() {
             val validTagIds = _appState.value.nfcTags.map { it.id }.toSet()
             _appState.value = _appState.value.copy(
                 modes = _appState.value.modes.map { mode ->
-                    val cleaned = mode.effectiveNfcTagIds.filter { it in validTagIds }
-                    if (cleaned != mode.effectiveNfcTagIds) {
-                        mode.copy(nfcTagId = null, nfcTagIds = cleaned)
+                    val cleaned = mode.effectiveNfcTagIds.filter { it in validTagIds || it == "ANY" }
+                    val cleanedLimits = mode.tagUnlockLimits.filterKeys { it in validTagIds || it == "ANY" }
+                    if (cleaned != mode.effectiveNfcTagIds || cleanedLimits != mode.tagUnlockLimits) {
+                        mode.copy(nfcTagId = null, nfcTagIds = cleaned, tagUnlockLimits = cleanedLimits)
                     } else mode
                 }
             )
-
             saveState()
         }
     }

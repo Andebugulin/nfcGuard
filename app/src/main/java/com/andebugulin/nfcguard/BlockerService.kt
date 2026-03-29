@@ -30,6 +30,7 @@ class BlockerService : Service() {
     private var activeModeIds = setOf<String>()
     private var manuallyActivatedModeIds = setOf<String>()
     private var timedModeDeactivations = mapOf<String, Long>()
+    private var timedModeReactivations = mapOf<String, Long>()
     private var modeNames = mapOf<String, String>()
     private var lastCheckedApp: String? = null
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -104,6 +105,10 @@ class BlockerService : Service() {
         intent?.getSerializableExtra("mode_names")?.let {
             @Suppress("UNCHECKED_CAST")
             modeNames = (it as? java.util.HashMap<String, String>)?.toMap() ?: emptyMap()
+        }
+        intent?.getSerializableExtra("timed_mode_reactivations")?.let {
+            @Suppress("UNCHECKED_CAST")
+            timedModeReactivations = (it as? java.util.HashMap<String, Long>)?.toMap() ?: emptyMap()
         }
 
         lastCheckedApp = null
@@ -186,7 +191,8 @@ class BlockerService : Service() {
             activeModeIds: Set<String>,
             manuallyActivatedModeIds: Set<String> = emptySet(),
             timedModeDeactivations: Map<String, Long> = emptyMap(),
-            modeNames: Map<String, String> = emptyMap()
+            modeNames: Map<String, String> = emptyMap(),
+            timedModeReactivations: Map<String, Long> = emptyMap()
         ) {
             android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
             android.util.Log.d("BLOCKER_SERVICE", "START REQUEST RECEIVED")
@@ -212,6 +218,7 @@ class BlockerService : Service() {
                 putStringArrayListExtra("manually_activated_mode_ids", ArrayList(manuallyActivatedModeIds))
                 putExtra("timed_mode_deactivations", HashMap(timedModeDeactivations))
                 putExtra("mode_names", HashMap(modeNames))
+                putExtra("timed_mode_reactivations", HashMap(timedModeReactivations))
             }
             context.startForegroundService(intent)
             ScheduleAlarmReceiver.scheduleWatchdog(context)
@@ -880,66 +887,75 @@ class BlockerService : Service() {
             PendingIntent.FLAG_IMMUTABLE
         )
 
-        val titleText = if (activeModeIds.isEmpty()) {
-            "GUARDIAN MONITORING"
-        } else {
-            "GUARDIAN ACTIVE"
+        val timedDeactivationCount = activeModeIds.count { timedModeDeactivations.containsKey(it) }
+        val timedReactivationCount = timedModeReactivations.size
+
+        val titleText = when {
+            activeModeIds.isNotEmpty() -> "GUARDIAN ACTIVE"
+            timedReactivationCount > 0 -> "GUARDIAN PAUSED"
+            else -> "GUARDIAN MONITORING"
         }
 
-        val contentText = if (activeModeIds.isEmpty()) {
+        val contentText = if (activeModeIds.isEmpty() && timedReactivationCount == 0) {
             "Waiting for scheduled modes"
         } else {
-            val modeCount = activeModeIds.size
+            val modeCount = activeModeIds.size + timedReactivationCount
             val manualCount = activeModeIds.count { manuallyActivatedModeIds.contains(it) }
-            val scheduleCount = modeCount - manualCount
-            val timedCount = activeModeIds.count { timedModeDeactivations.containsKey(it) }
+            val scheduleCount = modeCount - manualCount - timedReactivationCount
 
             buildString {
-                append("$modeCount MODE${if (modeCount > 1) "S" else ""}")
-                val parts = mutableListOf<String>()
-                if (manualCount > 0) parts.add("${manualCount} manual")
-                if (scheduleCount > 0) parts.add("${scheduleCount} scheduled")
-                if (parts.isNotEmpty()) append(" (${parts.joinToString(", ")})")
-                if (timedCount > 0) {
-                    val nextExpiry = activeModeIds
-                        .mapNotNull { timedModeDeactivations[it] }
-                        .minOrNull()
-                    if (nextExpiry != null) {
-                        append(" · until ${formatNotificationTime(nextExpiry)}")
-                    }
+                if (modeCount > 0) {
+                    append("$modeCount MODE${if (modeCount > 1) "S" else ""}")
+                    val parts = mutableListOf<String>()
+                    if (manualCount > 0) parts.add("${manualCount} manual")
+                    if (scheduleCount > 0) parts.add("${scheduleCount} scheduled")
+                    if (timedReactivationCount > 0) parts.add("${timedReactivationCount} paused")
+                    if (parts.isNotEmpty()) append(" (${parts.joinToString(", ")})")
                 }
             }
         }
 
         val bigTextStyle = NotificationCompat.BigTextStyle()
-        if (activeModeIds.isNotEmpty()) {
-            // Resolve mode names: prefer the intent-passed map, fall back to SharedPreferences
-            val resolvedNames = if (modeNames.isNotEmpty()) modeNames else {
-                try {
-                    val prefs = getSharedPreferences("guardian_prefs", MODE_PRIVATE)
-                    val stateJson = prefs.getString("app_state", null)
-                    if (stateJson != null) {
-                        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-                        val state = json.decodeFromString<AppState>(stateJson)
-                        state.modes.associate { it.id to it.name }
-                    } else emptyMap()
-                } catch (_: Exception) { emptyMap() }
-            }
+        
+        // Resolve mode names: prefer the intent-passed map, fall back to SharedPreferences
+        val resolvedNames = if (modeNames.isNotEmpty()) modeNames else {
+            try {
+                val prefs = getSharedPreferences("guardian_prefs", MODE_PRIVATE)
+                val stateJson = prefs.getString("app_state", null)
+                if (stateJson != null) {
+                    val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                    val state = json.decodeFromString<AppState>(stateJson)
+                    state.modes.associate { it.id to it.name }
+                } else emptyMap()
+            } catch (_: Exception) { emptyMap() }
+        }
+
+        if (activeModeIds.isNotEmpty() || timedModeReactivations.isNotEmpty()) {
             val details = buildString {
-                activeModeIds.forEach { modeId ->
-                    val name = resolvedNames[modeId]?.uppercase() ?: modeId.take(8)
-                    val isManual = manuallyActivatedModeIds.contains(modeId)
-                    val isTimed = timedModeDeactivations.containsKey(modeId)
-                    append("• $name")
-                    if (isManual && isTimed) {
-                        val endTime = timedModeDeactivations[modeId] ?: 0
-                        append(" — manual, until ${formatNotificationTime(endTime)}")
-                    } else if (isManual) {
-                        append(" — manual (NFC to unlock)")
-                    } else {
-                        append(" — by schedule")
+                if (activeModeIds.isNotEmpty()) {
+                    activeModeIds.forEach { modeId ->
+                        val name = resolvedNames[modeId]?.uppercase() ?: modeId.take(8)
+                        val isManual = manuallyActivatedModeIds.contains(modeId)
+                        val isTimed = timedModeDeactivations.containsKey(modeId)
+                        append("• $name")
+                        if (isManual && isTimed) {
+                            val endTime = timedModeDeactivations[modeId] ?: 0
+                            append(" — manual, until ${formatNotificationTime(endTime)}")
+                        } else if (isManual) {
+                            append(" — manual")
+                        } else {
+                            append(" — by schedule")
+                        }
+                        append("\n")
                     }
-                    append("\n")
+                }
+                
+                if (timedModeReactivations.isNotEmpty()) {
+                    if (isNotEmpty()) append("\n")
+                    timedModeReactivations.forEach { (modeId, reactivateAt) ->
+                        val name = resolvedNames[modeId]?.uppercase() ?: modeId.take(8)
+                        append("• $name — resumes at ${formatNotificationTime(reactivateAt)}\n")
+                    }
                 }
             }.trimEnd()
             bigTextStyle.bigText(details)

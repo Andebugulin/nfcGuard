@@ -86,7 +86,11 @@ class ServiceRestartReceiver : BroadcastReceiver() {
                 context,
                 appsToBlock,
                 if (hasAllowMode) BlockMode.ALLOW_SELECTED else BlockMode.BLOCK_SELECTED,
-                appState.activeModes
+                appState.activeModes,
+                appState.manuallyActivatedModes,
+                appState.timedModeDeactivations,
+                appState.modes.associate { it.id to it.name },
+                appState.timedModeReactivations
             )
 
             ScheduleAlarmReceiver.scheduleWatchdog(context)

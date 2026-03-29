@@ -8,12 +8,16 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -66,15 +70,19 @@ fun ModeEditorScreen(
     availableNfcTags: List<NfcTag>,
     allModes: List<Mode> = emptyList(),  // FIX #8: Pass all modes for NFC usage count
     onBack: () -> Unit,
-    onSave: (List<String>, BlockMode, List<String>) -> Unit
+    onSave: (List<String>, BlockMode, List<String>, Map<String, Long?>) -> Unit
 ) {
     val context = LocalContext.current
     var selectedApps by remember { mutableStateOf(mode.blockedApps.toSet()) }
     var blockMode by remember { mutableStateOf(mode.blockMode) }
     var selectedNfcTagIds by remember { mutableStateOf(mode.effectiveNfcTagIds.toSet()) }
+    var tagUnlockLimits by remember { mutableStateOf(mode.tagUnlockLimits) }
     var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
+    
+    var tagToConfigureLimit by remember { mutableStateOf<String?>(null) } // tagId or "ANY"
+    var showPermanentUnlockWarning by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         isLoading = true
@@ -84,6 +92,13 @@ fun ModeEditorScreen(
                 installedApps = apps
                 isLoading = false
             }
+        }
+    }
+
+    // Ensure that if no tags are selected, the wildcard "ANY" (Any other tag) is selected automatically
+    LaunchedEffect(selectedNfcTagIds) {
+        if (selectedNfcTagIds.isEmpty()) {
+            selectedNfcTagIds = setOf("ANY")
         }
     }
 
@@ -102,6 +117,9 @@ fun ModeEditorScreen(
         }
         counts
     }
+
+    // Check if there's any way to permanently unlock (any selected tag has null limit)
+    val hasPermanentUnlockWay = selectedNfcTagIds.any { tagId -> tagUnlockLimits[tagId] == null }
 
     Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary).windowInsetsPadding(WindowInsets.systemBars)) {
         Column(Modifier.fillMaxSize()) {
@@ -125,7 +143,11 @@ fun ModeEditorScreen(
                 // FIX #5: Disable SAVE when no apps selected
                 Button(
                     onClick = {
-                        onSave(selectedApps.toList(), blockMode, selectedNfcTagIds.toList())
+                        if (!hasPermanentUnlockWay) {
+                            showPermanentUnlockWarning = true
+                        } else {
+                            onSave(selectedApps.toList(), blockMode, selectedNfcTagIds.toList(), tagUnlockLimits)
+                        }
                     },
                     enabled = selectedApps.isNotEmpty(),
                     colors = ButtonDefaults.buttonColors(
@@ -240,96 +262,49 @@ fun ModeEditorScreen(
                     )
 
                     Spacer(Modifier.height(12.dp))
-
-                    if (availableNfcTags.isEmpty()) {
-                        Text(
-                            "No NFC tags registered yet",
-                            fontSize = 10.sp,
-                            color = GuardianTheme.TextTertiary,
-                            letterSpacing = 1.sp
+                    
+                    // Constrain the height of the tag list to prevent it from pushing app list off screen
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 160.dp) // Slightly smaller to be more compact
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // "Any other tag" option (ID is now "ANY")
+                        val isAnySelected = selectedNfcTagIds.contains("ANY")
+                        TagLimitItem(
+                            name = "ANY OTHER NFC TAG",
+                            isSelected = isAnySelected,
+                            limitMinutes = tagUnlockLimits["ANY"],
+                            onToggle = {
+                                selectedNfcTagIds = if (isAnySelected) {
+                                    selectedNfcTagIds - "ANY"
+                                } else {
+                                    selectedNfcTagIds + "ANY"
+                                }
+                            },
+                            onConfigureLimit = { tagToConfigureLimit = "ANY" }
                         )
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // "Any tag can unlock" option (when no specific tags are selected)
-                            Surface(
-                                onClick = { selectedNfcTagIds = emptySet() },
-                                shape = RoundedCornerShape(0.dp),
-                                color = if (selectedNfcTagIds.isEmpty()) Color.White else Color.Black
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        "ANY TAG CAN UNLOCK",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (selectedNfcTagIds.isEmpty()) Color.Black else Color.White,
-                                        letterSpacing = 1.sp,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    if (selectedNfcTagIds.isEmpty()) {
-                                        Icon(
-                                            Icons.Default.Check,
-                                            contentDescription = null,
-                                            tint = Color.Black
-                                        )
-                                    }
-                                }
-                            }
 
-                            // Available tags — multi-select
-                            availableNfcTags.forEach { tag ->
-                                val usageCount = nfcTagUsageCounts[tag.id] ?: 0  // FIX #8
-                                val isSelected = selectedNfcTagIds.contains(tag.id)
+                        // Available tags — multi-select
+                        availableNfcTags.forEach { tag ->
+                            val usageCount = nfcTagUsageCounts[tag.id] ?: 0  // FIX #8
+                            val isSelected = selectedNfcTagIds.contains(tag.id)
 
-                                Surface(
-                                    onClick = {
-                                        selectedNfcTagIds = if (isSelected) {
-                                            selectedNfcTagIds - tag.id
-                                        } else {
-                                            selectedNfcTagIds + tag.id
-                                        }
-                                    },
-                                    shape = RoundedCornerShape(0.dp),
-                                    color = if (isSelected) Color.White else Color.Black
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                tag.name.uppercase(),
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (isSelected) Color.Black else Color.White,
-                                                letterSpacing = 1.sp
-                                            )
-                                            // FIX #8: Show usage count
-                                            if (usageCount > 0) {
-                                                Text(
-                                                    "USED BY $usageCount OTHER MODE${if (usageCount > 1) "S" else ""}",
-                                                    fontSize = 9.sp,
-                                                    color = if (isSelected) Color(0xFFE65100) else Color(0xFFFF9800),
-                                                    letterSpacing = 0.5.sp
-                                                )
-                                            }
-                                        }
-                                        if (isSelected) {
-                                            Icon(
-                                                Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = Color.Black
-                                            )
-                                        }
+                            TagLimitItem(
+                                name = tag.name.uppercase(),
+                                isSelected = isSelected,
+                                limitMinutes = tagUnlockLimits[tag.id],
+                                usageCount = usageCount,
+                                onToggle = {
+                                    selectedNfcTagIds = if (isSelected) {
+                                        selectedNfcTagIds - tag.id
+                                    } else {
+                                        selectedNfcTagIds + tag.id
                                     }
-                                }
-                            }
+                                },
+                                onConfigureLimit = { tagToConfigureLimit = tag.id }
+                            )
                         }
                     }
                 }
@@ -425,10 +400,11 @@ fun ModeEditorScreen(
                             app = filteredApps[index],
                             isSelected = selectedApps.contains(filteredApps[index].packageName),
                             onToggle = {
-                                selectedApps = if (selectedApps.contains(filteredApps[index].packageName)) {
-                                    selectedApps - filteredApps[index].packageName
+                                val pkg = filteredApps[index].packageName
+                                selectedApps = if (selectedApps.contains(pkg)) {
+                                    selectedApps - pkg
                                 } else {
-                                    selectedApps + filteredApps[index].packageName
+                                    selectedApps + pkg
                                 }
                             }
                         )
@@ -437,6 +413,321 @@ fun ModeEditorScreen(
             }
         }
     }
+    
+    // Tag limit configuration dialog
+    tagToConfigureLimit?.let { tagId ->
+        TagLimitConfigDialog(
+            currentLimit = tagUnlockLimits[tagId],
+            onDismiss = { tagToConfigureLimit = null },
+            onConfirm = { limit ->
+                tagUnlockLimits = tagUnlockLimits + (tagId to limit)
+                tagToConfigureLimit = null
+            }
+        )
+    }
+
+    if (showPermanentUnlockWarning) {
+        AlertDialog(
+            onDismissRequest = { showPermanentUnlockWarning = false },
+            containerColor = GuardianTheme.BackgroundSurface,
+            tonalElevation = 0.dp,
+            shape = RoundedCornerShape(0.dp),
+            modifier = Modifier.border(
+                width = GuardianTheme.DialogBorderWidth,
+                color = GuardianTheme.DialogBorderWarning,
+                shape = RoundedCornerShape(0.dp)
+            ),
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Warning, null, tint = GuardianTheme.Warning)
+                    Text(
+                        "NO PERMANENT UNLOCK",
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp,
+                        fontSize = 14.sp
+                    )
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Surface(
+                        color = GuardianTheme.WarningBackground,
+                        shape = RoundedCornerShape(0.dp)
+                    ) {
+                        Text(
+                            "DANGER: All selected NFC tags have a time limit. Once this mode activates, you will NOT be able to turn it off permanently until the schedule ends.",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = GuardianTheme.Warning,
+                            letterSpacing = 0.5.sp,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                    Text(
+                        "You will only be able to take temporary breaks. Are you sure you want to save this 'inescapable' mode?",
+                        fontSize = 11.sp,
+                        color = GuardianTheme.TextSecondary,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPermanentUnlockWarning = false
+                        onSave(selectedApps.toList(), blockMode, selectedNfcTagIds.toList(), tagUnlockLimits)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GuardianTheme.Warning,
+                        contentColor = Color.Black
+                    ),
+                    shape = RoundedCornerShape(0.dp)
+                ) {
+                    Text("SAVE ANYWAY", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermanentUnlockWarning = false }) {
+                    Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                }
+            },
+        )
+    }
+}
+
+@Composable
+fun TagLimitItem(
+    name: String,
+    isSelected: Boolean,
+    limitMinutes: Long?,
+    usageCount: Int = 0,
+    onToggle: () -> Unit,
+    onConfigureLimit: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(0.dp),
+        color = if (isSelected) Color.White else Color.Black,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left part: Check + Name (Toggles selection)
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onToggle() }
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    if (isSelected) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
+                    contentDescription = null,
+                    tint = if (isSelected) Color.Black else Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        name,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) Color.Black else Color.White,
+                        letterSpacing = 1.sp
+                    )
+                    if (usageCount > 0) {
+                        Text(
+                            "USED BY $usageCount OTHER MODE${if (usageCount > 1) "S" else ""}",
+                            fontSize = 9.sp,
+                            color = if (isSelected) Color(0xFFE65100) else Color(0xFFFF9800),
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+            }
+            
+            // Right part: Duration (Configure max limit)
+            Surface(
+                onClick = onConfigureLimit,
+                color = if (isSelected) Color(0xFFEEEEEE) else Color(0xFF1A1A1A),
+                shape = RoundedCornerShape(0.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Timer,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = if (isSelected) Color.Black else Color.White
+                    )
+                    Text(
+                        if (limitMinutes == null) "PERMANENT" else "${limitMinutes / 60}H ${limitMinutes % 60}M",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) Color.Black else Color.White,
+                        letterSpacing = 1.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TagLimitConfigDialog(
+    currentLimit: Long?,
+    onDismiss: () -> Unit,
+    onConfirm: (Long?) -> Unit
+) {
+    var selectedOption by remember { mutableIntStateOf(if (currentLimit == null) 0 else 1) } // 0 = permanent, 1 = timed
+    var timedHours by remember { mutableStateOf(currentLimit?.let { (it / 60).toString() } ?: "0") }
+    var timedMinutes by remember { mutableStateOf(currentLimit?.let { (it % 60).toString() } ?: "15") }
+
+    val totalMinutes = run {
+        val h = timedHours.toLongOrNull() ?: 0L
+        val m = timedMinutes.toLongOrNull() ?: 0L
+        h * 60 + m
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = GuardianTheme.BackgroundSurface,
+        tonalElevation = 0.dp,
+        shape = RoundedCornerShape(0.dp),
+        modifier = Modifier.border(
+            width = GuardianTheme.DialogBorderWidth,
+            color = GuardianTheme.DialogBorderInfo,
+            shape = RoundedCornerShape(0.dp)
+        ),
+        title = {
+            Text(
+                "MAX UNLOCK DURATION",
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                fontSize = 14.sp
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Set the maximum time this tag can unlock this mode for. Leave permanent for no restriction.",
+                    fontSize = 10.sp,
+                    color = GuardianTheme.TextSecondary,
+                    letterSpacing = 0.5.sp
+                )
+
+                // Option 1: Permanent
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(0.dp),
+                    color = if (selectedOption == 0) Color.White else Color(0xFF1A1A1A),
+                    onClick = { selectedOption = 0 }
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            "PERMANENT UNLOCK",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (selectedOption == 0) Color.Black else Color.White,
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "This tag can unlock this mode indefinitely",
+                            fontSize = 10.sp,
+                            color = if (selectedOption == 0) Color(0xFF555555) else GuardianTheme.TextTertiary,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+
+                // Option 2: Timed limit
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(0.dp),
+                    color = if (selectedOption == 1) Color.White else Color(0xFF1A1A1A),
+                    onClick = { selectedOption = 1 }
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            "MAX DURATION LIMIT",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (selectedOption == 1) Color.Black else Color.White,
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "This tag will only offer unlock durations up to this limit",
+                            fontSize = 10.sp,
+                            color = if (selectedOption == 1) Color(0xFF555555) else GuardianTheme.TextTertiary,
+                            letterSpacing = 0.5.sp
+                        )
+
+                        if (selectedOption == 1) {
+                            Spacer(Modifier.height(12.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = timedHours,
+                                    onValueChange = { timedHours = it.filter { c -> c.isDigit() }.take(2) },
+                                    label = { Text("HOURS", fontSize = 9.sp, letterSpacing = 1.sp) },
+                                    modifier = Modifier.weight(1f),
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color.Black,
+                                        unfocusedBorderColor = Color(0xFFCCCCCC),
+                                        focusedTextColor = Color.Black,
+                                        unfocusedTextColor = Color.Black,
+                                        focusedLabelColor = Color.Black,
+                                        cursorColor = Color.Black
+                                    ),
+                                    shape = RoundedCornerShape(0.dp)
+                                )
+                                OutlinedTextField(
+                                    value = timedMinutes,
+                                    onValueChange = { timedMinutes = it.filter { c -> c.isDigit() }.take(3) },
+                                    label = { Text("MINUTES", fontSize = 9.sp, letterSpacing = 1.sp) },
+                                    modifier = Modifier.weight(1f),
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color.Black,
+                                        unfocusedBorderColor = Color(0xFFCCCCCC),
+                                        focusedTextColor = Color.Black,
+                                        unfocusedTextColor = Color.Black,
+                                        focusedLabelColor = Color.Black,
+                                        cursorColor = Color.Black
+                                    ),
+                                    shape = RoundedCornerShape(0.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(if (selectedOption == 0) null else totalMinutes)
+                },
+                enabled = selectedOption == 0 || totalMinutes > 0
+            ) {
+                Text("APPLY", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+            }
+        },
+    )
 }
 
 @Composable

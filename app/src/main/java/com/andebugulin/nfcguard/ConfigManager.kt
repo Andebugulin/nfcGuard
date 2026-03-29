@@ -68,6 +68,14 @@ object ConfigManager {
                         sb.appendLine("      - \"${escapeYaml(tagId)}\"")
                     }
                 }
+                sb.appendLine("    tagUnlockLimits:")
+                if (mode.tagUnlockLimits.isEmpty()) {
+                    sb.appendLine("      {}")
+                } else {
+                    for ((tid, limit) in mode.tagUnlockLimits) {
+                        sb.appendLine("      \"${escapeYaml(tid)}\": ${limit ?: "null"}")
+                    }
+                }
                 sb.appendLine("    blockedApps:")
                 if (mode.blockedApps.isEmpty()) {
                     sb.appendLine("      []")
@@ -195,6 +203,7 @@ object ConfigManager {
                 if (trimmed.startsWith("- id:")) {
                     var id = ""; var name = ""; var blockMode = BlockMode.BLOCK_SELECTED
                     var nfcTagIds = listOf<String>(); var blockedApps = listOf<String>()
+                    var tagUnlockLimits = mapOf<String, Long?>()
                     id = parseQuotedString(trimmed.removePrefix("- id:"))
                     advance()
                     while (currentLine() != null) {
@@ -222,6 +231,31 @@ object ConfigManager {
                                 }
                                 advance()
                             }
+                            mt.startsWith("tagUnlockLimits:") -> {
+                                advance()
+                                val limits = mutableMapOf<String, Long?>()
+                                if (currentLine()?.trim() == "{}") {
+                                    advance()
+                                } else {
+                                    while (currentLine() != null) {
+                                        val ll = currentLine()!!
+                                        if (ll.isBlank()) { advance(); continue }
+                                        if (indent(ll) < 6) break
+                                        val lt = ll.trim()
+                                        val colonIdx = lt.indexOf(":")
+                                        if (colonIdx != -1) {
+                                            val tid = parseQuotedString(lt.substring(0, colonIdx).trim())
+                                            val valStr = lt.substring(colonIdx + 1).trim()
+                                            val limit = if (valStr == "null") null else valStr.toLongOrNull()
+                                            limits[tid] = limit
+                                            advance()
+                                        } else {
+                                            break
+                                        }
+                                    }
+                                }
+                                tagUnlockLimits = limits
+                            }
                             mt.startsWith("blockedApps:") -> {
                                 advance()
                                 blockedApps = parseStringList(6)
@@ -229,7 +263,7 @@ object ConfigManager {
                             else -> advance()
                         }
                     }
-                    modes.add(Mode(id, name, blockedApps, blockMode, nfcTagIds = nfcTagIds))
+                    modes.add(Mode(id, name, blockedApps, blockMode, nfcTagIds = nfcTagIds, tagUnlockLimits = tagUnlockLimits))
                 } else {
                     advance()
                 }

@@ -32,8 +32,8 @@ fun ModesScreen(
 
     // Tick every 30s so timer countdowns in ModeCards stay fresh
     var timeTick by remember { mutableStateOf(0L) }
-    LaunchedEffect(appState.timedModeDeactivations) {
-        while (appState.timedModeDeactivations.isNotEmpty()) {
+    LaunchedEffect(appState.timedModeDeactivations, appState.timedModeReactivations) {
+        while (appState.timedModeDeactivations.isNotEmpty() || appState.timedModeReactivations.isNotEmpty()) {
             kotlinx.coroutines.delay(30_000)
             timeTick = System.currentTimeMillis()
         }
@@ -128,15 +128,18 @@ fun ModesScreen(
                             ModeCard(
                                 mode = mode,
                                 isActive = appState.activeModes.contains(mode.id),
+                                isPaused = appState.timedModeReactivations.containsKey(mode.id),
                                 isManual = appState.manuallyActivatedModes.contains(mode.id),
                                 timedUntil = appState.timedModeDeactivations[mode.id],
+                                pausedUntil = appState.timedModeReactivations[mode.id],
                                 now = now,
-                                nfcTags = appState.nfcTags.filter { mode.effectiveNfcTagIds.contains(it.id) },
+                                nfcTags = (appState.nfcTags + NfcTag("ANY", "ANY")).filter { mode.effectiveNfcTagIds.contains(it.id) },
                                 onActivate = {
                                     showActivationOptionsDialog = mode
                                 },
                                 onEdit = { selectedMode = mode },
-                                onDelete = { showDeleteDialog = mode }
+                                onDelete = { showDeleteDialog = mode },
+                                onUnpause = { viewModel.reactivateMode(mode.id) }
                             )
                         }
 
@@ -353,11 +356,11 @@ fun ModesScreen(
                 availableNfcTags = appState.nfcTags,
                 allModes = appState.modes,  // FIX #8: pass all modes for NFC usage indicator
                 onBack = { selectedMode = null },
-                onSave = { apps, blockMode, nfcTagIds ->
+                onSave = { apps, blockMode, nfcTagIds, tagUnlockLimits ->
                     if (appState.modes.any { it.id == mode.id }) {
-                        viewModel.updateMode(mode.id, mode.name, apps, blockMode, nfcTagIds)
+                        viewModel.updateMode(mode.id, mode.name, apps, blockMode, nfcTagIds, tagUnlockLimits)
                     } else {
-                        viewModel.addMode(mode.name, apps, blockMode, nfcTagIds)
+                        viewModel.addMode(mode.name, apps, blockMode, nfcTagIds, tagUnlockLimits)
                     }
                     selectedMode = null
                 }
@@ -370,18 +373,25 @@ fun ModesScreen(
 fun ModeCard(
     mode: Mode,
     isActive: Boolean,
+    isPaused: Boolean = false,
     isManual: Boolean = false,
     timedUntil: Long? = null,
+    pausedUntil: Long? = null,
     now: Long = System.currentTimeMillis(),
     nfcTags: List<NfcTag>,
     onActivate: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onUnpause: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(0.dp),
-        color = if (isActive) Color.White else GuardianTheme.BackgroundSurface
+        color = when {
+            isActive -> Color.White
+            isPaused -> Color(0xFFFFF9C4) // Light yellow for paused state
+            else -> GuardianTheme.BackgroundSurface
+        }
     ) {
         Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -390,14 +400,14 @@ fun ModeCard(
                         mode.name.uppercase(),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isActive) Color.Black else Color.White,
+                        color = if (isActive || isPaused) Color.Black else Color.White,
                         letterSpacing = 1.sp
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         "${mode.blockedApps.size} APPS \u00B7 ${if (mode.blockMode == BlockMode.BLOCK_SELECTED) "BLOCK" else "ALLOW ONLY"}",
                         fontSize = 10.sp,
-                        color = if (isActive) GuardianTheme.TextTertiary else GuardianTheme.TextTertiary,
+                        color = if (isActive || isPaused) GuardianTheme.TextTertiary else GuardianTheme.TextTertiary,
                         letterSpacing = 1.sp
                     )
                     if (nfcTags.isNotEmpty()) {
@@ -409,55 +419,78 @@ fun ModeCard(
                                 Icons.Default.Nfc,
                                 contentDescription = null,
                                 modifier = Modifier.size(10.dp),
-                                tint = if (isActive) GuardianTheme.TextTertiary else GuardianTheme.TextTertiary
+                                tint = if (isActive || isPaused) GuardianTheme.TextTertiary else GuardianTheme.TextTertiary
                             )
                             Text(
                                 "LINKED TO: ${nfcTags.joinToString(", ") { it.name.uppercase() }}",
                                 fontSize = 10.sp,
-                                color = if (isActive) GuardianTheme.TextTertiary else GuardianTheme.TextTertiary,
+                                color = if (isActive || isPaused) GuardianTheme.TextTertiary else GuardianTheme.TextTertiary,
                                 letterSpacing = 1.sp
                             )
                         }
                     }
-                    // Show activation source when active
-                    if (isActive) {
+                    
+                    if (isActive || isPaused) {
                         Spacer(Modifier.height(4.dp))
-                        val isTimed = timedUntil != null
-                        val sourceLabel = when {
-                            isManual && isTimed -> {
-                                val remaining = ((timedUntil ?: 0) - now) / 60000
-                                "MANUAL · ${remaining.coerceAtLeast(0)}M LEFT"
+                        
+                        if (isActive) {
+                            val isTimed = timedUntil != null
+                            val sourceLabel = when {
+                                isManual && isTimed -> {
+                                    val remaining = ((timedUntil ?: 0) - now) / 60000
+                                    "MANUAL \u00B7 ${remaining.coerceAtLeast(0)}M LEFT"
+                                }
+                                isManual -> "MANUAL \u00B7 NFC TO UNLOCK"
+                                else -> "ACTIVATED BY SCHEDULE"
                             }
-                            isManual -> "MANUAL · NFC TO UNLOCK"
-                            else -> "ACTIVATED BY SCHEDULE"
-                        }
-                        val sourceIcon = when {
-                            isManual && isTimed -> Icons.Default.Timer
-                            isManual -> Icons.Default.TouchApp
-                            else -> Icons.Default.Schedule
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                sourceIcon,
-                                contentDescription = null,
-                                modifier = Modifier.size(12.dp),
-                                tint = Color(0xFF555555)
-                            )
-                            Text(
-                                sourceLabel,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF555555),
-                                letterSpacing = 1.sp
-                            )
+                            val sourceIcon = when {
+                                isManual && isTimed -> Icons.Default.Timer
+                                isManual -> Icons.Default.TouchApp
+                                else -> Icons.Default.Schedule
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    sourceIcon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = Color(0xFF555555)
+                                )
+                                Text(
+                                    sourceLabel,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF555555),
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        } else if (isPaused) {
+                            val remaining = if (pausedUntil != null) ((pausedUntil - now) / 60000) else null
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.PauseCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = Color(0xFFFBC02D) // Yellow-700
+                                )
+                                Text(
+                                    if (remaining != null) "PAUSED \u00B7 ${remaining.coerceAtLeast(0)}M LEFT" else "PAUSED \u00B7 PERMANENTLY",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFFBC02D),
+                                    letterSpacing = 1.sp
+                                )
+                            }
                         }
                     }
                 }
 
-                if (!isActive) {
+                if (!isActive && !isPaused) {
                     Button(
                         onClick = onActivate,
                         colors = ButtonDefaults.buttonColors(
@@ -469,12 +502,20 @@ fun ModeCard(
                     ) {
                         Text("ACTIVATE", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     }
-                } else {
+                } else if (isActive) {
                     Text(
                         "ACTIVE",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = GuardianTheme.BackgroundSurface,
+                        letterSpacing = 1.sp
+                    )
+                } else if (isPaused) {
+                    Text(
+                        "PAUSED",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFBC02D),
                         letterSpacing = 1.sp
                     )
                 }
@@ -483,11 +524,33 @@ fun ModeCard(
             if (!isActive) {
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TextButton(onClick = onEdit) {
-                        Text("EDIT", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
-                    }
-                    TextButton(onClick = onDelete) {
-                        Text("DELETE", fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                    if (isPaused) {
+                        TextButton(
+                            onClick = onUnpause,
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = Color(0xFFD4A017)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                "UN-PAUSE", 
+                                fontSize = 11.sp, 
+                                color = Color(0xFFD4A017), 
+                                fontWeight = FontWeight.Bold, 
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    } else {
+                        TextButton(onClick = onEdit) {
+                            Text("EDIT", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
+                        }
+                        TextButton(onClick = onDelete) {
+                            Text("DELETE", fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                        }
                     }
                 }
             }
@@ -816,20 +879,30 @@ fun ActivationOptionsDialog(
 @Composable
 fun UnlockDurationDialog(
     modeNames: List<String>,
+    maxLimitMinutes: Long? = null,
     onDismiss: () -> Unit,
     onConfirm: (reactivateAtMillis: Long?) -> Unit
 ) {
-    var selectedOption by remember { mutableStateOf(0) } // 0 = permanent, 1 = timed
-    var timedHours by remember { mutableStateOf("0") }
-    var timedMinutes by remember { mutableStateOf("5") }
+    // If there's a limit, permanent is not an option. Default to timed.
+    val initialOption = if (maxLimitMinutes != null) 1 else 0
+    var selectedOption by remember { mutableStateOf(initialOption) }
+    
+    // Default duration: 5m, capped by limit
+    val defaultMins = if (maxLimitMinutes != null) minOf(5L, maxLimitMinutes) else 5L
+    var timedHours by remember { mutableStateOf((defaultMins / 60).toString()) }
+    var timedMinutes by remember { mutableStateOf((defaultMins % 60).toString()) }
 
     val totalMinutes = run {
         val h = timedHours.toLongOrNull() ?: 0L
         val m = timedMinutes.toLongOrNull() ?: 0L
         h * 60 + m
     }
-    val normalizedH = totalMinutes / 60
-    val normalizedM = totalMinutes % 60
+    
+    // The actual duration used, capped by maxLimitMinutes
+    val cappedMinutes = if (maxLimitMinutes != null) totalMinutes.coerceAtMost(maxLimitMinutes) else totalMinutes
+    
+    val normalizedH = cappedMinutes / 60
+    val normalizedM = cappedMinutes % 60
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -867,28 +940,58 @@ fun UnlockDurationDialog(
                     letterSpacing = 1.sp
                 )
 
-                // Option 1: Permanent unlock
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(0.dp),
-                    color = if (selectedOption == 0) Color.White else Color(0xFF1A1A1A),
-                    onClick = { selectedOption = 0 }
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(
-                            "PERMANENTLY",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (selectedOption == 0) Color.Black else Color.White,
-                            letterSpacing = 1.sp
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "Mode stays off until re-enabled by schedule or manually",
-                            fontSize = 10.sp,
-                            color = if (selectedOption == 0) Color(0xFF555555) else GuardianTheme.TextTertiary,
-                            letterSpacing = 0.5.sp
-                        )
+                // Option 1: Permanent unlock (only if no limit)
+                if (maxLimitMinutes == null) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(0.dp),
+                        color = if (selectedOption == 0) Color.White else Color(0xFF1A1A1A),
+                        onClick = { selectedOption = 0 }
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(
+                                "PERMANENTLY",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selectedOption == 0) Color.Black else Color.White,
+                                letterSpacing = 1.sp
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "Mode stays off until re-enabled by schedule or manually",
+                                fontSize = 10.sp,
+                                color = if (selectedOption == 0) Color(0xFF555555) else GuardianTheme.TextTertiary,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                } else {
+                    // Inform user why permanent unlock is disabled
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(0.dp),
+                        color = GuardianTheme.WarningBackground.copy(alpha = 0.5f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.LockClock,
+                                contentDescription = null,
+                                tint = GuardianTheme.Warning,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                "PERMANENT UNLOCK DISABLED\nTHIS TAG HAS A ${maxLimitMinutes}M LIMIT SET ON THIS MODE",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                color = GuardianTheme.Warning,
+                                letterSpacing = 1.sp,
+                                lineHeight = 12.sp
+                            )
+                        }
                     }
                 }
 
@@ -909,7 +1012,8 @@ fun UnlockDurationDialog(
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Mode will automatically re-enable after the time expires",
+                            if (maxLimitMinutes != null) "Unlocks for a limited time (max ${maxLimitMinutes / 60}H ${maxLimitMinutes % 60}M)"
+                            else "Mode will automatically re-enable after the time expires",
                             fontSize = 10.sp,
                             color = if (selectedOption == 1) Color(0xFF555555) else GuardianTheme.TextTertiary,
                             letterSpacing = 0.5.sp
@@ -929,20 +1033,24 @@ fun UnlockDurationDialog(
                                     Triple("0", "30", "30M"),
                                     Triple("1", "0", "1H")
                                 ).forEach { (h, m, label) ->
-                                    val isSelected = timedHours == h && timedMinutes == m
-                                    Surface(
-                                        shape = RoundedCornerShape(0.dp),
-                                        color = if (isSelected) Color.Black else Color(0xFFEEEEEE),
-                                        onClick = { timedHours = h; timedMinutes = m }
-                                    ) {
-                                        Text(
-                                            label,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isSelected) Color.White else Color.Black,
-                                            letterSpacing = 1.sp,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                        )
+                                    val presetMins = h.toLong() * 60 + m.toLong()
+                                    // Only show presets that are within limit
+                                    if (maxLimitMinutes == null || presetMins <= maxLimitMinutes) {
+                                        val isSelected = timedHours == h && timedMinutes == m
+                                        Surface(
+                                            shape = RoundedCornerShape(0.dp),
+                                            color = if (isSelected) Color.Black else Color(0xFFEEEEEE),
+                                            onClick = { timedHours = h; timedMinutes = m }
+                                        ) {
+                                            Text(
+                                                label,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isSelected) Color.White else Color.Black,
+                                                letterSpacing = 1.sp,
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -988,12 +1096,13 @@ fun UnlockDurationDialog(
                                 )
                             }
 
-                            if (totalMinutes > 0) {
+                            if (cappedMinutes > 0) {
+                                val limitWarning = if (maxLimitMinutes != null && totalMinutes > maxLimitMinutes) " (CAPPED BY TAG LIMIT)" else ""
                                 Text(
-                                    "WILL RE-ENABLE IN ${normalizedH}H ${normalizedM}M",
+                                    "WILL RE-ENABLE IN ${normalizedH}H ${normalizedM}M$limitWarning",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF555555),
+                                    color = if (limitWarning.isNotEmpty()) GuardianTheme.Warning else Color(0xFF555555),
                                     letterSpacing = 1.sp,
                                     modifier = Modifier.padding(top = 4.dp)
                                 )
@@ -1006,14 +1115,14 @@ fun UnlockDurationDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (selectedOption == 1 && totalMinutes > 0) {
-                        val reactivateAt = System.currentTimeMillis() + (totalMinutes * 60 * 1000)
+                    if (selectedOption == 1 && cappedMinutes > 0) {
+                        val reactivateAt = System.currentTimeMillis() + (cappedMinutes * 60 * 1000)
                         onConfirm(reactivateAt)
-                    } else {
+                    } else if (selectedOption == 0) {
                         onConfirm(null)
                     }
                 },
-                enabled = selectedOption == 0 || totalMinutes > 0
+                enabled = (selectedOption == 0 && maxLimitMinutes == null) || (selectedOption == 1 && cappedMinutes > 0)
             ) {
                 Text("UNLOCK", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
