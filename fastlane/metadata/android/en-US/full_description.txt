@@ -1,0 +1,11 @@
+nfcGuard blocks distracting apps using NFC tags as physical keys.
+Place a tag somewhere inconvenient and think twice before scrolling.
+
+Features:
+* Block mode - block specific distracting apps
+* Allow mode - block everything except essentials
+* Per-day schedules with auto-activate/deactivate
+* Multiple modes with different NFC tags
+* Emergency reset with 60-second cooldown
+* Config export/import in JSON or YAML
+* Fully offline - no ads, no tracking, no accounts
