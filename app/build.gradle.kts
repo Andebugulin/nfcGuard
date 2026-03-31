@@ -30,13 +30,16 @@ android {
 
     signingConfigs {
         create("release") {
-            val props = Properties().apply {
-                load(FileInputStream(rootProject.file("local.properties")))
+            val propsFile = rootProject.file("local.properties")
+            if (propsFile.exists()) {
+                val props = Properties().apply {
+                    load(FileInputStream(propsFile))
+                }
+                storeFile = file("keystore/release.jks")
+                storePassword = props.getProperty("KEYSTORE_PASSWORD", "")
+                keyAlias = props.getProperty("KEY_ALIAS", "guardian")
+                keyPassword = props.getProperty("KEY_PASSWORD", "")
             }
-            storeFile = file("keystore/release.jks")
-            storePassword = props.getProperty("KEYSTORE_PASSWORD", "")
-            keyAlias = props.getProperty("KEY_ALIAS", "guardian")
-            keyPassword = props.getProperty("KEY_PASSWORD", "")
         }
     }
 
@@ -49,7 +52,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            val propsFile = rootProject.file("local.properties")
+            if (propsFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             isDebuggable = true
