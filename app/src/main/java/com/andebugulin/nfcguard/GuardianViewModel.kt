@@ -837,34 +837,28 @@ class GuardianViewModel : ViewModel() {
                 val existingScheduleIds = _appState.value.schedules.map { it.id }.toSet()
                 val existingTagIds = _appState.value.nfcTags.map { it.id }.toSet()
 
-                // For existing items: restore cross-references from import
-                // For new items: add them
+                // For existing items: fully replace with imported version (restores apps, block mode, schedule links, etc.)
+                // For new items: add them with nfcTagId migration applied
                 val mergedModes = _appState.value.modes.map { existing ->
                     val imported = importModeMap[existing.id]
                     if (imported != null) {
-                        // Restore NFC tag links and limits from import
-                        existing.copy(
-                            nfcTagId = null,
-                            nfcTagIds = imported.effectiveNfcTagIds,
-                            tagUnlockLimits = imported.tagUnlockLimits
-                        )
+                        // Fully replace with imported version, normalizing legacy nfcTagId
+                        imported.copy(nfcTagId = null, nfcTagIds = imported.effectiveNfcTagIds)
                     } else existing
-                } + data.modes.filter { it.id !in existingModeIds }
+                } + data.modes.filter { it.id !in existingModeIds }.map { m ->
+                    m.copy(nfcTagId = null, nfcTagIds = m.effectiveNfcTagIds)
+                }
 
                 val mergedSchedules = _appState.value.schedules.map { existing ->
                     val imported = importScheduleMap[existing.id]
-                    if (imported != null) {
-                        // Restore linked mode IDs from import
-                        existing.copy(linkedModeIds = imported.linkedModeIds)
-                    } else existing
+                    // Fully replace with imported version (restores linkedModeIds, hasEndTime, timeSlot)
+                    if (imported != null) imported else existing
                 } + data.schedules.filter { it.id !in existingScheduleIds }
 
                 val mergedTags = _appState.value.nfcTags.map { existing ->
                     val imported = importTagMap[existing.id]
-                    if (imported != null) {
-                        // Restore linked mode IDs from import
-                        existing.copy(linkedModeIds = imported.linkedModeIds)
-                    } else existing
+                    // Fully replace with imported version (restores linkedModeIds)
+                    if (imported != null) imported else existing
                 } + data.nfcTags.filter { it.id !in existingTagIds }
 
                 _appState.value = _appState.value.copy(
@@ -874,8 +868,12 @@ class GuardianViewModel : ViewModel() {
                 )
             } else {
                 // Replace: overwrite all config, reset runtime state
+                // Normalize legacy nfcTagId -> nfcTagIds on all imported modes
+                val normalizedModes = data.modes.map { m ->
+                    m.copy(nfcTagId = null, nfcTagIds = m.effectiveNfcTagIds)
+                }
                 _appState.value = _appState.value.copy(
-                    modes = data.modes,
+                    modes = normalizedModes,
                     schedules = data.schedules,
                     nfcTags = data.nfcTags,
                     activeModes = emptySet(),

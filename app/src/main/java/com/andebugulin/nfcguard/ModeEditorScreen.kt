@@ -551,8 +551,7 @@ fun TagLimitItem(
             Surface(
                 onClick = onConfigureLimit,
                 color = Color.Black,
-                shape = RoundedCornerShape(0.dp),
-                modifier = Modifier.border(1.dp, Color.White, RoundedCornerShape(0.dp))
+                shape = RoundedCornerShape(0.dp)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),

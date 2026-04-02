@@ -3,6 +3,14 @@ package com.andebugulin.nfcguard
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 
 /**
  * Handles export/import of Guardian configuration in JSON and YAML formats.
@@ -38,8 +46,92 @@ object ConfigManager {
     }
 
     fun importFromJson(content: String): ExportData {
-        return json.decodeFromString<ExportData>(content)
+        // First try direct deserialization (handles current format + defaults for missing fields)
+        try {
+            val data = json.decodeFromString<ExportData>(content)
+            return migrateExportData(data)
+        } catch (_: Exception) { /* Fall through to manual migration */ }
+
+        // Manual migration for older configs that may have incompatible structure
+        val root = Json.parseToJsonElement(content).jsonObject
+        val modesArray = root["modes"]?.jsonArray ?: emptyJsonArray()
+        val schedulesArray = root["schedules"]?.jsonArray ?: emptyJsonArray()
+        val nfcTagsArray = root["nfcTags"]?.jsonArray ?: emptyJsonArray()
+
+        val modes = modesArray.map { el ->
+            val obj = el.jsonObject
+            val id = obj["id"]?.jsonPrimitive?.content ?: ""
+            val name = obj["name"]?.jsonPrimitive?.content ?: ""
+            val blockModeStr = obj["blockMode"]?.jsonPrimitive?.content ?: "BLOCK_SELECTED"
+            val blockMode = if (blockModeStr == "ALLOW_SELECTED") BlockMode.ALLOW_SELECTED else BlockMode.BLOCK_SELECTED
+            val blockedApps = obj["blockedApps"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
+
+            // Handle both new nfcTagIds list and legacy nfcTagId single value
+            val nfcTagIds = obj["nfcTagIds"]?.jsonArray?.map { it.jsonPrimitive.content }
+                ?: run {
+                    val legacy = obj["nfcTagId"]?.jsonPrimitive?.contentOrNull
+                    if (legacy != null) listOf(legacy) else emptyList()
+                }
+
+            // tagUnlockLimits: missing = empty map (permanent by default)
+            val tagUnlockLimits = obj["tagUnlockLimits"]?.jsonObject?.entries?.associate { (k, v) ->
+                k to if (v.jsonPrimitive.content == "null") null else v.jsonPrimitive.longOrNull
+            } ?: emptyMap()
+
+            Mode(id, name, blockedApps, blockMode, nfcTagId = null, nfcTagIds = nfcTagIds, tagUnlockLimits = tagUnlockLimits)
+        }
+
+        val schedules = schedulesArray.map { el ->
+            val obj = el.jsonObject
+            val id = obj["id"]?.jsonPrimitive?.content ?: ""
+            val name = obj["name"]?.jsonPrimitive?.content ?: ""
+            val hasEndTime = obj["hasEndTime"]?.jsonPrimitive?.booleanOrNull ?: false
+            // Handle both linkedModeIds list and legacy modeId single value
+            val linkedModeIds = obj["linkedModeIds"]?.jsonArray?.map { it.jsonPrimitive.content }
+                ?: run {
+                    val legacy = obj["modeId"]?.jsonPrimitive?.contentOrNull
+                    if (legacy != null) listOf(legacy) else emptyList()
+                }
+            val dayTimes = obj["timeSlot"]?.jsonObject?.get("dayTimes")?.jsonArray?.map { dtEl ->
+                val dt = dtEl.jsonObject
+                DayTime(
+                    day = dt["day"]?.jsonPrimitive?.intOrNull ?: 0,
+                    startHour = dt["startHour"]?.jsonPrimitive?.intOrNull ?: 0,
+                    startMinute = dt["startMinute"]?.jsonPrimitive?.intOrNull ?: 0,
+                    endHour = dt["endHour"]?.jsonPrimitive?.intOrNull ?: 0,
+                    endMinute = dt["endMinute"]?.jsonPrimitive?.intOrNull ?: 0
+                )
+            } ?: emptyList()
+            Schedule(id, name, TimeSlot(dayTimes), linkedModeIds, hasEndTime)
+        }
+
+        val nfcTags = nfcTagsArray.map { el ->
+            val obj = el.jsonObject
+            val id = obj["id"]?.jsonPrimitive?.content ?: ""
+            val name = obj["name"]?.jsonPrimitive?.content ?: ""
+            val linkedModeIds = obj["linkedModeIds"]?.jsonArray?.map { it.jsonPrimitive.content }
+                ?: run {
+                    val legacy = obj["linkedModeId"]?.jsonPrimitive?.contentOrNull
+                    if (legacy != null) listOf(legacy) else emptyList()
+                }
+            NfcTag(id, name, linkedModeIds)
+        }
+
+        return ExportData(modes = modes, schedules = schedules, nfcTags = nfcTags)
     }
+
+    /** Normalize imported data: migrate legacy fields, ensure consistent state */
+    private fun migrateExportData(data: ExportData): ExportData {
+        val migratedModes = data.modes.map { mode ->
+            val effectiveIds = mode.effectiveNfcTagIds
+            if (effectiveIds != mode.nfcTagIds || @Suppress("DEPRECATION") mode.nfcTagId != null) {
+                mode.copy(nfcTagId = null, nfcTagIds = effectiveIds)
+            } else mode
+        }
+        return data.copy(modes = migratedModes)
+    }
+
+    private fun emptyJsonArray() = kotlinx.serialization.json.JsonArray(emptyList())
 
     // ======================== YAML ========================
 
@@ -163,7 +255,7 @@ object ConfigManager {
                 val line = currentLine()!!
                 if (line.isBlank()) { advance(); continue }
                 val curIndent = indent(line)
-                if (curIndent <= baseIndent) break
+                if (curIndent < baseIndent) break
                 val trimmed = line.trim()
                 if (trimmed == "[]") { advance(); return emptyList() }
                 if (trimmed.startsWith("- ")) {
@@ -303,6 +395,14 @@ object ConfigManager {
                                 advance()
                                 linkedModeIds = parseStringList(6)
                             }
+                            st.startsWith("modeId:") -> {
+                                // Legacy single-mode format migration
+                                val v = st.removePrefix("modeId:").trim()
+                                if (v != "null") {
+                                    linkedModeIds = listOf(parseQuotedString(v))
+                                }
+                                advance()
+                            }
                             st.startsWith("timeSlot:") -> {
                                 advance()
                                 // skip "dayTimes:" line
@@ -372,6 +472,14 @@ object ConfigManager {
                             tt.startsWith("linkedModeIds:") -> {
                                 advance()
                                 linkedModeIds = parseStringList(6)
+                            }
+                            tt.startsWith("linkedModeId:") -> {
+                                // Legacy single-mode format migration
+                                val v = tt.removePrefix("linkedModeId:").trim()
+                                if (v != "null") {
+                                    linkedModeIds = listOf(parseQuotedString(v))
+                                }
+                                advance()
                             }
                             else -> advance()
                         }
