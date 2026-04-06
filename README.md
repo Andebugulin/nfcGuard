@@ -1,16 +1,22 @@
-# Guardian
+# nfcGuard
 
 <div align="center">
-  <img src="app/src/main/ic_launcher-playstore.png" alt="Guardian Logo" style="width: 20%">
+  <img src="app/src/main/ic_launcher-playstore.png" alt="nfcGuard Logo" style="width: 20%">
 </div>
 
 A minimalist Android app that blocks distracting apps using NFC tags and scheduled modes. Built to add **physical friction** between you and your phone.
 
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=com.andebugulin.nfcguard">Google Play</a> ·
+  <a href="https://github.com/Andebugulin/nfcGuard/releases/">Releases</a> ·
+  <a href="https://andebugulin.github.io/nfcGuard/">Website</a>
+</p>
+
 ## Concept
 
-Guardian forces you to physically interact with an NFC tag to unlock blocked apps. Place your tag somewhere inconvenient — your kitchen, gym bag, a friend's house — and you'll think twice before mindlessly opening Instagram.
+nfcGuard forces you to physically interact with an NFC tag to unlock blocked apps. Place your tag somewhere inconvenient — your kitchen, gym bag, a friend's house — and you'll think twice before mindlessly opening Instagram.
 
-**Flow:** Create a mode → select apps to block (or allow) → optionally link an NFC tag → optionally set a schedule → activate → stay focused → tap your NFC tag when you actually need access.
+**Flow:** Create a mode → select apps to block (or allow) → optionally link NFC tags → optionally set a schedule → activate → stay focused → tap your NFC tag when you actually need access.
 
 If no NFC tag is linked to a mode, any NFC-capable object (smartwatch, headphones, transit card) can deactivate it.
 
@@ -45,7 +51,12 @@ Two blocking strategies:
 - **Block Selected** — block specific distracting apps while everything else remains accessible
 - **Allow Only** — block everything except a whitelist of essential apps
 
-Each mode can optionally require a _specific_ NFC tag for deactivation, preventing you from using just any tag to cheat.
+Each mode can have **multiple NFC tags** linked to it. Each tag can be individually configured:
+
+- **Permanent unlock** — tapping the tag fully deactivates the mode until the next scheduled activation
+- **Temporary unlock** — tapping the tag unlocks for a configurable duration (e.g. 5 minutes), after which the mode automatically reactivates
+
+This lets you set up different levels of access. For example, keep one tag at home for full unlock and another at work that only gives you 5 minutes — enough to quickly check something without falling down a scroll hole.
 
 ### Schedules
 
@@ -54,14 +65,14 @@ Automate mode activation with flexible scheduling:
 - Per-day time configuration (different start/end times for each day of the week)
 - Optional automatic deactivation at end time
 - Multiple modes can be linked to a single schedule
-- Visual status badges: **ACTIVE** when a schedule is running, **PAUSED** when dismissed temporarily via NFC
+- Visual status badges: **ACTIVE** when a schedule is running, **DEACTIVATED** when dismissed early via NFC
 
 ### NFC Integration
 
 - Register physical NFC tags by tapping them to your device
-- Tap a registered tag to deactivate active modes
-- Modes with a linked tag _require_ that specific tag — other tags won't work
-- A tag can be set with a time limit to allow a break without giving the ability to fully unlock a schedule
+- Link **multiple tags** to a single mode, each with its own unlock behavior
+- Configure per-tag unlock duration (permanent or temporary with a time limit)
+- Modes with linked tags _require_ one of those specific tags — other tags won't work
 - Wrong-tag feedback when an incorrect tag is scanned
 
 ### Settings & Permissions
@@ -74,20 +85,14 @@ Accessible via the gear icon on the home screen:
   - **Import** with two strategies: **Replace** (overwrite everything) or **Merge** (add non-duplicate items)
 - **Pause App reminder** — quick link to disable Android's "Pause app if unused" setting
 
-### Emergency Reset & Cheating Prevention
+### Emergency Reset
 
 If you lose your NFC tag:
 
 1. Tap the delete icon on the home screen
-2. Complete the safety flow
+2. Complete the safety flow (90-second cooldown + confirmation text)
 3. Select which tags you lost
 4. All modes are deactivated and selected tags are removed — your configurations stay intact
-
-# KEEP IN MIND:
-
-- There are two regimes of operation: with protection (by default) and without
-- If you try to bypass, change, edit, delete active modes somehow or schedules/NFCs related to active modes, the app will force you into going through the safety flow, where during 1.5 minutes you will have to wait, plus every 10 seconds you will be asked to tap on your screen, in order to make sure that the action is intentional!
-- The safety regime can be turned off in the settings, but I personally don't recommend doing it.
 
 ## Technical Details
 
@@ -99,7 +104,7 @@ If you lose your NFC tag:
   - **Usage Access** — detect which app is in the foreground
   - **Display Over Apps** — show the block overlay
   - **Battery Optimization exemption** — ensure reliable background operation
-  - **Disable "Pause app if unused"** — prevent Android from hibernating Guardian
+  - **Disable "Pause app if unused"** — prevent Android from hibernating nfcGuard
 
 ### Architecture
 
@@ -112,11 +117,13 @@ If you lose your NFC tag:
 
 ### How Blocking Works
 
-Guardian runs a foreground service that polls the current foreground app via `UsageStatsManager`. When a blocked app is detected, a full-screen overlay is displayed, preventing interaction until the user switches away or unlocks with an NFC tag.
+nfcGuard runs a foreground service that polls the current foreground app via `UsageStatsManager`, with an `AccessibilityService` fallback for devices where `UsageStatsManager` misreports on recent-apps transitions (Pixel, some Samsung). When a blocked app is detected, a full-screen overlay is displayed, preventing interaction until the user switches away or unlocks with an NFC tag.
 
 ## Installation
 
-Go to the [Releases](https://github.com/Andebugulin/nfcGuard/releases/) page and download the latest APK. Install it on your device, grant the necessary permissions, and configure your modes and schedules.
+**Google Play:** [Download from Play Store](https://play.google.com/store/apps/details?id=com.andebugulin.nfcguard)
+
+**APK:** Go to the [Releases](https://github.com/Andebugulin/nfcGuard/releases/) page and download the latest APK. Install it on your device, grant the necessary permissions, and configure your modes and schedules.
 
 ## Manual Installation
 
@@ -128,10 +135,10 @@ Go to the [Releases](https://github.com/Andebugulin/nfcGuard/releases/) page and
 
 Some manufacturers (Xiaomi, Samsung, Huawei) aggressively kill background services. After installation:
 
-1. **Settings → Apps → Guardian** — disable "Pause app activity if unused"
+1. **Settings → Apps → nfcGuard** — disable "Pause app activity if unused"
 2. Enable **Autostart** if available (MIUI, ColorOS)
 3. Set battery optimization to **Unrestricted** / **No restrictions**
-4. On MIUI: add Guardian to the **Lock screen cleanup whitelist**
+4. On MIUI: add nfcGuard to the **Lock screen cleanup whitelist**
 
 ## Export Format Examples
 
@@ -146,69 +153,59 @@ Some manufacturers (Xiaomi, Samsung, Huawei) aggressively kill background servic
       "name": "Work Focus",
       "blockedApps": ["com.instagram.android", "com.twitter.android"],
       "blockMode": "BLOCK_SELECTED",
-      "nfcTagId": null,
-      "nfcTagIds": ["1234abcd", "ANY"],
-      "tagUnlockLimits": {
-        "1234abcd": null,
-        "ANY": 15
-      }
+      "nfcTagIds": ["tag-001", "tag-002"]
     }
   ],
-  "schedules": [
-    {
-      "id": "123-abc",
-      "name": "Schedule",
-      "timeSlot": {
-        "dayTimes": [
-          {
-            "day": 1,
-            "startHour": 0,
-            "startMinute": 0,
-            "endHour": 23,
-            "endMinute": 59
-          }
-        ]
-      },
-      "linkedModeIds": ["a4f74781-f6f4-47be-9b64-7c67b8c5e554"],
-      "hasEndTime": true
-    }
-  ],
+  "schedules": [],
   "nfcTags": [
     {
-      "id": "1234abcd",
-      "name": "NFC Card",
-      "linkedModeIds": []
+      "id": "tag-001",
+      "name": "Home tag",
+      "unlockDurationMinutes": null
+    },
+    {
+      "id": "tag-002",
+      "name": "Work tag",
+      "unlockDurationMinutes": 5
     }
   ]
 }
-
 ```
 
 ### YAML
 
 ```yaml
-# Guardian Configuration Export
+# nfcGuard Configuration Export
 version: 1
 
 modes:
   - id: "abc-123"
     name: "Work Focus"
     blockMode: BLOCK_SELECTED
-    nfcTagId: null
+    nfcTagIds:
+      - "tag-001"
+      - "tag-002"
     blockedApps:
       - "com.instagram.android"
       - "com.twitter.android"
 
 schedules: []
-nfcTags: []
+
+nfcTags:
+  - id: "tag-001"
+    name: "Home tag"
+    unlockDurationMinutes: null # permanent unlock
+  - id: "tag-002"
+    name: "Work tag"
+    unlockDurationMinutes: 5 # temporary 5-minute unlock
 ```
 
-# My personal configuration
+## My personal configuration
 
 <details>
   <summary>Click to view my personal configuration</summary>
 
-```json
+```yaml
 {
   "version": 1,
   "modes":
