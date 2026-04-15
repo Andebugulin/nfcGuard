@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      How to Block Apps with NFC Tags on Android — Free Setup Guide (2026)
+    </title>
+    <meta
+      name="description"
+      content="Step-by-step guide to blocking distracting apps on Android using NFC tags. Free setup with nfcGuard — no expensive hardware needed."
+    />
+    <meta
+      name="keywords"
+      content="block apps NFC tag Android, NFC app blocker tutorial, how to block apps with NFC, phone addiction NFC, free app blocker NFC, nfcGuard setup guide, digital wellbeing Android, Brick alternative free"
+    />
+    <meta name="author" content="nfcGuard" />
+    <meta name="robots" content="index, follow" />
+    <link
+      rel="canonical"
+      href="https://andebugulin.github.io/nfcGuard/blog-block-apps-nfc-tags-android-guide.html"
+    />
+
+    <meta
+      property="og:title"
+      content="How to Block Apps with NFC Tags on Android — Free Setup Guide"
+    />
+    <meta
+      property="og:description"
+      content="Turn a €2 NFC sticker into a physical app blocker. Step-by-step tutorial for Android."
+    />
+    <meta property="og:type" content="article" />
+    <meta
+      property="og:image"
+      content="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/app/src/main/ic_launcher-playstore.png"
+    />
+    <meta
+      property="og:url"
+      content="https://andebugulin.github.io/nfcGuard/blog-block-apps-nfc-tags-android-guide.html"
+    />
+    <meta property="og:site_name" content="nfcGuard" />
+    <meta property="article:published_time" content="2026-04-15T00:00:00Z" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta
+      name="twitter:title"
+      content="How to Block Apps with NFC Tags on Android — Free Setup Guide"
+    />
+    <meta
+      name="twitter:description"
+      content="Turn a €2 NFC sticker into a physical app blocker. Free, open-source tutorial."
+    />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": "How to Block Apps with NFC Tags on Android",
+        "description": "A step-by-step guide to setting up NFC-based app blocking on Android using the free nfcGuard app.",
+        "totalTime": "PT10M",
+        "supply": [
+          {
+            "@type": "HowToSupply",
+            "name": "NFC tag (NTAG213 or NTAG215 sticker)"
+          },
+          {
+            "@type": "HowToSupply",
+            "name": "Android phone with NFC (Android 8.0+)"
+          }
+        ],
+        "tool": [
+          { "@type": "HowToTool", "name": "nfcGuard app (free, open source)" }
+        ],
+        "step": [
+          {
+            "@type": "HowToStep",
+            "name": "Get an NFC tag",
+            "text": "Buy NTAG213 or NTAG215 sticker tags online — a pack of 10 costs around €2–5."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Install nfcGuard",
+            "text": "Download nfcGuard from Google Play or grab the APK from GitHub Releases."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Grant permissions",
+            "text": "Enable Usage Access, Display Over Apps, and disable battery optimization for the app."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Register your NFC tag",
+            "text": "Go to the NFC Tags screen and tap your tag to your phone to register it."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Create a blocking mode",
+            "text": "Create a mode, select which apps to block or allow, and link your NFC tag."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Set schedules",
+            "text": "Optionally create schedules to auto-activate modes at specific times on specific days."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Activate and place your tag",
+            "text": "Activate the mode, then place your NFC tag somewhere inconvenient."
+          }
+        ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "How to Block Apps with NFC Tags on Android — Free Setup Guide",
+        "description": "Step-by-step tutorial for using NFC tags to block distracting apps on Android.",
+        "author": { "@type": "Organization", "name": "nfcGuard" },
+        "datePublished": "2026-04-15",
+        "publisher": { "@type": "Organization", "name": "nfcGuard" }
+      }
+    </script>
+
+    <link
+      rel="icon"
+      href="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/app/src/main/ic_launcher-playstore.png"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      :root {
+        --black: #000;
+        --white: #fff;
+        --gray: #808080;
+        --gray-dark: #404040;
+        --gray-darker: #1a1a1a;
+        --green: #4caf50;
+        --font-display: "Bebas Neue", sans-serif;
+        --font-heading: "Syne", sans-serif;
+        --font-mono: "JetBrains Mono", monospace;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background: var(--black);
+        color: var(--white);
+        font-family: var(--font-mono);
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+      ::selection {
+        background: var(--white);
+        color: var(--black);
+      }
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(255, 255, 255, 0.008) 2px,
+          rgba(255, 255, 255, 0.008) 4px
+        );
+        pointer-events: none;
+        z-index: 9999;
+      }
+      .grid-bg {
+        position: fixed;
+        inset: 0;
+        background-image: linear-gradient(
+            rgba(255, 255, 255, 0.02) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        background-size: 60px 60px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        padding: 20px 40px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        backdrop-filter: blur(20px);
+        background: rgba(0, 0, 0, 0.8);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .nav-brand {
+        text-decoration: none;
+        color: var(--white);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .nav-brand img {
+        width: 28px;
+        height: 28px;
+      }
+      .nav-brand span {
+        font-family: var(--font-heading);
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 3px;
+      }
+      .nav-links {
+        display: flex;
+        gap: 32px;
+        align-items: center;
+      }
+      .nav-links a {
+        color: var(--gray);
+        text-decoration: none;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        transition: color 0.3s;
+      }
+      .nav-links a:hover {
+        color: var(--white);
+      }
+      .nav-cta {
+        background: var(--white) !important;
+        color: var(--black) !important;
+        padding: 8px 20px;
+        font-weight: 700;
+      }
+
+      .article-wrapper {
+        position: relative;
+        z-index: 1;
+        max-width: 780px;
+        margin: 0 auto;
+        padding: 160px 24px 120px;
+      }
+      .article-meta {
+        font-size: 10px;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--gray);
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .article-meta::before {
+        content: "";
+        width: 40px;
+        height: 1px;
+        background: var(--gray-dark);
+      }
+      h1 {
+        font-family: var(--font-display);
+        font-size: clamp(36px, 6vw, 64px);
+        line-height: 1.05;
+        letter-spacing: 3px;
+        margin-bottom: 24px;
+      }
+      .article-subtitle {
+        font-size: 14px;
+        line-height: 1.8;
+        color: var(--gray);
+        margin-bottom: 64px;
+        max-width: 600px;
+      }
+      h2 {
+        font-family: var(--font-heading);
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        margin: 64px 0 20px;
+        padding-top: 32px;
+        border-top: 1px solid var(--gray-dark);
+      }
+      h3 {
+        font-family: var(--font-heading);
+        font-size: 15px;
+        font-weight: 700;
+        margin: 36px 0 12px;
+      }
+      p {
+        font-size: 13px;
+        line-height: 1.9;
+        color: #c0c0c0;
+        margin-bottom: 20px;
+      }
+      a {
+        color: var(--white);
+      }
+      strong {
+        color: var(--white);
+        font-weight: 700;
+      }
+
+      .step-card {
+        border: 1px solid var(--gray-dark);
+        padding: 32px;
+        margin: 24px 0;
+        position: relative;
+        transition: border-color 0.3s;
+      }
+      .step-card:hover {
+        border-color: var(--gray);
+      }
+      .step-card-number {
+        font-family: var(--font-display);
+        font-size: 56px;
+        color: rgba(255, 255, 255, 0.06);
+        position: absolute;
+        top: 12px;
+        right: 20px;
+        line-height: 1;
+      }
+      .step-card h3 {
+        margin-top: 0;
+        font-family: var(--font-heading);
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      .step-card p {
+        margin-bottom: 0;
+        font-size: 12px;
+      }
+
+      .code-block {
+        background: var(--gray-darker);
+        border: 1px solid var(--gray-dark);
+        padding: 20px 24px;
+        margin: 16px 0 24px;
+        font-size: 12px;
+        line-height: 1.7;
+        overflow-x: auto;
+        color: var(--gray);
+      }
+      .code-block strong {
+        color: var(--green);
+      }
+
+      .tip-box {
+        border-left: 3px solid var(--green);
+        padding: 20px 24px;
+        margin: 24px 0;
+        background: rgba(76, 175, 80, 0.04);
+      }
+      .tip-box-label {
+        font-family: var(--font-heading);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--green);
+        margin-bottom: 8px;
+      }
+      .tip-box p {
+        margin-bottom: 0;
+        font-size: 12px;
+      }
+
+      .needs-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin: 24px 0 40px;
+      }
+      .need-item {
+        border: 1px solid var(--gray-dark);
+        padding: 24px;
+        text-align: center;
+      }
+      .need-item-icon {
+        font-size: 28px;
+        margin-bottom: 12px;
+      }
+      .need-item-title {
+        font-family: var(--font-heading);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .need-item-desc {
+        font-size: 11px;
+        color: var(--gray);
+        line-height: 1.6;
+      }
+      .need-item-desc strong {
+        color: var(--green);
+      }
+
+      .cta-banner {
+        text-align: center;
+        padding: 64px 24px;
+        margin: 64px 0 0;
+        border-top: 1px solid var(--gray-dark);
+      }
+      .cta-banner h2 {
+        border: none;
+        padding-top: 0;
+        margin-top: 0;
+      }
+      .cta-buttons {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 32px;
+        background: var(--white);
+        color: var(--black);
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        transition: all 0.3s;
+        margin-top: 24px;
+      }
+      .btn-primary:hover {
+        background: var(--green);
+        color: var(--white);
+      }
+      .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 32px;
+        border: 1px solid var(--gray-dark);
+        color: var(--white);
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        transition: all 0.3s;
+        margin-top: 24px;
+      }
+      .btn-secondary:hover {
+        border-color: var(--white);
+      }
+
+      footer {
+        position: relative;
+        z-index: 1;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 48px 40px;
+      }
+      .footer-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 24px;
+      }
+      .footer-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .footer-left img {
+        width: 24px;
+        height: 24px;
+        opacity: 0.6;
+      }
+      .footer-left span {
+        font-size: 11px;
+        color: var(--gray);
+        letter-spacing: 3px;
+      }
+      .footer-links {
+        display: flex;
+        gap: 32px;
+      }
+      .footer-links a {
+        color: var(--gray);
+        text-decoration: none;
+        font-size: 11px;
+        letter-spacing: 1px;
+        transition: color 0.3s;
+      }
+      .footer-links a:hover {
+        color: var(--gray);
+      }
+      .footer-copy {
+        font-size: 11px;
+        color: var(--gray);
+      }
+
+      @media (max-width: 768px) {
+        nav {
+          padding: 16px 20px;
+        }
+        .nav-links {
+          display: none;
+        }
+        .article-wrapper {
+          padding: 120px 20px 80px;
+        }
+        .needs-grid {
+          grid-template-columns: 1fr;
+        }
+        .footer-inner {
+          flex-direction: column;
+          text-align: center;
+        }
+        .footer-links {
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="grid-bg"></div>
+
+    <nav>
+      <a href="index.html" class="nav-brand">
+        <img
+          src="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/app/src/main/ic_launcher-playstore.png"
+          alt="nfcGuard"
+          onerror="this.style.display='none'"
+        />
+        <span>NFCGUARD</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="blog-best-free-alternatives-to-brick-app.html">Alternatives</a>
+        <a href="https://github.com/Andebugulin/nfcGuard" target="_blank"
+          >GitHub</a
+        >
+        <a href="index.html#download" class="nav-cta">Download</a>
+      </div>
+    </nav>
+
+    <article class="article-wrapper">
+      <div class="article-meta">Tutorial &mdash; April 15, 2026</div>
+
+      <h1>
+        HOW TO BLOCK APPS WITH NFC TAGS ON ANDROID &mdash; FREE SETUP GUIDE
+      </h1>
+
+      <p class="article-subtitle">
+        You don't need a &euro;62 gadget to use NFC-based app blocking. A
+        &euro;2 NFC sticker and a free app are all it takes. Here's the full
+        setup, start to finish, in under 10 minutes.
+      </p>
+
+      <h2>Why Physical Friction Works</h2>
+
+      <p>
+        Android's built-in Digital Wellbeing lets you set daily timers for apps.
+        The problem is the dismiss button &mdash; it's always right there. One
+        tap and you're back to scrolling. Software-only blockers like Opal
+        (~&euro;99/year) face the same challenge: the off switch lives on the
+        same device as the temptation.
+      </p>
+
+      <p>
+        NFC-based blocking works differently. You link a physical NFC tag to
+        your blocking profile, then place that tag somewhere inconvenient
+        &mdash; stuck to the underside of a kitchen shelf, inside a drawer at
+        work, inside your gym bag. When you want to unlock your distracting
+        apps, you have to physically walk to that tag and tap your phone against
+        it. That one extra step is enough to break the autopilot habit for most
+        people.
+      </p>
+
+      <p>
+        Products like Brick (&euro;62) and Unpluq (~&euro;27 tag +
+        ~&euro;64/year subscription) sell proprietary NFC hardware for this
+        purpose. But NFC tags themselves are a commodity &mdash; a pack of 10
+        NTAG215 stickers costs &euro;2&ndash;5 online. You just need an app to
+        handle the blocking logic.
+      </p>
+
+      <h2>What You Need</h2>
+
+      <div class="needs-grid">
+        <div class="need-item">
+          <div class="need-item-icon">📱</div>
+          <div class="need-item-title">Android Phone</div>
+          <div class="need-item-desc">
+            Android 8.0+ with NFC hardware. Most phones from 2018 onward have
+            NFC built in.
+          </div>
+        </div>
+        <div class="need-item">
+          <div class="need-item-icon">🏷️</div>
+          <div class="need-item-title">NFC Tag(s)</div>
+          <div class="need-item-desc">
+            NTAG213 or NTAG215 sticker tags. A 10-pack costs
+            <strong>~&euro;2&ndash;5</strong>. Available on Amazon, AliExpress,
+            or your local electronics shop.
+          </div>
+        </div>
+      </div>
+
+      <h2>Step-by-Step Setup with nfcGuard</h2>
+
+      <p>
+        We'll use
+        <a href="https://github.com/Andebugulin/nfcGuard" target="_blank"
+          >nfcGuard</a
+        >
+        &mdash; a free, open-source app built for this exact purpose. No
+        account, no subscription, no data leaves your phone.
+      </p>
+
+      <div class="step-card">
+        <div class="step-card-number">01</div>
+        <h3>Install nfcGuard</h3>
+        <p>
+          Download from
+          <a
+            href="https://play.google.com/store/apps/details?id=com.andebugulin.nfcguard"
+            target="_blank"
+            >Google Play</a
+          >
+          or get the APK from
+          <a
+            href="https://github.com/Andebugulin/nfcGuard/releases"
+            target="_blank"
+            >GitHub Releases</a
+          >. The app is under 5 MB.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-card-number">02</div>
+        <h3>Grant Permissions</h3>
+        <p>
+          nfcGuard needs three permissions. Open the app, tap the gear icon
+          &mdash; it shows each permission's status with a link to the right
+          settings page.
+        </p>
+        <div class="code-block">
+          <strong>Usage Access</strong> — detects which app is in the
+          foreground<br />
+          <strong>Display Over Apps</strong> — shows the blocking overlay<br />
+          <strong>Battery Optimization: Unrestricted</strong> — keeps the
+          service running reliably
+        </div>
+        <p>
+          On Xiaomi, Samsung, or Huawei devices, also enable Autostart and add
+          nfcGuard to the lock screen cleanup whitelist. These manufacturers
+          aggressively kill background services.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-card-number">03</div>
+        <h3>Register Your NFC Tag</h3>
+        <p>
+          Go to the <strong>NFC Tags</strong> screen (bottom navigation). Tap
+          "+", name your tag (e.g., "Kitchen Tag"), and hold the NFC sticker to
+          the back of your phone. The app reads the tag's unique ID and saves
+          it.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-card-number">04</div>
+        <h3>Create a Blocking Mode</h3>
+        <p>
+          Go to the <strong>Modes</strong> screen. Create a new mode and choose
+          your strategy:
+        </p>
+        <div class="code-block">
+          <strong>Block Selected</strong> — pick specific apps to block
+          (Instagram, TikTok, Reddit, YouTube...)<br />
+          <strong>Allow Only</strong> — block everything except a whitelist
+          (Phone, Maps, Banking...)
+        </div>
+        <p>
+          Link your NFC tag to this mode. Only <em>that specific tag</em> can
+          deactivate it &mdash; tapping a random NFC object won't work.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-card-number">05</div>
+        <h3>Set Schedules (Optional)</h3>
+        <p>
+          Go to <strong>Schedules</strong>. Create a schedule, pick days and
+          times, and link it to your mode. nfcGuard supports different start/end
+          times for each day of the week &mdash; useful when weekdays and
+          weekends have different routines.
+        </p>
+        <p>
+          You can optionally enable automatic deactivation at the end time, or
+          require the NFC tag to turn off the mode even when the schedule
+          expires.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-card-number">06</div>
+        <h3>Place Your Tag and Activate</h3>
+        <p>
+          Stick your NFC tag somewhere that requires effort to reach. Some
+          ideas:
+        </p>
+        <div class="code-block">
+          → Underside of a kitchen shelf<br />
+          → Inside a drawer at your desk<br />
+          → Inside your gym bag<br />
+          → At a friend's house or at your office<br />
+          → On your car dashboard (forces you to go outside)
+        </div>
+        <p>
+          Activate the mode from the home screen. Try opening a blocked app
+          &mdash; you'll see a full-screen overlay. The only way past it is
+          tapping your tag.
+        </p>
+      </div>
+
+      <div class="tip-box">
+        <div class="tip-box-label">Pro Tip: Multiple Tags, Multiple Modes</div>
+        <p>
+          Buy a few extra tags and create separate modes for different parts of
+          your day. A "Work" mode blocking social media 9&ndash;17, an "Evening"
+          mode that blocks everything except music and messaging, a "Sleep" mode
+          that locks down after 22:00. Each mode gets its own tag in a different
+          location.
+        </p>
+      </div>
+
+      <h2>What If I Lose My NFC Tag?</h2>
+
+      <p>
+        nfcGuard has a built-in emergency reset. Tap the delete icon on the home
+        screen and follow the safety flow: a 60-second cooldown, then a text
+        confirmation. Select which tags you've lost, and all linked modes are
+        deactivated. Your configurations stay intact &mdash; just register a new
+        tag and re-link.
+      </p>
+
+      <p>
+        There's no limit on how many times you can use the emergency reset, and
+        you don't need to contact anyone. Just wait 60 seconds and confirm.
+      </p>
+
+      <h2>Recommended NFC Tags</h2>
+
+      <p>
+        Any NDEF-compatible NFC tag works. For best results, look for NTAG213 or
+        NTAG215 sticker tags &mdash; they're thin, adhesive-backed, and work
+        reliably with all Android phones. Black stickers blend in well. Search
+        "NTAG215 sticker tags" on Amazon or AliExpress. A 10-pack typically
+        costs &euro;2&ndash;5.
+      </p>
+
+      <div class="tip-box">
+        <div class="tip-box-label">Quick Start Without Tags</div>
+        <p>
+          If no NFC tag is linked to a mode, nfcGuard lets
+          <em>any</em> NFC-capable object deactivate it &mdash; your transit
+          card, smartwatch, NFC headphones, even a friend's phone. Useful for
+          getting started before your tags arrive.
+        </p>
+      </div>
+
+      <h2>Export and Share Your Setup</h2>
+
+      <p>
+        Once your configuration is dialled in, open Settings and export it as
+        JSON or YAML. Share the file with friends, back it up to Git, or import
+        it on a new device. Two import strategies: Replace (overwrite
+        everything) or Merge (add non-duplicate items).
+      </p>
+
+      <p>
+        Looking for a detailed comparison of nfcGuard against Brick, Unpluq, and
+        Opal? Read our
+        <a href="blog-best-free-alternatives-to-brick-app.html"
+          >Best Free Alternatives to Brick App</a
+        >
+        post.
+      </p>
+
+      <div class="cta-banner">
+        <h2>GET STARTED IN 10 MINUTES</h2>
+        <p>Free. Open source. Any NFC tag works.</p>
+        <div class="cta-buttons">
+          <a
+            href="https://play.google.com/store/apps/details?id=com.andebugulin.nfcguard"
+            class="btn-primary"
+            target="_blank"
+          >
+            Google Play
+          </a>
+          <a
+            href="https://github.com/Andebugulin/nfcGuard"
+            class="btn-secondary"
+            target="_blank"
+          >
+            View Source on GitHub
+          </a>
+        </div>
+      </div>
+    </article>
+
+    <footer>
+      <div class="footer-inner">
+        <div class="footer-left">
+          <img
+            src="https://raw.githubusercontent.com/Andebugulin/nfcGuard/main/app/src/main/ic_launcher-playstore.png"
+            alt="nfcGuard"
+            onerror="this.style.display='none'"
+          />
+          <span>NFCGUARD</span>
+        </div>
+        <div class="footer-links">
+          <a href="index.html">Home</a>
+          <a href="https://github.com/Andebugulin/nfcGuard" target="_blank"
+            >GitHub</a
+          >
+          <a href="privacy.html">Privacy</a>
+        </div>
+        <div class="footer-copy">
+          &copy; 2025 nfcGuard. Open source under MIT.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
