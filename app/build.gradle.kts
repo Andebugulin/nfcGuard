@@ -74,9 +74,6 @@ android {
     buildFeatures {
         compose = true
     }
-
-    experimentalProperties["android.experimental.art-profile-r8-rewriting"] = false
-    experimentalProperties["android.experimental.r8.dex-startup-optimization"] = false
 }
 
 dependencies {
@@ -104,4 +101,14 @@ dependencies {
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+afterEvaluate {
+    tasks.matching {
+        it.name.contains("ArtProfile") ||
+                it.name.contains("StartupProfile") ||
+                it.name.contains("VersionControlInfo")
+    }.configureEach {
+        enabled = false
+    }
 }
