@@ -74,6 +74,9 @@ android {
     buildFeatures {
         compose = true
     }
+
+    experimentalProperties["android.experimental.art-profile-r8-rewriting"] = false
+    experimentalProperties["android.experimental.r8.dex-startup-optimization"] = false
 }
 
 dependencies {
