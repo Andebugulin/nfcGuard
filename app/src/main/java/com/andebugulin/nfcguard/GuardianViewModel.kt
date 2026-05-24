@@ -509,97 +509,18 @@ class GuardianViewModel : ViewModel() {
         viewModelScope.launch {
             AppLogger.log("NFC", "handleNfcTag: tagId=$tagId, activeModes=${_appState.value.activeModes}")
             val calendar = java.util.Calendar.getInstance()
-            val currentDayOfWeek = when (calendar.get(java.util.Calendar.DAY_OF_WEEK)) {
-                java.util.Calendar.MONDAY -> 1
-                java.util.Calendar.TUESDAY -> 2
-                java.util.Calendar.WEDNESDAY -> 3
-                java.util.Calendar.THURSDAY -> 4
-                java.util.Calendar.FRIDAY -> 5
-                java.util.Calendar.SATURDAY -> 6
-                java.util.Calendar.SUNDAY -> 7
-                else -> 1
-            }
-            val currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
-            val currentMinute = calendar.get(java.util.Calendar.MINUTE)
-            val currentTime = currentHour * 60 + currentMinute
+            val currentDayOfWeek = NfcUnlockLogic.calendarDayToScheduleDay(calendar.get(java.util.Calendar.DAY_OF_WEEK))
+            val currentMinuteOfDay = calendar.get(java.util.Calendar.HOUR_OF_DAY) * 60 + calendar.get(java.util.Calendar.MINUTE)
 
-            val modesToDeactivate = mutableSetOf<String>()
-            val schedulesToDeactivate = mutableSetOf<String>()
-            val perModeLimits = mutableMapOf<String, Long?>() // per-mode limit tracking
+            val pending = NfcUnlockLogic.computePendingUnlock(
+                state = _appState.value,
+                tagId = tagId,
+                currentDayOfWeek = currentDayOfWeek,
+                currentMinuteOfDay = currentMinuteOfDay
+            ) ?: return@launch
 
-            var aggregateLimit: Long? = null
-            var limitInitialized = false
-
-            _appState.value.activeModes.forEach { modeId ->
-                val mode = _appState.value.modes.find { it.id == modeId }
-
-                if (mode != null) {
-                    val tagIds = mode.effectiveNfcTagIds
-                    // Check if tag matches specific tag OR any tag wildcard "ANY"
-                    val tagMatches = tagIds.contains(tagId) || tagIds.contains("ANY")
-
-                    if (tagIds.isNotEmpty()) {
-                        if (tagMatches) {
-                            modesToDeactivate.add(modeId)
-
-                            // Track the most restrictive limit among all modes being unlocked
-                            val modeLimit = mode.getLimitForTag(tagId)
-                            perModeLimits[modeId] = modeLimit
-                            if (!limitInitialized) {
-                                aggregateLimit = modeLimit
-                                limitInitialized = true
-                            } else {
-                                if (modeLimit != null) {
-                                    aggregateLimit = if (aggregateLimit == null) modeLimit else minOf(aggregateLimit!!, modeLimit)
-                                }
-                            }
-
-                            _appState.value.schedules.forEach { schedule ->
-                                if (schedule.linkedModeIds.contains(modeId)) {
-                                    val dayTime = schedule.timeSlot.getTimeForDay(currentDayOfWeek)
-                                    if (dayTime != null) {
-                                        val startTime = dayTime.startHour * 60 + dayTime.startMinute
-                                        if (currentTime >= startTime) {
-                                            if (_appState.value.activeSchedules.contains(schedule.id)) {
-                                                schedulesToDeactivate.add(schedule.id)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // No NFC tags linked — any tag can unlock this mode (legacy behavior)
-                        modesToDeactivate.add(modeId)
-                        perModeLimits[modeId] = null // no limit
-
-                        _appState.value.schedules.forEach { schedule ->
-                            if (schedule.linkedModeIds.contains(modeId)) {
-                                val dayTime = schedule.timeSlot.getTimeForDay(currentDayOfWeek)
-                                if (dayTime != null) {
-                                    val startTime = dayTime.startHour * 60 + dayTime.startMinute
-                                    if (currentTime >= startTime) {
-                                        if (_appState.value.activeSchedules.contains(schedule.id)) {
-                                            schedulesToDeactivate.add(schedule.id)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (modesToDeactivate.isNotEmpty()) {
-                AppLogger.log("NFC", "Pending unlock: modes=$modesToDeactivate, schedules=$schedulesToDeactivate, limit=$aggregateLimit")
-                _pendingUnlock.value = PendingUnlock(
-                    modeIds = modesToDeactivate,
-                    schedulesToDeactivate = schedulesToDeactivate,
-                    tagId = tagId,
-                    maxLimitMinutes = aggregateLimit,
-                    modeLimits = perModeLimits
-                )
-            }
+            AppLogger.log("NFC", "Pending unlock: modes=${pending.modeIds}, schedules=${pending.schedulesToDeactivate}, limit=${pending.maxLimitMinutes}")
+            _pendingUnlock.value = pending
         }
     }
 
@@ -609,80 +530,38 @@ class GuardianViewModel : ViewModel() {
         val pending = _pendingUnlock.value ?: return
         _pendingUnlock.value = null
 
-        val modeIdsToUnlock = selectedModeIds ?: pending.modeIds
-
         viewModelScope.launch {
-            AppLogger.log("NFC", "Confirming unlock: modes=$modeIdsToUnlock (of ${pending.modeIds}), reactivate=${reactivateAtMillis != null}")
-
-            // Recompute schedules to deactivate based on the actual modes being unlocked
             val currentState = _appState.value
             val calendar = java.util.Calendar.getInstance()
-            val currentDayOfWeek = when (calendar.get(java.util.Calendar.DAY_OF_WEEK)) {
-                java.util.Calendar.MONDAY -> 1; java.util.Calendar.TUESDAY -> 2
-                java.util.Calendar.WEDNESDAY -> 3; java.util.Calendar.THURSDAY -> 4
-                java.util.Calendar.FRIDAY -> 5; java.util.Calendar.SATURDAY -> 6
-                java.util.Calendar.SUNDAY -> 7; else -> 1
-            }
-            val currentTime = calendar.get(java.util.Calendar.HOUR_OF_DAY) * 60 + calendar.get(java.util.Calendar.MINUTE)
-
-            val schedulesToDeactivate = mutableSetOf<String>()
-            modeIdsToUnlock.forEach { modeId ->
-                currentState.schedules.forEach { schedule ->
-                    if (schedule.linkedModeIds.contains(modeId) && currentState.activeSchedules.contains(schedule.id)) {
-                        val dayTime = schedule.timeSlot.getTimeForDay(currentDayOfWeek)
-                        if (dayTime != null) {
-                            val startTime = dayTime.startHour * 60 + dayTime.startMinute
-                            if (currentTime >= startTime) {
-                                // Only deactivate schedule if ALL its linked modes will be inactive
-                                val allLinkedWillBeInactive = schedule.linkedModeIds.all { linkedId ->
-                                    modeIdsToUnlock.contains(linkedId) || !currentState.activeModes.contains(linkedId)
-                                }
-                                if (allLinkedWillBeInactive) {
-                                    schedulesToDeactivate.add(schedule.id)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            val newReactivations = if (reactivateAtMillis != null) {
-                currentState.timedModeReactivations + modeIdsToUnlock.associateWith { reactivateAtMillis }
-            } else {
-                currentState.timedModeReactivations
-            }
-
-            // Save remaining deactivation time for modes that had a timed deactivation
+            val currentDayOfWeek = NfcUnlockLogic.calendarDayToScheduleDay(calendar.get(java.util.Calendar.DAY_OF_WEEK))
+            val currentMinuteOfDay = calendar.get(java.util.Calendar.HOUR_OF_DAY) * 60 + calendar.get(java.util.Calendar.MINUTE)
             val now = System.currentTimeMillis()
-            val newPausedRemaining = currentState.pausedModeRemainingMs.toMutableMap()
-            modeIdsToUnlock.forEach { modeId ->
-                val deadline = currentState.timedModeDeactivations[modeId]
-                if (deadline != null) {
-                    val remaining = (deadline - now).coerceAtLeast(0)
-                    if (remaining > 0) {
-                        newPausedRemaining[modeId] = remaining
-                        AppLogger.log("TIMER", "Saving remaining ${remaining / 60000}m for mode $modeId")
-                    }
+
+            val result = NfcUnlockLogic.applyUnlock(
+                state = currentState,
+                pending = pending,
+                selectedModeIds = selectedModeIds,
+                reactivateAtMillis = reactivateAtMillis,
+                now = now,
+                currentDayOfWeek = currentDayOfWeek,
+                currentMinuteOfDay = currentMinuteOfDay
+            )
+
+            AppLogger.log("NFC", "Confirming unlock: modes=${result.unlockedModeIds} (of ${pending.modeIds}), reactivate=${reactivateAtMillis != null}")
+            result.unlockedModeIds.forEach { modeId ->
+                val remaining = result.newState.pausedModeRemainingMs[modeId]
+                if (remaining != null && remaining > 0) {
+                    AppLogger.log("TIMER", "Saving remaining ${remaining / 60000}m for mode $modeId")
                 }
             }
 
-            _appState.value = currentState.copy(
-                activeModes = currentState.activeModes - modeIdsToUnlock,
-                activeSchedules = currentState.activeSchedules - schedulesToDeactivate,
-                deactivatedSchedules = currentState.deactivatedSchedules + schedulesToDeactivate,
-                manuallyActivatedModes = currentState.manuallyActivatedModes - modeIdsToUnlock,
-                timedModeDeactivations = currentState.timedModeDeactivations - modeIdsToUnlock,
-                timedModeReactivations = newReactivations,
-                pausedModeRemainingMs = newPausedRemaining
-            )
+            _appState.value = result.newState
             saveState()
 
-            // Cancel any timed deactivation alarms for unlocked modes
-            modeIdsToUnlock.forEach { cancelTimedDeactivation(it) }
+            result.unlockedModeIds.forEach { cancelTimedDeactivation(it) }
 
-            // Schedule reactivation alarms if timed
             if (reactivateAtMillis != null) {
-                modeIdsToUnlock.forEach { modeId ->
+                result.unlockedModeIds.forEach { modeId ->
                     scheduleTimedReactivation(modeId, reactivateAtMillis)
                 }
             }
@@ -767,60 +646,34 @@ class GuardianViewModel : ViewModel() {
     /** Reactivate a mode after timed unlock expires */
     fun reactivateMode(modeId: String) {
         viewModelScope.launch {
-            val currentState = _appState.value
-            val mode = currentState.modes.find { it.id == modeId } ?: return@launch
-            if (currentState.activeModes.contains(modeId)) {
-                // Already active (e.g. schedule re-activated it), just clean up the reactivation entry
-                _appState.value = currentState.copy(
-                    timedModeReactivations = currentState.timedModeReactivations - modeId
-                )
-                saveState()
-                return@launch
-            }
+            val now = System.currentTimeMillis()
+            val result = NfcUnlockLogic.applyReactivation(_appState.value, modeId, now)
 
-            // Check for BLOCK/ALLOW conflict before reactivating
-            val currentlyActiveModes = currentState.modes.filter { currentState.activeModes.contains(it.id) }
-            if (currentlyActiveModes.isNotEmpty() && currentlyActiveModes.any { it.blockMode != mode.blockMode }) {
-                AppLogger.log("TIMER", "Reactivation conflict for '${mode.name}' — skipping, clearing timer")
-                _appState.value = currentState.copy(
-                    timedModeReactivations = currentState.timedModeReactivations - modeId
-                )
-                saveState()
-                return@launch
-            }
-
-            AppLogger.log("TIMER", "Reactivating mode '${mode.name}' after timed unlock")
-            val remainingMs = currentState.pausedModeRemainingMs[modeId]
-            val newTimedDeactivations = if (remainingMs != null && remainingMs > 0) {
-                val newDeadline = System.currentTimeMillis() + remainingMs
-                AppLogger.log("TIMER", "Restoring timed deactivation for '${mode.name}': ${remainingMs / 60000}m remaining")
-                currentState.timedModeDeactivations + (modeId to newDeadline)
-            } else {
-                currentState.timedModeDeactivations
-            }
-
-            // Restore schedules that were deactivated when this mode was paused
-            val schedulesToRestore = currentState.schedules
-                .filter { schedule ->
-                    schedule.linkedModeIds.contains(modeId) &&
-                            currentState.deactivatedSchedules.contains(schedule.id)
+            when (result) {
+                is NfcUnlockLogic.ReactivationResult.ModeNotFound -> {
+                    // Mode gone — just clear the orphan reactivation entry
                 }
-                .map { it.id }
-                .toSet()
+                is NfcUnlockLogic.ReactivationResult.AlreadyActive -> {
+                    // Schedule (or other path) already re-activated it; just clean up
+                }
+                is NfcUnlockLogic.ReactivationResult.Conflict -> {
+                    AppLogger.log("TIMER", "Reactivation conflict for '${result.modeName}' — skipping, clearing timer")
+                }
+                is NfcUnlockLogic.ReactivationResult.Reactivated -> {
+                    val mode = _appState.value.modes.find { it.id == modeId }
+                    AppLogger.log("TIMER", "Reactivating mode '${mode?.name}' after timed unlock")
+                    if (result.restoredDeactivationAt != null) {
+                        val remainingMs = result.restoredDeactivationAt - now
+                        AppLogger.log("TIMER", "Restoring timed deactivation for '${mode?.name}': ${remainingMs / 60000}m remaining")
+                    }
+                }
+            }
 
-            _appState.value = currentState.copy(
-                activeModes = currentState.activeModes + modeId,
-                timedModeReactivations = currentState.timedModeReactivations - modeId,
-                timedModeDeactivations = newTimedDeactivations,
-                pausedModeRemainingMs = currentState.pausedModeRemainingMs - modeId,
-                activeSchedules = currentState.activeSchedules + schedulesToRestore,
-                deactivatedSchedules = currentState.deactivatedSchedules - schedulesToRestore
-            )
+            _appState.value = result.newState
             saveState()
 
-            // Re-schedule deactivation alarm if time was restored
-            if (remainingMs != null && remainingMs > 0) {
-                scheduleTimedDeactivation(modeId, System.currentTimeMillis() + remainingMs)
+            if (result is NfcUnlockLogic.ReactivationResult.Reactivated && result.restoredDeactivationAt != null) {
+                scheduleTimedDeactivation(modeId, result.restoredDeactivationAt)
             }
         }
     }
