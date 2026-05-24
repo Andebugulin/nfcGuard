@@ -100,52 +100,26 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
         try {
             val appState = json.decodeFromString<AppState>(stateJson)
-            val schedule = appState.schedules.find { it.id == scheduleId }
-
-            if (schedule == null) {
-                android.util.Log.e("SCHEDULE_ALARM", "Schedule not found: $scheduleId")
-                AppLogger.log("ALARM", "ERROR: Schedule not found: $scheduleId")
-                return
-            }
-
-            android.util.Log.d("SCHEDULE_ALARM", "Found schedule: ${schedule.name}")
-            android.util.Log.d("SCHEDULE_ALARM", "Linked modes: ${schedule.linkedModeIds}")
-
-            // FIX #2: Check for BLOCK/ALLOW conflict before activating
-            val currentlyActiveModes = appState.modes.filter { appState.activeModes.contains(it.id) }
-            val modesToActivate = schedule.linkedModeIds.filter { modeId ->
-                val mode = appState.modes.find { it.id == modeId }
-                if (mode == null) return@filter false
-                // Skip if there's a block mode conflict with currently active modes
-                if (currentlyActiveModes.isNotEmpty() && currentlyActiveModes.any { it.blockMode != mode.blockMode }) {
-                    android.util.Log.w("SCHEDULE_ALARM", "Skipping mode ${mode.name}: BLOCK/ALLOW conflict with active modes")
-                    AppLogger.log("ALARM", "CONFLICT: Skipping mode ${mode.name} — BLOCK/ALLOW conflict")
-                    return@filter false
+            when (val result = ScheduleTransitions.applyScheduleActivation(appState, scheduleId)) {
+                is ScheduleTransitions.ScheduleActivationResult.ScheduleNotFound -> {
+                    android.util.Log.e("SCHEDULE_ALARM", "Schedule not found: $scheduleId")
+                    AppLogger.log("ALARM", "ERROR: Schedule not found: $scheduleId")
                 }
-                true
+                is ScheduleTransitions.ScheduleActivationResult.Applied -> {
+                    result.conflictSkippedModeIds.forEach { skipped ->
+                        val name = appState.modes.find { it.id == skipped }?.name ?: skipped
+                        android.util.Log.w("SCHEDULE_ALARM", "Skipping mode $name: BLOCK/ALLOW conflict with active modes")
+                        AppLogger.log("ALARM", "CONFLICT: Skipping mode $name — BLOCK/ALLOW conflict")
+                    }
+                    AppLogger.log("ALARM", "Schedule activated: activeModes=${result.newState.activeModes}, activeSchedules=${result.newState.activeSchedules}")
+                    val newStateJson = json.encodeToString(result.newState)
+                    prefs.edit().putString("app_state", newStateJson).apply()
+                    android.util.Log.d("SCHEDULE_ALARM", "- Active modes updated to: ${result.newState.activeModes}")
+                    android.util.Log.d("SCHEDULE_ALARM", "- Active schedules: ${result.newState.activeSchedules}")
+                    updateBlockerService(context, result.newState)
+                    GuardianWidget.notifyAllWidgets(context)
+                }
             }
-
-            val newActiveModes = appState.activeModes + modesToActivate
-            val newActiveSchedules = appState.activeSchedules + scheduleId
-            val newDeactivatedSchedules = appState.deactivatedSchedules - scheduleId
-            val activatedSet = modesToActivate.toSet()
-
-            val newState = appState.copy(
-                activeModes = newActiveModes,
-                activeSchedules = newActiveSchedules,
-                deactivatedSchedules = newDeactivatedSchedules,
-                timedModeReactivations = appState.timedModeReactivations - activatedSet,
-                pausedModeRemainingMs = appState.pausedModeRemainingMs - activatedSet
-            )
-            AppLogger.log("ALARM", "Schedule activated: activeModes=$newActiveModes, activeSchedules=$newActiveSchedules")
-            val newStateJson = json.encodeToString(newState)
-            prefs.edit().putString("app_state", newStateJson).apply()
-
-            android.util.Log.d("SCHEDULE_ALARM", "- Active modes updated to: $newActiveModes")
-
-            android.util.Log.d("SCHEDULE_ALARM", "- Active schedules: $newActiveSchedules")
-            updateBlockerService(context, newState)
-            GuardianWidget.notifyAllWidgets(context)
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error activating schedule: ${e.message}", e)
         }
@@ -165,43 +139,24 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
         try {
             val appState = json.decodeFromString<AppState>(stateJson)
-            val schedule = appState.schedules.find { it.id == scheduleId }
-
-            if (schedule == null) {
-                android.util.Log.e("SCHEDULE_ALARM", "Schedule not found: $scheduleId")
-                AppLogger.log("ALARM", "ERROR: Schedule not found: $scheduleId")
-                return
-            }
-
-            android.util.Log.d("SCHEDULE_ALARM", "Deactivating modes: ${schedule.linkedModeIds}")
-
-            // Skip modes that have a user-set timer — user's explicit duration takes priority
-            val modesToDeactivate = schedule.linkedModeIds.filter { modeId ->
-                val hasTimer = appState.timedModeDeactivations.containsKey(modeId)
-                if (hasTimer) {
-                    android.util.Log.d("SCHEDULE_ALARM", "Skipping mode $modeId: has active user timer, keeping alive")
-                    AppLogger.log("ALARM", "Skipping timed mode $modeId — user timer takes priority over schedule end")
+            when (val result = ScheduleTransitions.applyScheduleDeactivation(appState, scheduleId)) {
+                is ScheduleTransitions.ScheduleDeactivationResult.ScheduleNotFound -> {
+                    android.util.Log.e("SCHEDULE_ALARM", "Schedule not found: $scheduleId")
+                    AppLogger.log("ALARM", "ERROR: Schedule not found: $scheduleId")
                 }
-                !hasTimer
-            }.toSet()
-
-            val newActiveModes = appState.activeModes - modesToDeactivate
-            val newActiveSchedules = appState.activeSchedules - scheduleId
-            val newDeactivatedSchedules = appState.deactivatedSchedules - scheduleId
-
-            val newState = appState.copy(
-                activeModes = newActiveModes,
-                activeSchedules = newActiveSchedules,
-                deactivatedSchedules = newDeactivatedSchedules
-            )
-            AppLogger.log("ALARM", "Schedule deactivated: removed=${modesToDeactivate}, kept=${schedule.linkedModeIds.toSet() - modesToDeactivate}, activeModes=$newActiveModes")
-            val newStateJson = json.encodeToString(newState)
-            prefs.edit().putString("app_state", newStateJson).apply()
-
-            android.util.Log.d("SCHEDULE_ALARM", "- Active modes updated to: $newActiveModes")
-
-            updateBlockerService(context, newState)
-            GuardianWidget.notifyAllWidgets(context)
+                is ScheduleTransitions.ScheduleDeactivationResult.Applied -> {
+                    result.keptDueToUserTimerModeIds.forEach { kept ->
+                        android.util.Log.d("SCHEDULE_ALARM", "Skipping mode $kept: has active user timer, keeping alive")
+                        AppLogger.log("ALARM", "Skipping timed mode $kept — user timer takes priority over schedule end")
+                    }
+                    AppLogger.log("ALARM", "Schedule deactivated: removed=${result.deactivatedModeIds}, kept=${result.keptDueToUserTimerModeIds}, activeModes=${result.newState.activeModes}")
+                    val newStateJson = json.encodeToString(result.newState)
+                    prefs.edit().putString("app_state", newStateJson).apply()
+                    android.util.Log.d("SCHEDULE_ALARM", "- Active modes updated to: ${result.newState.activeModes}")
+                    updateBlockerService(context, result.newState)
+                    GuardianWidget.notifyAllWidgets(context)
+                }
+            }
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error deactivating schedule: ${e.message}", e)
         }
@@ -282,40 +237,17 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
         try {
             val appState = json.decodeFromString<AppState>(stateJson)
-            if (!appState.activeModes.contains(modeId)) {
-                android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId already inactive, skipping")
-                return
-            }
-
-            // Find schedules that linked this mode and are currently active
-            val schedulesToMark = appState.schedules
-                .filter { schedule ->
-                    schedule.linkedModeIds.contains(modeId) &&
-                            appState.activeSchedules.contains(schedule.id)
+            when (val result = ScheduleTransitions.applyTimedModeDeactivation(appState, modeId)) {
+                is ScheduleTransitions.TimedDeactivationResult.AlreadyInactive -> {
+                    android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId already inactive, skipping")
                 }
-                .map { it.id }
-                .toSet()
-
-            val schedulesToDeactivate = schedulesToMark.filter { scheduleId ->
-                val schedule = appState.schedules.find { it.id == scheduleId }
-                schedule?.linkedModeIds?.all { linkedModeId ->
-                    linkedModeId == modeId || !appState.activeModes.contains(linkedModeId)
-                } ?: true
-            }.toSet()
-
-            val newState = appState.copy(
-                activeModes = appState.activeModes - modeId,
-                activeSchedules = appState.activeSchedules - schedulesToDeactivate,
-                deactivatedSchedules = appState.deactivatedSchedules + schedulesToDeactivate,
-                manuallyActivatedModes = appState.manuallyActivatedModes - modeId,
-                timedModeDeactivations = appState.timedModeDeactivations - modeId
-            )
-
-            val newStateJson = json.encodeToString(newState)
-            prefs.edit().putString("app_state", newStateJson).apply()
-
-            updateBlockerService(context, newState)
-            GuardianWidget.notifyAllWidgets(context)
+                is ScheduleTransitions.TimedDeactivationResult.Applied -> {
+                    val newStateJson = json.encodeToString(result.newState)
+                    prefs.edit().putString("app_state", newStateJson).apply()
+                    updateBlockerService(context, result.newState)
+                    GuardianWidget.notifyAllWidgets(context)
+                }
+            }
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error deactivating timed mode: ${e.message}", e)
         }
@@ -329,81 +261,36 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
         try {
             val appState = json.decodeFromString<AppState>(stateJson)
+            val result = NfcUnlockLogic.applyReactivation(appState, modeId, System.currentTimeMillis())
 
-            if (appState.activeModes.contains(modeId)) {
-                android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId already active, just cleaning up reactivation timer")
-                val newState = appState.copy(
-                    timedModeReactivations = appState.timedModeReactivations - modeId
-                )
-                val newStateJson = json.encodeToString(newState)
-                prefs.edit().putString("app_state", newStateJson).apply()
-                return
-            }
-
-            val mode = appState.modes.find { it.id == modeId }
-            if (mode == null) {
-                android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId not found, cleaning up")
-                val newState = appState.copy(
-                    timedModeReactivations = appState.timedModeReactivations - modeId
-                )
-                val newStateJson = json.encodeToString(newState)
-                prefs.edit().putString("app_state", newStateJson).apply()
-                return
-            }
-
-            // Check for BLOCK/ALLOW conflict
-            val currentlyActiveModes = appState.modes.filter { appState.activeModes.contains(it.id) }
-            if (currentlyActiveModes.isNotEmpty() && currentlyActiveModes.any { it.blockMode != mode.blockMode }) {
-                android.util.Log.w("SCHEDULE_ALARM", "Reactivation conflict for ${mode.name} — skipping")
-                AppLogger.log("ALARM", "CONFLICT: Skipping reactivation of ${mode.name}")
-                val newState = appState.copy(
-                    timedModeReactivations = appState.timedModeReactivations - modeId
-                )
-                val newStateJson = json.encodeToString(newState)
-                prefs.edit().putString("app_state", newStateJson).apply()
-                return
-            }
-
-            AppLogger.log("ALARM", "Reactivating mode '${mode.name}' after timed unlock expired")
-
-            // Restore remaining deactivation time if the mode was on a timer before being paused
-            val remainingMs = appState.pausedModeRemainingMs[modeId]
-            val newTimedDeactivations = if (remainingMs != null && remainingMs > 0) {
-                val newDeadline = System.currentTimeMillis() + remainingMs
-                AppLogger.log("ALARM", "Restoring timed deactivation for '${mode.name}': ${remainingMs / 60000}m remaining")
-                appState.timedModeDeactivations + (modeId to newDeadline)
-            } else {
-                appState.timedModeDeactivations
-            }
-
-            // Restore schedules that were deactivated when this mode was paused
-            val schedulesToRestore = appState.schedules
-                .filter { schedule ->
-                    schedule.linkedModeIds.contains(modeId) &&
-                            appState.deactivatedSchedules.contains(schedule.id)
+            when (result) {
+                is NfcUnlockLogic.ReactivationResult.AlreadyActive ->
+                    android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId already active, just cleaning up reactivation timer")
+                is NfcUnlockLogic.ReactivationResult.ModeNotFound ->
+                    android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId not found, cleaning up")
+                is NfcUnlockLogic.ReactivationResult.Conflict -> {
+                    android.util.Log.w("SCHEDULE_ALARM", "Reactivation conflict for ${result.modeName} — skipping")
+                    AppLogger.log("ALARM", "CONFLICT: Skipping reactivation of ${result.modeName}")
                 }
-                .map { it.id }
-                .toSet()
+                is NfcUnlockLogic.ReactivationResult.Reactivated -> {
+                    val mode = appState.modes.find { it.id == modeId }
+                    AppLogger.log("ALARM", "Reactivating mode '${mode?.name}' after timed unlock expired")
+                    if (result.restoredDeactivationAt != null) {
+                        val remainingMs = appState.pausedModeRemainingMs[modeId] ?: 0L
+                        AppLogger.log("ALARM", "Restoring timed deactivation for '${mode?.name}': ${remainingMs / 60000}m remaining")
+                    }
+                }
+            }
 
-            val newState = appState.copy(
-                activeModes = appState.activeModes + modeId,
-                timedModeReactivations = appState.timedModeReactivations - modeId,
-                timedModeDeactivations = newTimedDeactivations,
-                pausedModeRemainingMs = appState.pausedModeRemainingMs - modeId,
-                activeSchedules = appState.activeSchedules + schedulesToRestore,
-                deactivatedSchedules = appState.deactivatedSchedules - schedulesToRestore
-            )
-
-            val newStateJson = json.encodeToString(newState)
+            val newStateJson = json.encodeToString(result.newState)
             prefs.edit().putString("app_state", newStateJson).apply()
 
-            updateBlockerService(context, newState)
-            GuardianWidget.notifyAllWidgets(context)
-
-            // Schedule deactivation alarm if remaining time was restored
-            if (remainingMs != null && remainingMs > 0) {
-                val deactivateAt = System.currentTimeMillis() + remainingMs
-                scheduleTimedDeactivationAlarm(context, modeId, deactivateAt)
+            if (result is NfcUnlockLogic.ReactivationResult.Reactivated) {
+                updateBlockerService(context, result.newState)
+                GuardianWidget.notifyAllWidgets(context)
+                if (result.restoredDeactivationAt != null) {
+                    scheduleTimedDeactivationAlarm(context, modeId, result.restoredDeactivationAt)
+                }
             }
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error reactivating timed mode: ${e.message}", e)
