@@ -106,6 +106,12 @@ dependencies {
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // Unit tests
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 }
 
 afterEvaluate {

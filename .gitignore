@@ -98,3 +98,6 @@ Thumbs.db
 
 # Kotlin
 .kotlin/
+
+# AI
+CLAUDE.md
