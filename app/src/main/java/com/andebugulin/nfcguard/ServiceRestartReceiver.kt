@@ -3,11 +3,8 @@ package com.andebugulin.nfcguard
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import kotlinx.serialization.json.Json
 
 class ServiceRestartReceiver : BroadcastReceiver() {
-
-    private val json = Json { ignoreUnknownKeys = true }
 
     override fun onReceive(context: Context, intent: Intent) {
         android.util.Log.d("SERVICE_RESTART", "═══════════════════════════════════════")
@@ -16,18 +13,8 @@ class ServiceRestartReceiver : BroadcastReceiver() {
         android.util.Log.d("SERVICE_RESTART", "⏰ Time: ${java.util.Date()}")
         android.util.Log.d("SERVICE_RESTART", "📱 Action: ${intent.action}")
 
-        val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-        val stateJson = prefs.getString("app_state", null)
-
-        if (stateJson == null) {
-            android.util.Log.w("SERVICE_RESTART", "⚠️  No app state found")
-            android.util.Log.d("SERVICE_RESTART", "   Cannot restart service without state")
-            android.util.Log.d("SERVICE_RESTART", "═══════════════════════════════════════")
-            return
-        }
-
         try {
-            val appState = json.decodeFromString<AppState>(stateJson)
+            val appState = AppStateRepository.getInstance(context).current
             android.util.Log.d("SERVICE_RESTART", "✓ App state loaded")
             android.util.Log.d("SERVICE_RESTART", "🎯 Active modes: ${appState.activeModes.size}")
             android.util.Log.d("SERVICE_RESTART", "   IDs: ${appState.activeModes.joinToString(", ")}")

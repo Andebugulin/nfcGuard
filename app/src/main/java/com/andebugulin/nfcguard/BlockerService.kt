@@ -917,18 +917,13 @@ class BlockerService : Service() {
 
         val bigTextStyle = NotificationCompat.BigTextStyle()
 
-        // Resolve mode names and schedule info from SharedPreferences
+        // Resolve mode names and schedule info from the repository
         var resolvedAppState: AppState? = null
         val resolvedNames = if (modeNames.isNotEmpty()) modeNames else {
             try {
-                val prefs = getSharedPreferences("guardian_prefs", MODE_PRIVATE)
-                val stateJson = prefs.getString("app_state", null)
-                if (stateJson != null) {
-                    val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-                    val state = json.decodeFromString<AppState>(stateJson)
-                    resolvedAppState = state
-                    state.modes.associate { it.id to it.name }
-                } else emptyMap()
+                val state = AppStateRepository.getInstance(this).current
+                resolvedAppState = state
+                state.modes.associate { it.id to it.name }
             } catch (_: Exception) { emptyMap() }
         }
 
@@ -936,10 +931,7 @@ class BlockerService : Service() {
         fun getScheduleEndTimeForMode(modeId: String): String? {
             val state = resolvedAppState ?: run {
                 try {
-                    val prefs = getSharedPreferences("guardian_prefs", MODE_PRIVATE)
-                    val stateJson = prefs.getString("app_state", null) ?: return null
-                    val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-                    json.decodeFromString<AppState>(stateJson).also { resolvedAppState = it }
+                    AppStateRepository.getInstance(this).current.also { resolvedAppState = it }
                 } catch (_: Exception) { return null }
             }
             val cal = java.util.Calendar.getInstance()
@@ -1033,38 +1025,29 @@ class BlockerService : Service() {
     }
 
     private fun scheduleServiceRestart() {
-        val prefs = applicationContext.getSharedPreferences(
-            "guardian_prefs",
-            android.content.Context.MODE_PRIVATE
-        )
-        val stateJson = prefs.getString("app_state", null)
+        try {
+            val appState = AppStateRepository.getInstance(applicationContext).current
 
-        if (stateJson != null) {
-            try {
-                val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-                val appState = json.decodeFromString<AppState>(stateJson)
+            if (appState.activeModes.isNotEmpty()) {
+                val restartIntent =
+                    Intent(applicationContext, ServiceRestartReceiver::class.java)
+                val pendingIntent = android.app.PendingIntent.getBroadcast(
+                    applicationContext,
+                    0,
+                    restartIntent,
+                    android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+                )
 
-                if (appState.activeModes.isNotEmpty()) {
-                    val restartIntent =
-                        Intent(applicationContext, ServiceRestartReceiver::class.java)
-                    val pendingIntent = android.app.PendingIntent.getBroadcast(
-                        applicationContext,
-                        0,
-                        restartIntent,
-                        android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-                    )
-
-                    val alarmManager =
-                        applicationContext.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
-                    alarmManager.setExact(
-                        android.app.AlarmManager.RTC_WAKEUP,
-                        System.currentTimeMillis() + 1000,
-                        pendingIntent
-                    )
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("BLOCKER_SERVICE", "--- Error scheduling restart: ${e.message}", e)
+                val alarmManager =
+                    applicationContext.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
+                alarmManager.setExact(
+                    android.app.AlarmManager.RTC_WAKEUP,
+                    System.currentTimeMillis() + 1000,
+                    pendingIntent
+                )
             }
+        } catch (e: Exception) {
+            android.util.Log.e("BLOCKER_SERVICE", "--- Error scheduling restart: ${e.message}", e)
         }
     }
 

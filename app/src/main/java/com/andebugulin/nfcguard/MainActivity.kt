@@ -117,32 +117,25 @@ class MainActivity : ComponentActivity() {
                 AppLogger.log("NFC", "Tag scanned: $tagId")
 
                 // Check if this is a valid tag for current active modes
-                val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-                val stateJson = prefs.getString("app_state", null)
-                if (stateJson != null) {
-                    try {
-                        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-                        val appState = json.decodeFromString<AppState>(stateJson)
+                try {
+                    val appState = AppStateRepository.getInstance(this).current
+                    val activeModes = appState.modes.filter { appState.activeModes.contains(it.id) }
+                    val hasNfcLockedMode = activeModes.any { it.effectiveNfcTagIds.isNotEmpty() }
 
-                        // Check if any active mode requires this specific tag
-                        val activeModes = appState.modes.filter { appState.activeModes.contains(it.id) }
-                        val hasNfcLockedMode = activeModes.any { it.effectiveNfcTagIds.isNotEmpty() }
-
-                        if (hasNfcLockedMode && !nfcRegistrationMode.value) {
-                            val validTag = activeModes.any { it.effectiveNfcTagIds.contains(tagId) || it.effectiveNfcTagIds.isEmpty() || it.effectiveNfcTagIds.contains("ANY") }
-                            if (!validTag && appState.activeModes.isNotEmpty()) {
-                                // Wrong tag scanned!
-                                AppLogger.log("NFC", "WRONG TAG for active modes (tag=$tagId, activeModes=${appState.activeModes})")
-                                wrongTagScanned.value = true
-                                this@MainActivity.lifecycleScope.launch {
-                                    kotlinx.coroutines.delay(2000)
-                                    wrongTagScanned.value = false
-                                }
+                    if (hasNfcLockedMode && !nfcRegistrationMode.value) {
+                        val validTag = activeModes.any { it.effectiveNfcTagIds.contains(tagId) || it.effectiveNfcTagIds.isEmpty() || it.effectiveNfcTagIds.contains("ANY") }
+                        if (!validTag && appState.activeModes.isNotEmpty()) {
+                            // Wrong tag scanned!
+                            AppLogger.log("NFC", "WRONG TAG for active modes (tag=$tagId, activeModes=${appState.activeModes})")
+                            wrongTagScanned.value = true
+                            this@MainActivity.lifecycleScope.launch {
+                                kotlinx.coroutines.delay(2000)
+                                wrongTagScanned.value = false
                             }
                         }
-                    } catch (e: Exception) {
-                        android.util.Log.e("NFC_SCAN", "Error validating tag: ${e.message}")
                     }
+                } catch (e: Exception) {
+                    android.util.Log.e("NFC_SCAN", "Error validating tag: ${e.message}")
                 }
 
                 scannedNfcTagId.value = tagId

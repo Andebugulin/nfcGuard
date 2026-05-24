@@ -107,13 +107,8 @@ object AppLogger {
         }
 
         try {
-            val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-            val stateJson = prefs.getString("app_state", null)
-            if (stateJson != null) {
-                val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-                val state = json.decodeFromString<AppState>(stateJson)
-                sb.appendLine("**State:** ${state.modes.size} modes (${state.activeModes.size} active) | ${state.schedules.size} schedules (${state.activeSchedules.size} active) | ${state.nfcTags.size} tags")
-            }
+            val state = AppStateRepository.getInstance(context).current
+            sb.appendLine("**State:** ${state.modes.size} modes (${state.activeModes.size} active) | ${state.schedules.size} schedules (${state.activeSchedules.size} active) | ${state.nfcTags.size} tags")
         } catch (_: Exception) {}
 
         return sb.toString()
@@ -155,39 +150,32 @@ object AppLogger {
 
         sb.appendLine("── APP STATE ───────────────────────────")
         try {
-            val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-            val stateJson = prefs.getString("app_state", null)
-            if (stateJson != null) {
-                val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-                val state = json.decodeFromString<AppState>(stateJson)
-                sb.appendLine("Modes: ${state.modes.size}")
-                state.modes.forEach { m ->
-                    val active = if (state.activeModes.contains(m.id)) " [ACTIVE]" else ""
-                    sb.appendLine("  - ${m.name} (${m.blockMode}, ${m.blockedApps.size} apps, nfc=${m.effectiveNfcTagIds.ifEmpty { listOf("any") }})$active")
-                }
-                sb.appendLine("Schedules: ${state.schedules.size}")
-                state.schedules.forEach { s ->
-                    val active = when {
-                        state.activeSchedules.contains(s.id) -> " [ACTIVE]"
-                        state.deactivatedSchedules.contains(s.id) -> " [DEACTIVATED]"
-                        else -> ""
-                    }
-                    sb.appendLine("  - ${s.name} (${s.linkedModeIds.size} modes, endTime=${s.hasEndTime})$active")
-                    s.timeSlot.dayTimes.forEach { dt ->
-                        val dayName = when(dt.day) { 1->"Mon"; 2->"Tue"; 3->"Wed"; 4->"Thu"; 5->"Fri"; 6->"Sat"; 7->"Sun"; else->"?" }
-                        sb.appendLine("    $dayName ${String.format("%02d:%02d", dt.startHour, dt.startMinute)} - ${String.format("%02d:%02d", dt.endHour, dt.endMinute)}")
-                    }
-                }
-                sb.appendLine("NFC Tags: ${state.nfcTags.size}")
-                state.nfcTags.forEach { t ->
-                    sb.appendLine("  - ${t.name} (id=${t.id.take(12)}...)")
-                }
-                sb.appendLine("Active Modes: ${state.activeModes}")
-                sb.appendLine("Active Schedules: ${state.activeSchedules}")
-                sb.appendLine("Deactivated Schedules: ${state.deactivatedSchedules}")
-            } else {
-                sb.appendLine("No app state found")
+            val state = AppStateRepository.getInstance(context).current
+            sb.appendLine("Modes: ${state.modes.size}")
+            state.modes.forEach { m ->
+                val active = if (state.activeModes.contains(m.id)) " [ACTIVE]" else ""
+                sb.appendLine("  - ${m.name} (${m.blockMode}, ${m.blockedApps.size} apps, nfc=${m.effectiveNfcTagIds.ifEmpty { listOf("any") }})$active")
             }
+            sb.appendLine("Schedules: ${state.schedules.size}")
+            state.schedules.forEach { s ->
+                val active = when {
+                    state.activeSchedules.contains(s.id) -> " [ACTIVE]"
+                    state.deactivatedSchedules.contains(s.id) -> " [DEACTIVATED]"
+                    else -> ""
+                }
+                sb.appendLine("  - ${s.name} (${s.linkedModeIds.size} modes, endTime=${s.hasEndTime})$active")
+                s.timeSlot.dayTimes.forEach { dt ->
+                    val dayName = when(dt.day) { 1->"Mon"; 2->"Tue"; 3->"Wed"; 4->"Thu"; 5->"Fri"; 6->"Sat"; 7->"Sun"; else->"?" }
+                    sb.appendLine("    $dayName ${String.format("%02d:%02d", dt.startHour, dt.startMinute)} - ${String.format("%02d:%02d", dt.endHour, dt.endMinute)}")
+                }
+            }
+            sb.appendLine("NFC Tags: ${state.nfcTags.size}")
+            state.nfcTags.forEach { t ->
+                sb.appendLine("  - ${t.name} (id=${t.id.take(12)}...)")
+            }
+            sb.appendLine("Active Modes: ${state.activeModes}")
+            sb.appendLine("Active Schedules: ${state.activeSchedules}")
+            sb.appendLine("Deactivated Schedules: ${state.deactivatedSchedules}")
         } catch (e: Exception) {
             sb.appendLine("Error: ${e.message}")
         }

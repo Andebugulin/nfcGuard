@@ -14,13 +14,8 @@ import kotlinx.serialization.json.Json
  * Single owner of the persisted `AppState`.
  *
  * One process-wide instance backed by `guardian_prefs:app_state`.
- * All future writers should go through [update]; readers should observe
+ * All writers go through [update] / [updateWith]; readers observe
  * [state] (or read [current] for a snapshot).
- *
- * During the migration window (Phase 1.2 → 1.4) some callers still write
- * to SharedPreferences directly. The registered prefs-change listener
- * bridges those writes back into [state] so the repo's view never goes
- * stale, regardless of who wrote last.
  */
 class AppStateRepository private constructor(appContext: Context) {
 
@@ -39,18 +34,6 @@ class AppStateRepository private constructor(appContext: Context) {
 
     /** Read-only snapshot of the current state. */
     val current: AppState get() = _state.value
-
-    private val externalChangeListener =
-        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == APP_STATE_KEY) {
-                val fresh = readFromPrefs()
-                if (fresh != _state.value) _state.value = fresh
-            }
-        }
-
-    init {
-        prefs.registerOnSharedPreferenceChangeListener(externalChangeListener)
-    }
 
     /**
      * Atomic read-modify-write: apply [transform] to the latest state and

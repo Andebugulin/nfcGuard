@@ -9,12 +9,9 @@ import android.content.Intent
 import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.runBlocking
 
 class GuardianWidget : AppWidgetProvider() {
-
-    private val json = Json { ignoreUnknownKeys = true }
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         for (id in appWidgetIds) {
@@ -193,9 +190,9 @@ class GuardianWidget : AppWidgetProvider() {
     }
 
     private fun activateSelectedMode(context: Context, widgetId: Int) {
-        val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
+        val repo = AppStateRepository.getInstance(context)
         val wPrefs = context.getSharedPreferences(WIDGET_PREFS, Context.MODE_PRIVATE)
-        val appState = loadAppState(context)
+        val appState = repo.current
         if (appState.modes.isEmpty()) return
 
         val index = wPrefs.getInt("mode_index_$widgetId", 0).coerceIn(0, appState.modes.lastIndex)
@@ -212,24 +209,22 @@ class GuardianWidget : AppWidgetProvider() {
         val durationMinutes = DURATIONS[durationIndex]
         val timedUntil = if (durationMinutes > 0) System.currentTimeMillis() + durationMinutes * 60_000L else null
 
-        val newTimedDeactivations = if (timedUntil != null) {
-            appState.timedModeDeactivations + (mode.id to timedUntil)
-        } else {
-            appState.timedModeDeactivations
-        }
-
-        // Clear any pending reactivation for this mode
-        val newReactivations = appState.timedModeReactivations - mode.id
-
-        val newState = appState.copy(
-            activeModes = appState.activeModes + mode.id,
-            manuallyActivatedModes = appState.manuallyActivatedModes + mode.id,
-            timedModeDeactivations = newTimedDeactivations,
-            timedModeReactivations = newReactivations
-        )
-
         AppLogger.log("WIDGET", "Activating '${mode.name}' (timed=${timedUntil != null})")
-        prefs.edit().putString("app_state", json.encodeToString(newState)).apply()
+        val newState = runBlocking {
+            repo.update { state ->
+                val newTimedDeactivations = if (timedUntil != null) {
+                    state.timedModeDeactivations + (mode.id to timedUntil)
+                } else {
+                    state.timedModeDeactivations
+                }
+                state.copy(
+                    activeModes = state.activeModes + mode.id,
+                    manuallyActivatedModes = state.manuallyActivatedModes + mode.id,
+                    timedModeDeactivations = newTimedDeactivations,
+                    timedModeReactivations = state.timedModeReactivations - mode.id
+                )
+            }
+        }
         startBlockerService(context, newState)
 
         if (timedUntil != null) {
@@ -242,12 +237,8 @@ class GuardianWidget : AppWidgetProvider() {
 
     // ======================== Helpers ========================
 
-    private fun loadAppState(context: Context): AppState {
-        val json = Json { ignoreUnknownKeys = true }
-        val stateJson = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-            .getString("app_state", null) ?: return AppState()
-        return try { json.decodeFromString(stateJson) } catch (_: Exception) { AppState() }
-    }
+    private fun loadAppState(context: Context): AppState =
+        AppStateRepository.getInstance(context).current
 
     private fun startBlockerService(context: Context, appState: AppState) {
         val activeModes = appState.modes.filter { appState.activeModes.contains(it.id) }

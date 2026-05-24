@@ -3,11 +3,8 @@ package com.andebugulin.nfcguard
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import kotlinx.serialization.json.Json
 
 class BootReceiver : BroadcastReceiver() {
-
-    private val json = Json { ignoreUnknownKeys = true }
 
     override fun onReceive(context: Context, intent: Intent) {
         // Init logger (may already be initialized, that's fine)
@@ -25,16 +22,8 @@ class BootReceiver : BroadcastReceiver() {
             ScheduleAlarmReceiver.scheduleAllUpcomingAlarms(context)
             AppLogger.log("BOOT", "Step 1 done: Alarms rescheduled")
 
-            val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-            val stateJson = prefs.getString("app_state", null)
-
-            if (stateJson == null) {
-                AppLogger.log("BOOT", "No app state found — nothing to restore")
-                return
-            }
-
             try {
-                val appState = json.decodeFromString<AppState>(stateJson)
+                val appState = AppStateRepository.getInstance(context).current
                 AppLogger.log("BOOT", "State loaded: ${appState.modes.size} modes, ${appState.activeModes.size} active, ${appState.schedules.size} schedules")
 
                 if (appState.activeModes.isEmpty()) {
