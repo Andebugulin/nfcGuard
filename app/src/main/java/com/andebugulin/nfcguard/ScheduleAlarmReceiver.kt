@@ -6,13 +6,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
+import kotlinx.coroutines.runBlocking
 import java.util.Calendar
 
 class ScheduleAlarmReceiver : BroadcastReceiver() {
-
-    private val json = Json { ignoreUnknownKeys = true }
 
     private fun ensureServiceRunning(context: Context) {
         if (BlockerService.isRunning()) {
@@ -20,21 +17,14 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             return
         }
 
-        val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-        val stateJson = prefs.getString("app_state", null) ?: return
-
-        try {
-            val appState = json.decodeFromString<AppState>(stateJson)
-            if (appState.activeModes.isEmpty()) {
-                AppLogger.log("ALARM", "Watchdog: no active modes, skip")
-                return
-            }
-
-            AppLogger.log("ALARM", "Watchdog: SERVICE DEAD — restarting with ${appState.activeModes.size} active modes")
-            updateBlockerService(context, appState)
-        } catch (e: Exception) {
-            AppLogger.log("ALARM", "Watchdog restart error: ${e.message}")
+        val appState = AppStateRepository.getInstance(context).current
+        if (appState.activeModes.isEmpty()) {
+            AppLogger.log("ALARM", "Watchdog: no active modes, skip")
+            return
         }
+
+        AppLogger.log("ALARM", "Watchdog: SERVICE DEAD — restarting with ${appState.activeModes.size} active modes")
+        updateBlockerService(context, appState)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -89,31 +79,27 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
     private fun activateSpecificSchedule(context: Context, scheduleId: String, day: Int) {
         android.util.Log.d("SCHEDULE_ALARM", ">>> Activating schedule $scheduleId for day $day")
         AppLogger.log("ALARM", "Activating schedule $scheduleId for day $day")
-        val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-        val stateJson = prefs.getString("app_state", null)
-
-        if (stateJson == null) {
-            android.util.Log.e("SCHEDULE_ALARM", "No app state found!")
-            AppLogger.log("ALARM", "ERROR: No app state in SharedPreferences!")
-            return
-        }
+        val repo = AppStateRepository.getInstance(context)
 
         try {
-            val appState = json.decodeFromString<AppState>(stateJson)
-            when (val result = ScheduleTransitions.applyScheduleActivation(appState, scheduleId)) {
+            val result = runBlocking {
+                repo.updateWith { state ->
+                    val r = ScheduleTransitions.applyScheduleActivation(state, scheduleId)
+                    r.newState to r
+                }
+            }
+            when (result) {
                 is ScheduleTransitions.ScheduleActivationResult.ScheduleNotFound -> {
                     android.util.Log.e("SCHEDULE_ALARM", "Schedule not found: $scheduleId")
                     AppLogger.log("ALARM", "ERROR: Schedule not found: $scheduleId")
                 }
                 is ScheduleTransitions.ScheduleActivationResult.Applied -> {
                     result.conflictSkippedModeIds.forEach { skipped ->
-                        val name = appState.modes.find { it.id == skipped }?.name ?: skipped
+                        val name = result.newState.modes.find { it.id == skipped }?.name ?: skipped
                         android.util.Log.w("SCHEDULE_ALARM", "Skipping mode $name: BLOCK/ALLOW conflict with active modes")
                         AppLogger.log("ALARM", "CONFLICT: Skipping mode $name — BLOCK/ALLOW conflict")
                     }
                     AppLogger.log("ALARM", "Schedule activated: activeModes=${result.newState.activeModes}, activeSchedules=${result.newState.activeSchedules}")
-                    val newStateJson = json.encodeToString(result.newState)
-                    prefs.edit().putString("app_state", newStateJson).apply()
                     android.util.Log.d("SCHEDULE_ALARM", "- Active modes updated to: ${result.newState.activeModes}")
                     android.util.Log.d("SCHEDULE_ALARM", "- Active schedules: ${result.newState.activeSchedules}")
                     updateBlockerService(context, result.newState)
@@ -128,18 +114,16 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
     private fun deactivateSpecificSchedule(context: Context, scheduleId: String) {
         android.util.Log.d("SCHEDULE_ALARM", ">>> Deactivating schedule $scheduleId")
         AppLogger.log("ALARM", "Deactivating schedule $scheduleId")
-        val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-        val stateJson = prefs.getString("app_state", null)
-
-        if (stateJson == null) {
-            android.util.Log.e("SCHEDULE_ALARM", "No app state found!")
-            AppLogger.log("ALARM", "ERROR: No app state in SharedPreferences!")
-            return
-        }
+        val repo = AppStateRepository.getInstance(context)
 
         try {
-            val appState = json.decodeFromString<AppState>(stateJson)
-            when (val result = ScheduleTransitions.applyScheduleDeactivation(appState, scheduleId)) {
+            val result = runBlocking {
+                repo.updateWith { state ->
+                    val r = ScheduleTransitions.applyScheduleDeactivation(state, scheduleId)
+                    r.newState to r
+                }
+            }
+            when (result) {
                 is ScheduleTransitions.ScheduleDeactivationResult.ScheduleNotFound -> {
                     android.util.Log.e("SCHEDULE_ALARM", "Schedule not found: $scheduleId")
                     AppLogger.log("ALARM", "ERROR: Schedule not found: $scheduleId")
@@ -150,8 +134,6 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                         AppLogger.log("ALARM", "Skipping timed mode $kept — user timer takes priority over schedule end")
                     }
                     AppLogger.log("ALARM", "Schedule deactivated: removed=${result.deactivatedModeIds}, kept=${result.keptDueToUserTimerModeIds}, activeModes=${result.newState.activeModes}")
-                    val newStateJson = json.encodeToString(result.newState)
-                    prefs.edit().putString("app_state", newStateJson).apply()
                     android.util.Log.d("SCHEDULE_ALARM", "- Active modes updated to: ${result.newState.activeModes}")
                     updateBlockerService(context, result.newState)
                     GuardianWidget.notifyAllWidgets(context)
@@ -232,18 +214,19 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
     private fun deactivateTimedMode(context: Context, modeId: String) {
         android.util.Log.d("SCHEDULE_ALARM", ">>> Deactivating timed mode $modeId")
         AppLogger.log("ALARM", "Deactivating timed mode $modeId")
-        val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-        val stateJson = prefs.getString("app_state", null) ?: return
+        val repo = AppStateRepository.getInstance(context)
 
         try {
-            val appState = json.decodeFromString<AppState>(stateJson)
-            when (val result = ScheduleTransitions.applyTimedModeDeactivation(appState, modeId)) {
-                is ScheduleTransitions.TimedDeactivationResult.AlreadyInactive -> {
-                    android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId already inactive, skipping")
+            val result = runBlocking {
+                repo.updateWith { state ->
+                    val r = ScheduleTransitions.applyTimedModeDeactivation(state, modeId)
+                    r.newState to r
                 }
+            }
+            when (result) {
+                is ScheduleTransitions.TimedDeactivationResult.AlreadyInactive ->
+                    android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId already inactive, skipping")
                 is ScheduleTransitions.TimedDeactivationResult.Applied -> {
-                    val newStateJson = json.encodeToString(result.newState)
-                    prefs.edit().putString("app_state", newStateJson).apply()
                     updateBlockerService(context, result.newState)
                     GuardianWidget.notifyAllWidgets(context)
                 }
@@ -256,12 +239,17 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
     private fun reactivateTimedMode(context: Context, modeId: String) {
         android.util.Log.d("SCHEDULE_ALARM", ">>> Reactivating timed mode $modeId")
         AppLogger.log("ALARM", "Reactivating timed mode $modeId")
-        val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-        val stateJson = prefs.getString("app_state", null) ?: return
+        val repo = AppStateRepository.getInstance(context)
 
         try {
-            val appState = json.decodeFromString<AppState>(stateJson)
-            val result = NfcUnlockLogic.applyReactivation(appState, modeId, System.currentTimeMillis())
+            // Capture pausedRemainingMs BEFORE the transform consumes it (for the log line below)
+            val pausedRemainingMs = repo.current.pausedModeRemainingMs[modeId] ?: 0L
+            val result = runBlocking {
+                repo.updateWith { state ->
+                    val r = NfcUnlockLogic.applyReactivation(state, modeId, System.currentTimeMillis())
+                    r.newState to r
+                }
+            }
 
             when (result) {
                 is NfcUnlockLogic.ReactivationResult.AlreadyActive ->
@@ -273,23 +261,16 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     AppLogger.log("ALARM", "CONFLICT: Skipping reactivation of ${result.modeName}")
                 }
                 is NfcUnlockLogic.ReactivationResult.Reactivated -> {
-                    val mode = appState.modes.find { it.id == modeId }
+                    val mode = result.newState.modes.find { it.id == modeId }
                     AppLogger.log("ALARM", "Reactivating mode '${mode?.name}' after timed unlock expired")
                     if (result.restoredDeactivationAt != null) {
-                        val remainingMs = appState.pausedModeRemainingMs[modeId] ?: 0L
-                        AppLogger.log("ALARM", "Restoring timed deactivation for '${mode?.name}': ${remainingMs / 60000}m remaining")
+                        AppLogger.log("ALARM", "Restoring timed deactivation for '${mode?.name}': ${pausedRemainingMs / 60000}m remaining")
                     }
-                }
-            }
-
-            val newStateJson = json.encodeToString(result.newState)
-            prefs.edit().putString("app_state", newStateJson).apply()
-
-            if (result is NfcUnlockLogic.ReactivationResult.Reactivated) {
-                updateBlockerService(context, result.newState)
-                GuardianWidget.notifyAllWidgets(context)
-                if (result.restoredDeactivationAt != null) {
-                    scheduleTimedDeactivationAlarm(context, modeId, result.restoredDeactivationAt)
+                    updateBlockerService(context, result.newState)
+                    GuardianWidget.notifyAllWidgets(context)
+                    if (result.restoredDeactivationAt != null) {
+                        scheduleTimedDeactivationAlarm(context, modeId, result.restoredDeactivationAt)
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -383,12 +364,9 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             isStart: Boolean,
             forNextWeek: Boolean = false
         ) {
-            val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-            val stateJson = prefs.getString("app_state", null) ?: return
-            val json = Json { ignoreUnknownKeys = true }
+            val appState = AppStateRepository.getInstance(context).current
 
             try {
-                val appState = json.decodeFromString<AppState>(stateJson)
                 val schedule = appState.schedules.find { it.id == scheduleId } ?: return
                 val dayTime = schedule.timeSlot.getTimeForDay(day) ?: return
 
@@ -460,20 +438,9 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             android.util.Log.d("SCHEDULE_ALARM", "=== SCHEDULING ALL ALARMS ===")
             android.util.Log.d("SCHEDULE_ALARM", "Current time: ${java.util.Date()}")
 
-            val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-            val stateJson = prefs.getString("app_state", null)
-
-            if (stateJson == null) {
-                android.util.Log.e("SCHEDULE_ALARM", "No app state found!")
-                AppLogger.log("ALARM", "ERROR: No app state in SharedPreferences!")
-                return
-            }
-
-            val json = Json { ignoreUnknownKeys = true }
+            val appState = AppStateRepository.getInstance(context).current
 
             try {
-                val appState = json.decodeFromString<AppState>(stateJson)
-
                 android.util.Log.d("SCHEDULE_ALARM", "Found ${appState.schedules.size} schedules")
 
                 // Cancel all existing alarms first

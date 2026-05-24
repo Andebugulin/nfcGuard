@@ -70,6 +70,25 @@ class AppStateRepository private constructor(appContext: Context) {
         next
     }
 
+    /**
+     * Variant of [update] that also returns a caller-supplied value
+     * alongside the new state — useful when the transform produces a
+     * result object (e.g. a sealed `ScheduleActivationResult`) that
+     * the caller needs for post-write logging or side effects.
+     *
+     * The transform returns `(newState, returnValue)`. Mutex semantics
+     * and the no-op equality short-circuit are the same as [update].
+     */
+    suspend fun <R> updateWith(transform: (AppState) -> Pair<AppState, R>): R = writeMutex.withLock {
+        val previous = _state.value
+        val (next, returned) = transform(previous)
+        if (next != previous) {
+            _state.value = next
+            prefs.edit().putString(APP_STATE_KEY, json.encodeToString(next)).apply()
+        }
+        returned
+    }
+
     private fun readFromPrefs(): AppState {
         val raw = prefs.getString(APP_STATE_KEY, null) ?: return AppState()
         return try {
