@@ -1,15 +1,12 @@
 package com.andebugulin.nfcguard
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -123,33 +120,33 @@ class GuardianViewModel : ViewModel() {
     private val _pendingUnlock = MutableStateFlow<PendingUnlock?>(null)
     val pendingUnlock: StateFlow<PendingUnlock?> = _pendingUnlock
 
-    private lateinit var prefs: SharedPreferences
     private lateinit var context: Context
-    private val json = Json { ignoreUnknownKeys = true }
-
-    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == "app_state") {
-            loadState()
-        }
-    }
+    private lateinit var repo: AppStateRepository
 
     fun loadData(context: Context) {
         this.context = context
-        prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-        prefs.registerOnSharedPreferenceChangeListener(prefsListener)
-        loadState()
+        repo = AppStateRepository.getInstance(context)
 
-        // Load safe regime preference (default: enabled)
+        // Sync our mirror to the repo and keep it updated. The mirror lets
+        // synchronous reads (e.g. ensureServiceRunning, activateMode's
+        // conflict check) see the latest value without going through the
+        // coroutine boundary. After Phase 2 this can be dropped in favor
+        // of `repo.state` directly.
+        _appState.value = repo.current
+        viewModelScope.launch {
+            repo.state.collect { _appState.value = it }
+        }
+
+        // Safe Regime is intentionally outside AppState (so config import
+        // can't disable the safety challenge). Keep direct prefs access.
+        val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
         _safeRegimeEnabled.value = prefs.getBoolean("safe_regime_enabled", true)
 
-        // Don't spam service starts - only ensure it's running
         ensureServiceRunning()
-
 
         viewModelScope.launch {
             while (isActive) {
                 delay(5000)  // Check every 5 seconds
-                loadState()
                 checkTimedDeactivations()
                 checkTimedReactivations()
             }
@@ -168,34 +165,20 @@ class GuardianViewModel : ViewModel() {
 
     fun setSafeRegimeEnabled(enabled: Boolean) {
         _safeRegimeEnabled.value = enabled
+        val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
         prefs.edit().putBoolean("safe_regime_enabled", enabled).apply()
     }
 
-    private fun loadState() {
-        val stateJson = prefs.getString("app_state", null)
-        if (stateJson != null) {
-            try {
-                val newState = json.decodeFromString<AppState>(stateJson)
-                if (newState != _appState.value) {
-                    _appState.value = newState
-                    // Only update service if state actually changed
-                    updateBlockerService()
-                }
-            } catch (e: Exception) {
-                _appState.value = AppState()
-            }
-        }
-    }
-
-    private fun saveState() {
-        val stateJson = json.encodeToString(_appState.value)
-        prefs.edit().putString("app_state", stateJson).apply()
+    /**
+     * Persist the current mirror value through the repo and run the
+     * standard side effects (service restart, alarm scheduling, widget
+     * refresh). All mutating methods follow the same pattern:
+     * `_appState.value = _appState.value.copy(...); saveState()`.
+     */
+    private suspend fun saveState() {
+        repo.update { _appState.value }
         updateBlockerService()
-
-        // IMPORTANT: Reschedule alarms when state changes
         ScheduleAlarmReceiver.scheduleAllUpcomingAlarms(context)
-
-        // Refresh home screen widget
         GuardianWidget.notifyAllWidgets(context)
     }
 
@@ -865,8 +848,4 @@ class GuardianViewModel : ViewModel() {
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
-    }
 }
