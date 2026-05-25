@@ -225,34 +225,14 @@ class GuardianWidget : AppWidgetProvider() {
                 )
             }
         }
-        // Service restart, schedule alarms, and widget refresh dispatched by
-        // AppStateRepository via StateSyncer. Per-mode timer alarm is local.
-        if (timedUntil != null) {
-            scheduleTimedDeactivation(context, mode.id, timedUntil)
-        }
+        // All side effects (service, schedule alarms, per-mode timer alarm,
+        // widget refresh) dispatched by AppStateRepository via StateSyncer.
     }
 
     // ======================== Helpers ========================
 
     private fun loadAppState(context: Context): AppState =
         AppStateRepository.getInstance(context).current
-
-    private fun scheduleTimedDeactivation(context: Context, modeId: String, deactivateAt: Long) {
-        val intent = Intent(context, ScheduleAlarmReceiver::class.java).apply {
-            action = "com.andebugulin.nfcguard.TIMED_DEACTIVATE_MODE"
-            putExtra("mode_id", modeId)
-        }
-        val pi = PendingIntent.getBroadcast(
-            context, ("timed_$modeId").hashCode(), intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val am = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            am.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, deactivateAt, pi)
-        } else {
-            am.setExact(android.app.AlarmManager.RTC_WAKEUP, deactivateAt, pi)
-        }
-    }
 
     private fun pending(context: Context, widgetId: Int, action: String, slot: Int): PendingIntent {
         val intent = Intent(context, GuardianWidget::class.java).apply {

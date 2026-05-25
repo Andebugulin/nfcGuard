@@ -5,37 +5,72 @@ import android.content.Context
 /**
  * Single dispatch point for state → platform side effects.
  *
- * Three concerns, all idempotent:
+ * Four concerns, all idempotent:
  *   1. (Re)start [BlockerService] computed from `state.activeModes`,
  *      `blockMode`, blocked-apps union, and active-mode metadata; or
  *      stop the service when there's truly nothing left to do.
  *   2. Reschedule all schedule start/end alarms via
  *      [ScheduleAlarmReceiver.scheduleAllUpcomingAlarms].
- *   3. Refresh widget(s) via [GuardianWidget.notifyAllWidgets].
+ *   3. Diff per-mode `timedModeDeactivations` and `timedModeReactivations`
+ *      against the previous state and schedule/cancel alarms via
+ *      [TimedAlarms] for each map entry that changed.
+ *   4. Refresh widget(s) via [GuardianWidget.notifyAllWidgets].
  *
  * Wired into [AppStateRepository.update] / [updateWith] so every
  * successful write fires the side effects exactly once. Callers that
  * need to force the same side effects without mutating state — boot,
- * service watchdog, service-restart receiver — call [sync] directly.
- *
- * Per-mode timed-deactivation / timed-reactivation alarms are NOT
- * handled here; those still flow through the caller that initiated
- * the transition. Diffing the state for per-mode alarm scheduling is
- * a possible follow-up but adds enough complexity it's worth its own
- * commit.
+ * service watchdog, service-restart receiver — call the single-arg
+ * [sync] overload, which treats the prior state as empty and so
+ * re-schedules every per-mode alarm in the current state (correct on
+ * boot, when the OS has dropped all our pending alarms).
  */
 object StateSyncer {
 
     /**
-     * Apply the platform side effects implied by [state].
-     * Callable from any thread; the dispatched side effects (Service
-     * start, alarm scheduling via AlarmManager, widget update via
-     * AppWidgetManager) each take care of their own threading.
+     * Apply side effects when no prior state is meaningful (boot,
+     * watchdog, service restart). Re-schedules every per-mode alarm
+     * present in [state].
      */
     fun sync(context: Context, state: AppState) {
-        applyBlockerServiceFor(context, state)
+        sync(context, oldState = AppState(), newState = state)
+    }
+
+    /**
+     * Apply side effects implied by the transition from [oldState] to
+     * [newState]. Only per-mode alarm entries that changed (added,
+     * removed, or rescheduled to a new time) result in AlarmManager
+     * calls; unchanged entries are no-ops.
+     */
+    fun sync(context: Context, oldState: AppState, newState: AppState) {
+        applyBlockerServiceFor(context, newState)
         ScheduleAlarmReceiver.scheduleAllUpcomingAlarms(context)
+        syncTimedAlarms(context, oldState, newState)
         GuardianWidget.notifyAllWidgets(context)
+    }
+
+    private fun syncTimedAlarms(context: Context, old: AppState, new: AppState) {
+        // Deactivations: schedule changed/new, cancel removed.
+        new.timedModeDeactivations.forEach { (modeId, deadline) ->
+            if (old.timedModeDeactivations[modeId] != deadline) {
+                TimedAlarms.scheduleDeactivation(context, modeId, deadline)
+            }
+        }
+        old.timedModeDeactivations.keys.forEach { modeId ->
+            if (modeId !in new.timedModeDeactivations) {
+                TimedAlarms.cancelDeactivation(context, modeId)
+            }
+        }
+        // Reactivations: same pattern.
+        new.timedModeReactivations.forEach { (modeId, deadline) ->
+            if (old.timedModeReactivations[modeId] != deadline) {
+                TimedAlarms.scheduleReactivation(context, modeId, deadline)
+            }
+        }
+        old.timedModeReactivations.keys.forEach { modeId ->
+            if (modeId !in new.timedModeReactivations) {
+                TimedAlarms.cancelReactivation(context, modeId)
+            }
+        }
     }
 
     private fun applyBlockerServiceFor(context: Context, state: AppState) {

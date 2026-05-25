@@ -49,7 +49,7 @@ class AppStateRepository private constructor(private val appContext: Context) {
         if (next != previous) {
             _state.value = next
             prefs.edit().putString(APP_STATE_KEY, json.encodeToString(next)).apply()
-            StateSyncer.sync(appContext, next)
+            StateSyncer.sync(appContext, oldState = previous, newState = next)
         }
         next
     }
@@ -69,7 +69,7 @@ class AppStateRepository private constructor(private val appContext: Context) {
         if (next != previous) {
             _state.value = next
             prefs.edit().putString(APP_STATE_KEY, json.encodeToString(next)).apply()
-            StateSyncer.sync(appContext, next)
+            StateSyncer.sync(appContext, oldState = previous, newState = next)
         }
         returned
     }

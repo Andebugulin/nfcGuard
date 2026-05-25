@@ -215,8 +215,8 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                     pausedModeRemainingMs = state.pausedModeRemainingMs - id
                 )
             }
-            cancelTimedDeactivation(id)
-            cancelTimedReactivation(id)
+            // Per-mode alarms are diffed from state by StateSyncer — no manual
+            // schedule/cancel calls needed.
         }
     }
 
@@ -232,13 +232,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
             is ModeActivationLogic.ActivateModeResult.Activated -> {
                 val mode = repo.current.modes.find { it.id == modeId }
                 AppLogger.log("MODE", "Activating: '${mode?.name}' (${mode?.blockMode}, ${mode?.blockedApps?.size} apps, nfc=${mode?.effectiveNfcTagIds?.ifEmpty { listOf("any") }}, timed=${timedUntilMillis != null})")
-                viewModelScope.launch {
-                    mutate { result.newState }
-                    cancelTimedReactivation(modeId)
-                    if (timedUntilMillis != null) {
-                        scheduleTimedDeactivation(modeId, timedUntilMillis)
-                    }
-                }
+                viewModelScope.launch { mutate { result.newState } }
                 ActivationResult.SUCCESS
             }
         }
@@ -249,8 +243,6 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
         AppLogger.log("MODE", "Deactivating: '$modeName' (id=$modeId)")
         viewModelScope.launch {
             mutate { ModeActivationLogic.applyModeDeactivation(it, modeId).newState }
-            cancelTimedDeactivation(modeId)
-            cancelTimedReactivation(modeId)
         }
     }
 
@@ -397,77 +389,14 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
             }
 
             mutate { result.newState }
-
-            result.unlockedModeIds.forEach { cancelTimedDeactivation(it) }
-
-            if (reactivateAtMillis != null) {
-                result.unlockedModeIds.forEach { modeId ->
-                    scheduleTimedReactivation(modeId, reactivateAtMillis)
-                }
-            }
+            // Per-mode alarms (cancel deactivations for the unlocked modes,
+            // schedule reactivations if temporary) are diffed by StateSyncer.
         }
     }
 
     /** User dismissed the unlock dialog — do nothing, modes stay active */
     fun dismissUnlock() {
         _pendingUnlock.value = null
-    }
-
-    /** Schedule a timed reactivation alarm via AlarmManager */
-    private fun scheduleTimedReactivation(modeId: String, reactivateAtMillis: Long) {
-        try {
-            val intent = android.content.Intent(context, ScheduleAlarmReceiver::class.java).apply {
-                action = "com.andebugulin.nfcguard.TIMED_REACTIVATE_MODE"
-                putExtra("mode_id", modeId)
-            }
-            val requestCode = ("reactivate_$modeId").hashCode()
-            val pendingIntent = android.app.PendingIntent.getBroadcast(
-                context,
-                requestCode,
-                intent,
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-            )
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    android.app.AlarmManager.RTC_WAKEUP,
-                    reactivateAtMillis,
-                    pendingIntent
-                )
-            } else {
-                alarmManager.setExact(
-                    android.app.AlarmManager.RTC_WAKEUP,
-                    reactivateAtMillis,
-                    pendingIntent
-                )
-            }
-            AppLogger.log("TIMER", "Scheduled timed reactivation for mode $modeId at ${java.util.Date(reactivateAtMillis)}")
-        } catch (e: Exception) {
-            AppLogger.log("TIMER", "Error scheduling timed reactivation: ${e.message}")
-        }
-    }
-
-    /** Cancel a timed reactivation alarm */
-    private fun cancelTimedReactivation(modeId: String) {
-        try {
-            val intent = android.content.Intent(context, ScheduleAlarmReceiver::class.java).apply {
-                action = "com.andebugulin.nfcguard.TIMED_REACTIVATE_MODE"
-                putExtra("mode_id", modeId)
-            }
-            val requestCode = ("reactivate_$modeId").hashCode()
-            val pendingIntent = android.app.PendingIntent.getBroadcast(
-                context,
-                requestCode,
-                intent,
-                android.app.PendingIntent.FLAG_NO_CREATE or android.app.PendingIntent.FLAG_IMMUTABLE
-            )
-            pendingIntent?.let {
-                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-                alarmManager.cancel(it)
-            }
-        } catch (e: Exception) {
-            AppLogger.log("TIMER", "Error cancelling timed reactivation: ${e.message}")
-        }
     }
 
     /** Check for expired timed reactivations and re-enable modes (called from polling loop) */
@@ -510,10 +439,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
             }
 
             mutate { result.newState }
-
-            if (result is NfcUnlockLogic.ReactivationResult.Reactivated && result.restoredDeactivationAt != null) {
-                scheduleTimedDeactivation(modeId, result.restoredDeactivationAt)
-            }
+            // Restored deactivation alarm is diffed from state by StateSyncer.
         }
     }
 
@@ -595,69 +521,9 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
             is ModeActivationLogic.ManualScheduleActivationResult.Activated -> {
                 val schedule = repo.current.schedules.find { it.id == scheduleId }
                 AppLogger.log("SCHEDULE", "Manually activating schedule '${schedule?.name}' with ${schedule?.linkedModeIds?.size} modes")
-                viewModelScope.launch {
-                    mutate { result.newState }
-                    schedule?.linkedModeIds?.forEach { cancelTimedReactivation(it) }
-                }
+                viewModelScope.launch { mutate { result.newState } }
                 ActivationResult.SUCCESS
             }
-        }
-    }
-
-    /** Schedule a timed deactivation alarm via AlarmManager for reliability */
-    private fun scheduleTimedDeactivation(modeId: String, deactivateAtMillis: Long) {
-        try {
-            val intent = android.content.Intent(context, ScheduleAlarmReceiver::class.java).apply {
-                action = "com.andebugulin.nfcguard.TIMED_DEACTIVATE_MODE"
-                putExtra("mode_id", modeId)
-            }
-            val requestCode = ("timed_$modeId").hashCode()
-            val pendingIntent = android.app.PendingIntent.getBroadcast(
-                context,
-                requestCode,
-                intent,
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-            )
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    android.app.AlarmManager.RTC_WAKEUP,
-                    deactivateAtMillis,
-                    pendingIntent
-                )
-            } else {
-                alarmManager.setExact(
-                    android.app.AlarmManager.RTC_WAKEUP,
-                    deactivateAtMillis,
-                    pendingIntent
-                )
-            }
-            AppLogger.log("TIMER", "Scheduled timed deactivation for mode $modeId at ${java.util.Date(deactivateAtMillis)}")
-        } catch (e: Exception) {
-            AppLogger.log("TIMER", "Error scheduling timed deactivation: ${e.message}")
-        }
-    }
-
-    /** Cancel a timed deactivation alarm */
-    private fun cancelTimedDeactivation(modeId: String) {
-        try {
-            val intent = android.content.Intent(context, ScheduleAlarmReceiver::class.java).apply {
-                action = "com.andebugulin.nfcguard.TIMED_DEACTIVATE_MODE"
-                putExtra("mode_id", modeId)
-            }
-            val requestCode = ("timed_$modeId").hashCode()
-            val pendingIntent = android.app.PendingIntent.getBroadcast(
-                context,
-                requestCode,
-                intent,
-                android.app.PendingIntent.FLAG_NO_CREATE or android.app.PendingIntent.FLAG_IMMUTABLE
-            )
-            pendingIntent?.let {
-                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-                alarmManager.cancel(it)
-            }
-        } catch (e: Exception) {
-            AppLogger.log("TIMER", "Error cancelling timed deactivation: ${e.message}")
         }
     }
 

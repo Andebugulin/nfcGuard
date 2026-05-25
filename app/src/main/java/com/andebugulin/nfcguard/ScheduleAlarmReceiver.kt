@@ -196,47 +196,12 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     AppLogger.log("ALARM", "Reactivating mode '${mode?.name}' after timed unlock expired")
                     if (result.restoredDeactivationAt != null) {
                         AppLogger.log("ALARM", "Restoring timed deactivation for '${mode?.name}': ${pausedRemainingMs / 60000}m remaining")
-                        // Per-mode timer alarm — not part of the batch sync.
-                        scheduleTimedDeactivationAlarm(context, modeId, result.restoredDeactivationAt)
                     }
-                    // Service restart + widget refresh dispatched by repo.
+                    // All side effects (service, widget, alarms) dispatched by repo via StateSyncer.
                 }
             }
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error reactivating timed mode: ${e.message}", e)
-        }
-    }
-
-    private fun scheduleTimedDeactivationAlarm(context: Context, modeId: String, deactivateAtMillis: Long) {
-        try {
-            val intent = Intent(context, ScheduleAlarmReceiver::class.java).apply {
-                action = ACTION_TIMED_DEACTIVATE_MODE
-                putExtra("mode_id", modeId)
-            }
-            val requestCode = ("timed_$modeId").hashCode()
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                requestCode,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    deactivateAtMillis,
-                    pendingIntent
-                )
-            } else {
-                alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
-                    deactivateAtMillis,
-                    pendingIntent
-                )
-            }
-            AppLogger.log("ALARM", "Scheduled timed deactivation for mode $modeId at ${java.util.Date(deactivateAtMillis)}")
-        } catch (e: Exception) {
-            AppLogger.log("ALARM", "Error scheduling timed deactivation from receiver: ${e.message}")
         }
     }
 
