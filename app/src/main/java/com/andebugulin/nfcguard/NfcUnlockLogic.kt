@@ -45,7 +45,7 @@ object NfcUnlockLogic {
 
         state.activeModes.forEach { modeId ->
             val mode = state.modes.find { it.id == modeId } ?: return@forEach
-            val tagIds = mode.effectiveNfcTagIds
+            val tagIds = mode.nfcTagIds
 
             if (tagIds.isNotEmpty()) {
                 val tagMatches = tagIds.contains(tagId) || tagIds.contains("ANY")

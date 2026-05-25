@@ -50,7 +50,7 @@ fun ModeEditorScreen(
     val context = LocalContext.current
     var selectedApps by remember { mutableStateOf(mode.blockedApps.toSet()) }
     var blockMode by remember { mutableStateOf(mode.blockMode) }
-    var selectedNfcTagIds by remember { mutableStateOf(mode.effectiveNfcTagIds.toSet()) }
+    var selectedNfcTagIds by remember { mutableStateOf(mode.nfcTagIds.toSet()) }
     var tagUnlockLimits by remember { mutableStateOf(mode.tagUnlockLimits) }
     var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
@@ -86,7 +86,7 @@ fun ModeEditorScreen(
     val nfcTagUsageCounts = remember(allModes, mode.id) {
         val counts = mutableMapOf<String, Int>()
         allModes.filter { it.id != mode.id }.forEach { m ->
-            m.effectiveNfcTagIds.forEach { tagId ->
+            m.nfcTagIds.forEach { tagId ->
                 counts[tagId] = (counts[tagId] ?: 0) + 1
             }
         }

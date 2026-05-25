@@ -187,7 +187,6 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                             name = name,
                             blockedApps = blockedApps,
                             blockMode = blockMode,
-                            nfcTagId = null,
                             nfcTagIds = nfcTagIds,
                             tagUnlockLimits = tagUnlockLimits
                         ) else mode
@@ -231,7 +230,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
             }
             is ModeActivationLogic.ActivateModeResult.Activated -> {
                 val mode = repo.current.modes.find { it.id == modeId }
-                AppLogger.log("MODE", "Activating: '${mode?.name}' (${mode?.blockMode}, ${mode?.blockedApps?.size} apps, nfc=${mode?.effectiveNfcTagIds?.ifEmpty { listOf("any") }}, timed=${timedUntilMillis != null})")
+                AppLogger.log("MODE", "Activating: '${mode?.name}' (${mode?.blockMode}, ${mode?.blockedApps?.size} apps, nfc=${mode?.nfcTagIds?.ifEmpty { listOf("any") }}, timed=${timedUntilMillis != null})")
                 viewModelScope.launch { mutate { result.newState } }
                 ActivationResult.SUCCESS
             }
@@ -328,9 +327,8 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                 state.copy(
                     nfcTags = state.nfcTags.filter { it.id != tagId },
                     modes = state.modes.map { mode ->
-                        if (mode.effectiveNfcTagIds.contains(tagId)) mode.copy(
-                            nfcTagId = null,
-                            nfcTagIds = mode.effectiveNfcTagIds.filter { it != tagId }
+                        if (mode.nfcTagIds.contains(tagId)) mode.copy(
+                            nfcTagIds = mode.nfcTagIds.filter { it != tagId }
                         ) else mode
                     }
                 )
@@ -446,9 +444,10 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     fun importConfig(data: ConfigManager.ExportData, mergeMode: Boolean = false) {
         viewModelScope.launch {
             mutate { state ->
+                // ConfigManager has already normalized data.modes (legacy
+                // nfcTagId consolidated into nfcTagIds), so no per-mode
+                // normalization needed here.
                 val afterImport = if (mergeMode) {
-                    // For existing items: fully replace with imported version (restores apps, block mode, schedule links, etc.)
-                    // For new items: add them with nfcTagId migration applied
                     val importModeMap = data.modes.associateBy { it.id }
                     val importScheduleMap = data.schedules.associateBy { it.id }
                     val importTagMap = data.nfcTags.associateBy { it.id }
@@ -456,31 +455,20 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                     val existingScheduleIds = state.schedules.map { it.id }.toSet()
                     val existingTagIds = state.nfcTags.map { it.id }.toSet()
 
-                    val mergedModes = state.modes.map { existing ->
-                        val imported = importModeMap[existing.id]
-                        if (imported != null) {
-                            imported.copy(nfcTagId = null, nfcTagIds = imported.effectiveNfcTagIds)
-                        } else existing
-                    } + data.modes.filter { it.id !in existingModeIds }.map { m ->
-                        m.copy(nfcTagId = null, nfcTagIds = m.effectiveNfcTagIds)
-                    }
-
-                    val mergedSchedules = state.schedules.map { existing ->
-                        importScheduleMap[existing.id] ?: existing
-                    } + data.schedules.filter { it.id !in existingScheduleIds }
-
-                    val mergedTags = state.nfcTags.map { existing ->
-                        importTagMap[existing.id] ?: existing
-                    } + data.nfcTags.filter { it.id !in existingTagIds }
+                    // For existing items: fully replace with imported version.
+                    // For new items: append.
+                    val mergedModes = state.modes.map { existing -> importModeMap[existing.id] ?: existing } +
+                        data.modes.filter { it.id !in existingModeIds }
+                    val mergedSchedules = state.schedules.map { existing -> importScheduleMap[existing.id] ?: existing } +
+                        data.schedules.filter { it.id !in existingScheduleIds }
+                    val mergedTags = state.nfcTags.map { existing -> importTagMap[existing.id] ?: existing } +
+                        data.nfcTags.filter { it.id !in existingTagIds }
 
                     state.copy(modes = mergedModes, schedules = mergedSchedules, nfcTags = mergedTags)
                 } else {
-                    // Replace: overwrite all config, reset runtime state
-                    val normalizedModes = data.modes.map { m ->
-                        m.copy(nfcTagId = null, nfcTagIds = m.effectiveNfcTagIds)
-                    }
+                    // Replace: overwrite all config, reset runtime state.
                     state.copy(
-                        modes = normalizedModes,
+                        modes = data.modes,
                         schedules = data.schedules,
                         nfcTags = data.nfcTags,
                         activeModes = emptySet(),
@@ -493,14 +481,15 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
 
-                // FIX #11: Clean up orphaned nfcTagIds references after import
+                // Clean up orphaned tag references after import (a mode might
+                // reference a tag id that no longer exists in nfcTags).
                 val validTagIds = afterImport.nfcTags.map { it.id }.toSet()
                 afterImport.copy(
                     modes = afterImport.modes.map { mode ->
-                        val cleaned = mode.effectiveNfcTagIds.filter { it in validTagIds || it == "ANY" }
+                        val cleaned = mode.nfcTagIds.filter { it in validTagIds || it == "ANY" }
                         val cleanedLimits = mode.tagUnlockLimits.filterKeys { it in validTagIds || it == "ANY" }
-                        if (cleaned != mode.effectiveNfcTagIds || cleanedLimits != mode.tagUnlockLimits) {
-                            mode.copy(nfcTagId = null, nfcTagIds = cleaned, tagUnlockLimits = cleanedLimits)
+                        if (cleaned != mode.nfcTagIds || cleanedLimits != mode.tagUnlockLimits) {
+                            mode.copy(nfcTagIds = cleaned, tagUnlockLimits = cleanedLimits)
                         } else mode
                     }
                 )

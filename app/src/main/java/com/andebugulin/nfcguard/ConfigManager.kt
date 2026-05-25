@@ -152,11 +152,10 @@ object ConfigManager {
                 sb.appendLine("    name: \"${escapeYaml(mode.name)}\"")
                 sb.appendLine("    blockMode: ${mode.blockMode.name}")
                 sb.appendLine("    nfcTagIds:")
-                val effectiveIds = mode.effectiveNfcTagIds
-                if (effectiveIds.isEmpty()) {
+                if (mode.nfcTagIds.isEmpty()) {
                     sb.appendLine("      []")
                 } else {
-                    for (tagId in effectiveIds) {
+                    for (tagId in mode.nfcTagIds) {
                         sb.appendLine("      - \"${escapeYaml(tagId)}\"")
                     }
                 }

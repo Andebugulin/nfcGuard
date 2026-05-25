@@ -148,7 +148,7 @@ fun ModesScreen(
                                 timedUntil = appState.timedModeDeactivations[mode.id],
                                 pausedUntil = appState.timedModeReactivations[mode.id],
                                 now = now,
-                                nfcTags = (appState.nfcTags + NfcTag("ANY", "ANY")).filter { mode.effectiveNfcTagIds.contains(it.id) },
+                                nfcTags = (appState.nfcTags + NfcTag("ANY", "ANY")).filter { mode.nfcTagIds.contains(it.id) },
                                 scheduleEndTime = scheduleEndStr,
                                 onActivate = {
                                     showActivationOptionsDialog = mode

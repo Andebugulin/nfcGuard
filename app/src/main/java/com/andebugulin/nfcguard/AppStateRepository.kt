@@ -29,7 +29,7 @@ class AppStateRepository private constructor(private val appContext: Context) {
 
     private val writeMutex = Mutex()
 
-    private val _state = MutableStateFlow(readFromPrefs())
+    private val _state = MutableStateFlow(readAndMigrateFromPrefs())
     val state: StateFlow<AppState> = _state.asStateFlow()
 
     /** Read-only snapshot of the current state. */
@@ -74,14 +74,42 @@ class AppStateRepository private constructor(private val appContext: Context) {
         returned
     }
 
-    private fun readFromPrefs(): AppState {
+    /**
+     * Load the persisted state, then run a one-time migration that
+     * normalizes any legacy `Mode.nfcTagId` (the deprecated single-tag
+     * field) into the `nfcTagIds` list and persists the result.
+     *
+     * After this runs, all stored modes have `nfcTagId == null` — app
+     * code can read `mode.nfcTagIds` directly without going through the
+     * `effectiveNfcTagIds` fallback.
+     *
+     * The deprecated field stays in the data class so kotlinx.serialization
+     * can still read pre-migration JSON. Removing it from the data class
+     * would silently drop the value (with `ignoreUnknownKeys = true`),
+     * regressing affected users to "any tag unlocks" behavior.
+     */
+    private fun readAndMigrateFromPrefs(): AppState {
         val raw = prefs.getString(APP_STATE_KEY, null) ?: return AppState()
-        return try {
+        val decoded = try {
             json.decodeFromString<AppState>(raw)
         } catch (e: Exception) {
             AppLogger.log("REPO", "Failed to decode app_state, falling back to empty: ${e.message}")
-            AppState()
+            return AppState()
         }
+
+        @Suppress("DEPRECATION")
+        val legacyCount = decoded.modes.count { it.nfcTagId != null }
+        if (legacyCount == 0) return decoded
+
+        val migrated = decoded.copy(
+            modes = decoded.modes.map { m ->
+                if (m.effectiveNfcTagIds.isEmpty()) m
+                else m.copy(nfcTagId = null, nfcTagIds = m.effectiveNfcTagIds)
+            }
+        )
+        prefs.edit().putString(APP_STATE_KEY, json.encodeToString(migrated)).apply()
+        AppLogger.log("REPO", "Migrated $legacyCount mode(s) from legacy nfcTagId field")
+        return migrated
     }
 
     companion object {
