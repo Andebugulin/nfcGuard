@@ -7,39 +7,24 @@ import android.content.Intent
 class ServiceRestartReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        android.util.Log.d("SERVICE_RESTART", "═══════════════════════════════════════")
-        android.util.Log.d("SERVICE_RESTART", "SERVICE RESTART RECEIVER TRIGGERED")
-        android.util.Log.d("SERVICE_RESTART", "═══════════════════════════════════════")
-        android.util.Log.d("SERVICE_RESTART", "⏰ Time: ${java.util.Date()}")
-        android.util.Log.d("SERVICE_RESTART", "📱 Action: ${intent.action}")
+        AppLogger.init(context)
+        AppLogger.log("SERVICE_RESTART", "Receiver triggered: action=${intent.action}")
 
         try {
             val appState = AppStateRepository.getInstance(context).current
-            android.util.Log.d("SERVICE_RESTART", "✓ App state loaded; active modes: ${appState.activeModes.size}; service running: ${BlockerService.isRunning()}")
-
             if (appState.activeModes.isEmpty()) {
-                android.util.Log.d("SERVICE_RESTART", "   No active modes, nothing to restart")
-                android.util.Log.d("SERVICE_RESTART", "═══════════════════════════════════════")
+                AppLogger.log("SERVICE_RESTART", "No active modes, nothing to restart")
                 return
             }
-
             if (BlockerService.isRunning()) {
-                android.util.Log.d("SERVICE_RESTART", "   Service already running, skipping restart")
-                android.util.Log.d("SERVICE_RESTART", "═══════════════════════════════════════")
+                AppLogger.log("SERVICE_RESTART", "Service already running, skipping restart")
                 return
             }
-
-            android.util.Log.d("SERVICE_RESTART", "RESTARTING SERVICE via StateSyncer")
+            AppLogger.log("SERVICE_RESTART", "Restarting service via StateSyncer (${appState.activeModes.size} active modes)")
             StateSyncer.sync(context, appState)
             ScheduleAlarmReceiver.scheduleWatchdog(context)
-            android.util.Log.d("SERVICE_RESTART", "✓✓✓ SERVICE RESTART COMPLETE ✓✓✓")
         } catch (e: Exception) {
-            android.util.Log.e("SERVICE_RESTART", "❌❌❌ RESTART FAILED ❌❌❌")
-            android.util.Log.e("SERVICE_RESTART", "Error type: ${e.javaClass.simpleName}")
-            android.util.Log.e("SERVICE_RESTART", "Error message: ${e.message}")
-            android.util.Log.e("SERVICE_RESTART", "Stack trace:", e)
+            AppLogger.log("SERVICE_RESTART", "Restart failed: ${e.javaClass.simpleName} — ${e.message}")
         }
-
-        android.util.Log.d("SERVICE_RESTART", "═══════════════════════════════════════")
     }
 }

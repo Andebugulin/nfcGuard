@@ -33,9 +33,6 @@ class BlockerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
-        android.util.Log.d("BLOCKER_SERVICE", "SERVICE CREATED")
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
         AppLogger.init(this)
         isRunning = true
         foregroundAppDetector = ForegroundAppDetector(this)
@@ -63,30 +60,22 @@ class BlockerService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, createNotification())
         }
-        android.util.Log.d("BLOCKER_SERVICE", "--- Service started in foreground")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        android.util.Log.d("BLOCKER_SERVICE", "------------------------------------------------------------------------------")
-        android.util.Log.d("BLOCKER_SERVICE", "ON START COMMAND")
-        android.util.Log.d("BLOCKER_SERVICE", "------------------------------------------------------------------------------")
-
         intent?.getStringArrayListExtra("blocked_apps")?.let {
             blockedApps = it.toSet()
-            android.util.Log.d("BLOCKER_SERVICE", "---- Blocked apps updated: ${blockedApps.size} apps")
             AppLogger.log("SERVICE", "onStartCommand: ${blockedApps.size} apps in blocklist")
         }
 
         intent?.getStringExtra("block_mode")?.let {
             blockMode = BlockMode.valueOf(it)
             AppLogger.log("SERVICE", "onStartCommand: blockMode=$blockMode")
-            android.util.Log.d("BLOCKER_SERVICE", "---- Block mode: $blockMode")
         }
 
         intent?.getStringArrayListExtra("active_mode_ids")?.let {
             activeModeIds = it.toSet()
             AppLogger.log("SERVICE", "onStartCommand: activeModeIds=$activeModeIds")
-            android.util.Log.d("BLOCKER_SERVICE", "---- Active modes: ${activeModeIds.size}")
         }
 
         intent?.getStringArrayListExtra("manually_activated_mode_ids")?.let {
@@ -115,7 +104,6 @@ class BlockerService : Service() {
         // intent was processed. Without this, the overlay flashes for ~400ms
         // and on Samsung devices that flash kills the accessibility service.
         if (activeModeIds.isEmpty()) {
-            android.util.Log.d("BLOCKER_SERVICE", "---- No active modes — force-hiding overlay if visible")
             overlayEnforcer.forceHideImmediate()
         }
 
@@ -145,12 +133,7 @@ class BlockerService : Service() {
             modeNames: Map<String, String> = emptyMap(),
             timedModeReactivations: Map<String, Long> = emptyMap()
         ) {
-            android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
-            android.util.Log.d("BLOCKER_SERVICE", "START REQUEST RECEIVED")
-            android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
-
             if (!Settings.canDrawOverlays(context)) {
-                android.util.Log.e("BLOCKER_SERVICE", "--- OVERLAY PERMISSION NOT GRANTED!")
                 AppLogger.log("SERVICE", "OVERLAY PERMISSION NOT GRANTED - cannot start blocking")
                 val intent = Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -160,7 +143,6 @@ class BlockerService : Service() {
                 context.startActivity(intent)
                 return
             }
-            android.util.Log.d("BLOCKER_SERVICE", "--- Overlay permission granted")
 
             val intent = Intent(context, BlockerService::class.java).apply {
                 putStringArrayListExtra("blocked_apps", ArrayList(blockedApps))
@@ -173,13 +155,10 @@ class BlockerService : Service() {
             }
             context.startForegroundService(intent)
             ScheduleAlarmReceiver.scheduleWatchdog(context)
-            android.util.Log.d("BLOCKER_SERVICE", "--- Service start intent sent")
         }
 
         fun stop(context: Context) {
-            android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
-            android.util.Log.d("BLOCKER_SERVICE", "STOP REQUEST RECEIVED")
-            android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
+            AppLogger.log("SERVICE", "Stop requested")
             context.stopService(Intent(context, BlockerService::class.java))
         }
 
@@ -187,29 +166,19 @@ class BlockerService : Service() {
     }
 
     private fun startMonitoring() {
-        android.util.Log.d("BLOCKER_SERVICE", "------------------------------------------------------------------------------")
-        android.util.Log.d("BLOCKER_SERVICE", "STARTING MONITORING LOOP")
-        android.util.Log.d("BLOCKER_SERVICE", "------------------------------------------------------------------------------")
-
         serviceScope.launch {
             monitoringMutex.withLock {
-                // Cancel existing monitoring job if any
                 monitoringJob?.cancel()
-
-                // Start NEW monitoring loop
                 monitoringJob = serviceScope.launch(Dispatchers.Default) {
-                    android.util.Log.d("BLOCKER_SERVICE", "--- Monitoring loop started (Job ID: ${this.hashCode()})")
-
+                    AppLogger.log("SERVICE", "Monitoring loop started (job=${this.hashCode()})")
                     while (isActive) {
                         try {
                             checkCurrentApp()
                         } catch (e: Exception) {
-                            android.util.Log.e("BLOCKER_SERVICE", "Error in monitoring loop: ${e.message}")
+                            AppLogger.log("SERVICE", "Error in monitoring loop: ${e.message}")
                         }
                         delay(500)
                     }
-
-                    android.util.Log.d("BLOCKER_SERVICE", "--— Monitoring loop ended")
                 }
             }
         }
@@ -248,7 +217,6 @@ class BlockerService : Service() {
         lastCheckedApp = currentApp
 
         if (decision == BlockDecider.Decision.BLOCK) {
-            android.util.Log.w("BLOCKER_SERVICE", "---- BLOCKING APP: $currentApp")
             // Strategy:
             //   Accessibility ON  → force-close (HOME + kill). Overlay has
             //                       bugs with accessibility (stuck-on-home
@@ -263,7 +231,6 @@ class BlockerService : Service() {
                 overlayEnforcer.block(currentApp)
             }
         } else {
-            android.util.Log.d("BLOCKER_SERVICE", "--- ALLOWING APP: $currentApp")
             // Both enforcers' onAllowed fire — defense in depth. The cooldown
             // reset for force-close and the "hide a stale overlay from a
             // prior fallback" are independent concerns.
@@ -277,11 +244,7 @@ class BlockerService : Service() {
             addCategory(Intent.CATEGORY_HOME)
         }
         val resolveInfos = packageManager.queryIntentActivities(intent, 0)
-        val isLauncher = resolveInfos.any { it.activityInfo.packageName == packageName }
-        if (isLauncher) {
-            android.util.Log.d("BLOCKER_SERVICE", "   --- Detected as system launcher: $packageName")
-        }
-        return isLauncher
+        return resolveInfos.any { it.activityInfo.packageName == packageName }
     }
 
 
@@ -423,9 +386,7 @@ class BlockerService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
-        android.util.Log.d("BLOCKER_SERVICE", "TASK REMOVED")
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
+        AppLogger.log("SERVICE", "Task removed — scheduling restart")
         scheduleServiceRestart()
     }
 
@@ -452,15 +413,12 @@ class BlockerService : Service() {
                 )
             }
         } catch (e: Exception) {
-            android.util.Log.e("BLOCKER_SERVICE", "--- Error scheduling restart: ${e.message}", e)
+            AppLogger.log("SERVICE", "Error scheduling restart: ${e.message}")
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
-        android.util.Log.d("BLOCKER_SERVICE", "SERVICE DESTROYED")
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
         isRunning = false
         AppLogger.log("SERVICE", "BlockerService DESTROYED")
 
@@ -478,7 +436,6 @@ class BlockerService : Service() {
         serviceScope.cancel()
 
         scheduleServiceRestart()
-        android.util.Log.d("BLOCKER_SERVICE", "-•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•--•-")
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

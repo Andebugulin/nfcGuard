@@ -29,10 +29,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         AppLogger.init(context)  // Ensure logger is ready (receivers run independently)
-        android.util.Log.d("SCHEDULE_ALARM", "=== ALARM RECEIVED ===")
-        AppLogger.log("ALARM", "Alarm received: action=${intent.action} at ${java.util.Date()}")
-        android.util.Log.d("SCHEDULE_ALARM", "Action: ${intent.action}")
-        android.util.Log.d("SCHEDULE_ALARM", "Time: ${java.util.Date()}")
+        AppLogger.log("ALARM", "Alarm received: action=${intent.action}")
 
         when (intent.action) {
             ACTION_CHECK_SCHEDULE -> {
@@ -44,8 +41,6 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             ACTION_ACTIVATE_SCHEDULE -> {
                 val scheduleId = intent.getStringExtra(EXTRA_SCHEDULE_ID) ?: return
                 val day = intent.getIntExtra(EXTRA_DAY, -1)
-                android.util.Log.d("SCHEDULE_ALARM", "- ACTIVATE alarm fired")
-                android.util.Log.d("SCHEDULE_ALARM", "Schedule ID: $scheduleId, Day: $day")
                 if (day != -1) {
                     activateSpecificSchedule(context, scheduleId, day)
                     scheduleAlarmForSchedule(context, scheduleId, day, isStart = true, forNextWeek = true)
@@ -54,8 +49,6 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             ACTION_DEACTIVATE_SCHEDULE -> {
                 val scheduleId = intent.getStringExtra(EXTRA_SCHEDULE_ID) ?: return
                 val day = intent.getIntExtra(EXTRA_DAY, -1)
-                android.util.Log.d("SCHEDULE_ALARM", "- DEACTIVATE alarm fired")
-                android.util.Log.d("SCHEDULE_ALARM", "Schedule ID: $scheduleId, Day: $day")
                 if (day != -1) {
                     deactivateSpecificSchedule(context, scheduleId)
                     scheduleAlarmForSchedule(context, scheduleId, day, isStart = false, forNextWeek = true)
@@ -63,13 +56,11 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             }
             ACTION_TIMED_DEACTIVATE_MODE -> {
                 val modeId = intent.getStringExtra("mode_id") ?: return
-                android.util.Log.d("SCHEDULE_ALARM", "- TIMED DEACTIVATE alarm fired for mode $modeId")
                 AppLogger.log("ALARM", "Timed deactivation alarm for mode $modeId")
                 deactivateTimedMode(context, modeId)
             }
             ACTION_TIMED_REACTIVATE_MODE -> {
                 val modeId = intent.getStringExtra("mode_id") ?: return
-                android.util.Log.d("SCHEDULE_ALARM", "- TIMED REACTIVATE alarm fired for mode $modeId")
                 AppLogger.log("ALARM", "Timed reactivation alarm for mode $modeId")
                 reactivateTimedMode(context, modeId)
             }
@@ -77,7 +68,6 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
     }
 
     private fun activateSpecificSchedule(context: Context, scheduleId: String, day: Int) {
-        android.util.Log.d("SCHEDULE_ALARM", ">>> Activating schedule $scheduleId for day $day")
         AppLogger.log("ALARM", "Activating schedule $scheduleId for day $day")
         val repo = AppStateRepository.getInstance(context)
 
@@ -90,18 +80,14 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             }
             when (result) {
                 is ScheduleTransitions.ScheduleActivationResult.ScheduleNotFound -> {
-                    android.util.Log.e("SCHEDULE_ALARM", "Schedule not found: $scheduleId")
                     AppLogger.log("ALARM", "ERROR: Schedule not found: $scheduleId")
                 }
                 is ScheduleTransitions.ScheduleActivationResult.Applied -> {
                     result.conflictSkippedModeIds.forEach { skipped ->
                         val name = result.newState.modes.find { it.id == skipped }?.name ?: skipped
-                        android.util.Log.w("SCHEDULE_ALARM", "Skipping mode $name: BLOCK/ALLOW conflict with active modes")
                         AppLogger.log("ALARM", "CONFLICT: Skipping mode $name — BLOCK/ALLOW conflict")
                     }
                     AppLogger.log("ALARM", "Schedule activated: activeModes=${result.newState.activeModes}, activeSchedules=${result.newState.activeSchedules}")
-                    android.util.Log.d("SCHEDULE_ALARM", "- Active modes updated to: ${result.newState.activeModes}")
-                    android.util.Log.d("SCHEDULE_ALARM", "- Active schedules: ${result.newState.activeSchedules}")
                     // Service restart, alarm reschedule, and widget refresh
                     // are dispatched by AppStateRepository via StateSyncer.
                 }
@@ -112,7 +98,6 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
     }
 
     private fun deactivateSpecificSchedule(context: Context, scheduleId: String) {
-        android.util.Log.d("SCHEDULE_ALARM", ">>> Deactivating schedule $scheduleId")
         AppLogger.log("ALARM", "Deactivating schedule $scheduleId")
         val repo = AppStateRepository.getInstance(context)
 
@@ -125,26 +110,22 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             }
             when (result) {
                 is ScheduleTransitions.ScheduleDeactivationResult.ScheduleNotFound -> {
-                    android.util.Log.e("SCHEDULE_ALARM", "Schedule not found: $scheduleId")
                     AppLogger.log("ALARM", "ERROR: Schedule not found: $scheduleId")
                 }
                 is ScheduleTransitions.ScheduleDeactivationResult.Applied -> {
                     result.keptDueToUserTimerModeIds.forEach { kept ->
-                        android.util.Log.d("SCHEDULE_ALARM", "Skipping mode $kept: has active user timer, keeping alive")
                         AppLogger.log("ALARM", "Skipping timed mode $kept — user timer takes priority over schedule end")
                     }
                     AppLogger.log("ALARM", "Schedule deactivated: removed=${result.deactivatedModeIds}, kept=${result.keptDueToUserTimerModeIds}, activeModes=${result.newState.activeModes}")
-                    android.util.Log.d("SCHEDULE_ALARM", "- Active modes updated to: ${result.newState.activeModes}")
                     // Side effects dispatched by AppStateRepository via StateSyncer.
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("SCHEDULE_ALARM", "Error deactivating schedule: ${e.message}", e)
+            AppLogger.log("ALARM", "Error deactivating schedule: ${e.message}")
         }
     }
 
     private fun deactivateTimedMode(context: Context, modeId: String) {
-        android.util.Log.d("SCHEDULE_ALARM", ">>> Deactivating timed mode $modeId")
         AppLogger.log("ALARM", "Deactivating timed mode $modeId")
         val repo = AppStateRepository.getInstance(context)
 
@@ -155,20 +136,16 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     r.newState to r
                 }
             }
-            when (result) {
-                is ScheduleTransitions.TimedDeactivationResult.AlreadyInactive ->
-                    android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId already inactive, skipping")
-                is ScheduleTransitions.TimedDeactivationResult.Applied -> {
-                    // Side effects dispatched by AppStateRepository via StateSyncer.
-                }
+            if (result is ScheduleTransitions.TimedDeactivationResult.AlreadyInactive) {
+                AppLogger.log("ALARM", "Mode $modeId already inactive, skipping")
             }
+            // Applied case: side effects dispatched by AppStateRepository via StateSyncer.
         } catch (e: Exception) {
-            android.util.Log.e("SCHEDULE_ALARM", "Error deactivating timed mode: ${e.message}", e)
+            AppLogger.log("ALARM", "Error deactivating timed mode: ${e.message}")
         }
     }
 
     private fun reactivateTimedMode(context: Context, modeId: String) {
-        android.util.Log.d("SCHEDULE_ALARM", ">>> Reactivating timed mode $modeId")
         AppLogger.log("ALARM", "Reactivating timed mode $modeId")
         val repo = AppStateRepository.getInstance(context)
 
@@ -184,13 +161,11 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
 
             when (result) {
                 is NfcUnlockLogic.ReactivationResult.AlreadyActive ->
-                    android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId already active, just cleaning up reactivation timer")
+                    AppLogger.log("ALARM", "Mode $modeId already active, just cleaning up reactivation timer")
                 is NfcUnlockLogic.ReactivationResult.ModeNotFound ->
-                    android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId not found, cleaning up")
-                is NfcUnlockLogic.ReactivationResult.Conflict -> {
-                    android.util.Log.w("SCHEDULE_ALARM", "Reactivation conflict for ${result.modeName} — skipping")
+                    AppLogger.log("ALARM", "Mode $modeId not found, cleaning up")
+                is NfcUnlockLogic.ReactivationResult.Conflict ->
                     AppLogger.log("ALARM", "CONFLICT: Skipping reactivation of ${result.modeName}")
-                }
                 is NfcUnlockLogic.ReactivationResult.Reactivated -> {
                     val mode = result.newState.modes.find { it.id == modeId }
                     AppLogger.log("ALARM", "Reactivating mode '${mode?.name}' after timed unlock expired")
@@ -201,7 +176,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("SCHEDULE_ALARM", "Error reactivating timed mode: ${e.message}", e)
+            AppLogger.log("ALARM", "Error reactivating timed mode: ${e.message}")
         }
     }
 

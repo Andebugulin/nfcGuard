@@ -46,7 +46,14 @@ object AppLogger {
         log("SYSTEM", "Logger initialized | App launched")
     }
 
-    /** Log an event. Category should be short: SERVICE, SCHEDULE, NFC, MODE, ALARM, UI, SYSTEM */
+    /**
+     * Log an event. Category should be short: SERVICE, SCHEDULE, NFC,
+     * MODE, ALARM, TIMER, BOOT, UI, SYSTEM, REPO, SYNC, WIDGET.
+     *
+     * Mirrors to logcat using the category as the tag, so per-category
+     * filtering still works (`adb logcat -s SERVICE` etc.) without a
+     * separate `Log.d(TAG, msg)` call at the site.
+     */
     fun log(category: String, message: String) {
         val timestamp = dateFormat.format(Date())
         val entry = "$timestamp [$category] $message"
@@ -56,7 +63,7 @@ object AppLogger {
             entries.pollFirst()
         }
 
-        android.util.Log.d("AppLogger", entry)
+        android.util.Log.d(category, message)
         persistAsync()
     }
 
