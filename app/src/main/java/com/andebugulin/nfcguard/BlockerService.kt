@@ -1,7 +1,6 @@
 package com.andebugulin.nfcguard
 
 import android.app.*
-import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
@@ -25,6 +24,7 @@ class BlockerService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
+    private lateinit var foregroundAppDetector: ForegroundAppDetector
     private var blockedApps = setOf<String>()
     private var blockMode = BlockMode.BLOCK_SELECTED
     private var activeModeIds = setOf<String>()
@@ -56,6 +56,7 @@ class BlockerService : Service() {
         AppLogger.init(this)
         isRunning = true
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        foregroundAppDetector = ForegroundAppDetector(this)
         createNotificationChannel()
         AppLogger.log("SERVICE", "BlockerService CREATED")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -247,7 +248,7 @@ class BlockerService : Service() {
             return
         }
 
-        val currentApp = getForegroundApp()
+        val currentApp = foregroundAppDetector.current()
 
         android.util.Log.v("BLOCKER_SERVICE", "---- Current foreground app: $currentApp")
 
@@ -323,86 +324,6 @@ class BlockerService : Service() {
             android.util.Log.d("BLOCKER_SERVICE", "   --- Detected as system launcher: $packageName")
         }
         return isLauncher
-    }
-
-    /**
-     * Detect the current foreground app.
-     *
-     * Strategy:
-     *   1. If AccessibilityService reports a fresh event (< 2s), trust it.
-     *   2. If AccessibilityService is stale BUT overlay is currently showing,
-     *      keep returning the last accessibility value — don't fall through to
-     *      UsageStatsManager which gives wrong results on Pixel after recents.
-     *      The overlay will only hide when accessibility fires a NEW event
-     *      with a different (non-blocked) package.
-     *   3. Otherwise fall back to UsageStatsManager.
-     */
-    private fun getForegroundApp(): String? {
-        // ── PRIMARY: AccessibilityService (if available) ──
-        if (ForegroundDetectorService.isRunning) {
-            val accessibilityPkg = ForegroundDetectorService.lastDetectedPackage
-            val accessibilityTime = ForegroundDetectorService.lastDetectedTime
-            val age = System.currentTimeMillis() - accessibilityTime
-
-            if (accessibilityPkg != null && age < 5000) {
-                android.util.Log.v("BLOCKER_SERVICE",
-                    "   --- Accessibility source: $accessibilityPkg (${age}ms ago)")
-                return accessibilityPkg
-            }
-        }
-
-        // ── FALLBACK: UsageStatsManager (original logic) ──
-        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        val time = System.currentTimeMillis()
-
-        try {
-            val usageEvents = usageStatsManager.queryEvents(time - 60_000, time)
-            var lastResumedApp: String? = null
-            var lastResumedTime = 0L
-            var lastPausedApp: String? = null
-            var lastPausedTime = 0L
-            val event = android.app.usage.UsageEvents.Event()
-
-            while (usageEvents.hasNextEvent()) {
-                usageEvents.getNextEvent(event)
-                when (event.eventType) {
-                    android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED -> {
-                        if (event.timeStamp >= lastResumedTime) {
-                            lastResumedApp = event.packageName
-                            lastResumedTime = event.timeStamp
-                        }
-                    }
-                    android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED -> {
-                        if (event.timeStamp >= lastPausedTime) {
-                            lastPausedApp = event.packageName
-                            lastPausedTime = event.timeStamp
-                        }
-                    }
-                }
-            }
-
-            // FIX: The old check `lastResumedApp != lastPausedApp` returns null
-            // when the same app is both last-resumed AND last-paused (e.g. Chrome
-            // was paused by the overlay then not resumed via a new event).
-            // Instead, compare timestamps: if resume happened AFTER pause, the
-            // app is still in the foreground.
-            if (lastResumedApp != null) {
-                val isStillForeground = lastResumedApp != lastPausedApp ||
-                        lastResumedTime >= lastPausedTime
-                if (isStillForeground) {
-                    return lastResumedApp
-                }
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("BLOCKER_SERVICE", "queryEvents (primary) failed: ${e.message}")
-        }
-
-        val stats = usageStatsManager.queryUsageStats(
-            UsageStatsManager.INTERVAL_DAILY,
-            time - 1000 * 60 * 5,
-            time
-        )
-        return stats?.maxByOrNull { it.lastTimeUsed }?.packageName
     }
 
     /**
