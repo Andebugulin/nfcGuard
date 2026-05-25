@@ -299,87 +299,39 @@ class GuardianViewModel : ViewModel() {
         }
     }
 
-    // FIX #2: Returns ActivationResult to indicate success or conflict
     fun activateMode(modeId: String, timedUntilMillis: Long? = null): ActivationResult {
-        val currentState = _appState.value
-        val modeToActivate = currentState.modes.find { it.id == modeId }
-            ?: return ActivationResult.MODE_NOT_FOUND
-
-        // Check for BLOCK/ALLOW conflict with currently active modes
-        val currentlyActiveModes = currentState.modes.filter { currentState.activeModes.contains(it.id) }
-        if (currentlyActiveModes.isNotEmpty()) {
-            val hasConflict = currentlyActiveModes.any { it.blockMode != modeToActivate.blockMode }
-            if (hasConflict) {
-                AppLogger.log("MODE", "CONFLICT: Cannot activate '${modeToActivate.name}' (${modeToActivate.blockMode}) — conflicts with active modes")
-                return ActivationResult.BLOCK_MODE_CONFLICT
+        val result = ModeActivationLogic.applyModeActivation(_appState.value, modeId, timedUntilMillis)
+        return when (result) {
+            is ModeActivationLogic.ActivateModeResult.ModeNotFound -> ActivationResult.MODE_NOT_FOUND
+            is ModeActivationLogic.ActivateModeResult.Conflict -> {
+                val mode = _appState.value.modes.find { it.id == modeId }
+                AppLogger.log("MODE", "CONFLICT: Cannot activate '${result.modeName}' (${mode?.blockMode}) — conflicts with active modes")
+                ActivationResult.BLOCK_MODE_CONFLICT
+            }
+            is ModeActivationLogic.ActivateModeResult.Activated -> {
+                val mode = _appState.value.modes.find { it.id == modeId }
+                AppLogger.log("MODE", "Activating: '${mode?.name}' (${mode?.blockMode}, ${mode?.blockedApps?.size} apps, nfc=${mode?.effectiveNfcTagIds?.ifEmpty { listOf("any") }}, timed=${timedUntilMillis != null})")
+                viewModelScope.launch {
+                    _appState.value = result.newState
+                    saveState()
+                    cancelTimedReactivation(modeId)
+                    if (timedUntilMillis != null) {
+                        scheduleTimedDeactivation(modeId, timedUntilMillis)
+                    }
+                }
+                ActivationResult.SUCCESS
             }
         }
-
-        AppLogger.log("MODE", "Activating: '${modeToActivate.name}' (${modeToActivate.blockMode}, ${modeToActivate.blockedApps.size} apps, nfc=${modeToActivate.effectiveNfcTagIds.ifEmpty { listOf("any") }}, timed=${timedUntilMillis != null})")
-
-        viewModelScope.launch {
-            val newTimedDeactivations = if (timedUntilMillis != null) {
-                currentState.timedModeDeactivations + (modeId to timedUntilMillis)
-            } else {
-                currentState.timedModeDeactivations
-            }
-            _appState.value = currentState.copy(
-                activeModes = currentState.activeModes + modeId,
-                manuallyActivatedModes = currentState.manuallyActivatedModes + modeId,
-                timedModeDeactivations = newTimedDeactivations,
-                timedModeReactivations = currentState.timedModeReactivations - modeId,
-                pausedModeRemainingMs = currentState.pausedModeRemainingMs - modeId
-            )
-            saveState()
-
-            // Cancel any pending reactivation alarm — mode is active now
-            cancelTimedReactivation(modeId)
-
-            // Schedule timed deactivation alarm for reliability
-            if (timedUntilMillis != null) {
-                scheduleTimedDeactivation(modeId, timedUntilMillis)
-            }
-        }
-        return ActivationResult.SUCCESS
     }
 
     fun deactivateMode(modeId: String) {
+        val modeName = _appState.value.modes.find { it.id == modeId }?.name ?: "unknown"
+        AppLogger.log("MODE", "Deactivating: '$modeName' (id=$modeId)")
         viewModelScope.launch {
-            val currentState = _appState.value
-            val modeName = currentState.modes.find { it.id == modeId }?.name ?: "unknown"
-            AppLogger.log("MODE", "Deactivating: '$modeName' (id=$modeId)")
-
-            // Find schedules that linked this mode and are currently active
-            val schedulesToMark = currentState.schedules
-                .filter { schedule ->
-                    schedule.linkedModeIds.contains(modeId) &&
-                            currentState.activeSchedules.contains(schedule.id)
-                }
-                .map { it.id }
-                .toSet()
-
-            // Only deactivate schedule if ALL its linked modes will be inactive
-            val schedulesToDeactivate = schedulesToMark.filter { scheduleId ->
-                val schedule = currentState.schedules.find { it.id == scheduleId }
-                schedule?.linkedModeIds?.all { linkedModeId ->
-                    linkedModeId == modeId || !currentState.activeModes.contains(linkedModeId)
-                } ?: true
-            }.toSet()
-
-            _appState.value = currentState.copy(
-                activeModes = currentState.activeModes - modeId,
-                activeSchedules = currentState.activeSchedules - schedulesToDeactivate,
-                deactivatedSchedules = currentState.deactivatedSchedules + schedulesToDeactivate,
-                manuallyActivatedModes = currentState.manuallyActivatedModes - modeId,
-                timedModeDeactivations = currentState.timedModeDeactivations - modeId,
-                timedModeReactivations = currentState.timedModeReactivations - modeId,
-                pausedModeRemainingMs = currentState.pausedModeRemainingMs - modeId
-            )
+            val result = ModeActivationLogic.applyModeDeactivation(_appState.value, modeId)
+            _appState.value = result.newState
             saveState()
-
-            // Cancel timed deactivation alarm if any
             cancelTimedDeactivation(modeId)
-            // Cancel timed reactivation alarm if any
             cancelTimedReactivation(modeId)
         }
     }
@@ -741,41 +693,23 @@ class GuardianViewModel : ViewModel() {
      *  This activates the schedule's linked modes and marks the schedule as active,
      *  so the end-alarm will properly deactivate everything. */
     fun activateScheduleManually(scheduleId: String): ActivationResult {
-        val currentState = _appState.value
-        val schedule = currentState.schedules.find { it.id == scheduleId }
-            ?: return ActivationResult.MODE_NOT_FOUND
-
-        // Check for BLOCK/ALLOW conflict
-        val currentlyActiveModes = currentState.modes.filter { currentState.activeModes.contains(it.id) }
-        val modesToActivate = schedule.linkedModeIds.mapNotNull { modeId ->
-            currentState.modes.find { it.id == modeId }
-        }
-        if (currentlyActiveModes.isNotEmpty() && modesToActivate.isNotEmpty()) {
-            val hasConflict = modesToActivate.any { newMode ->
-                currentlyActiveModes.any { it.blockMode != newMode.blockMode }
+        val result = ModeActivationLogic.applyManualScheduleActivation(_appState.value, scheduleId)
+        return when (result) {
+            is ModeActivationLogic.ManualScheduleActivationResult.ScheduleNotFound ->
+                ActivationResult.MODE_NOT_FOUND
+            is ModeActivationLogic.ManualScheduleActivationResult.Conflict ->
+                ActivationResult.BLOCK_MODE_CONFLICT
+            is ModeActivationLogic.ManualScheduleActivationResult.Activated -> {
+                val schedule = _appState.value.schedules.find { it.id == scheduleId }
+                AppLogger.log("SCHEDULE", "Manually activating schedule '${schedule?.name}' with ${schedule?.linkedModeIds?.size} modes")
+                viewModelScope.launch {
+                    _appState.value = result.newState
+                    saveState()
+                    schedule?.linkedModeIds?.forEach { cancelTimedReactivation(it) }
+                }
+                ActivationResult.SUCCESS
             }
-            if (hasConflict) {
-                return ActivationResult.BLOCK_MODE_CONFLICT
-            }
         }
-
-        AppLogger.log("SCHEDULE", "Manually activating schedule '${schedule.name}' with ${schedule.linkedModeIds.size} modes")
-
-        viewModelScope.launch {
-            val linkedModeIdSet = schedule.linkedModeIds.toSet()
-            _appState.value = currentState.copy(
-                activeModes = currentState.activeModes + linkedModeIdSet,
-                activeSchedules = currentState.activeSchedules + scheduleId,
-                deactivatedSchedules = currentState.deactivatedSchedules - scheduleId,
-                timedModeReactivations = currentState.timedModeReactivations - linkedModeIdSet,
-                pausedModeRemainingMs = currentState.pausedModeRemainingMs - linkedModeIdSet
-            )
-            saveState()
-
-            // Cancel any pending reactivation alarms for these modes
-            linkedModeIdSet.forEach { cancelTimedReactivation(it) }
-        }
-        return ActivationResult.SUCCESS
     }
 
     /** Schedule a timed deactivation alarm via AlarmManager for reliability */
