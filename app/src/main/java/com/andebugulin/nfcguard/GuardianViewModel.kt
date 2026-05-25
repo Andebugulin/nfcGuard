@@ -1,7 +1,8 @@
 package com.andebugulin.nfcguard
 
+import android.app.Application
 import android.content.Context
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -108,9 +109,12 @@ enum class ActivationResult {
     MODE_NOT_FOUND
 }
 
-class GuardianViewModel : ViewModel() {
-    private val _appState = MutableStateFlow(AppState())
-    val appState: StateFlow<AppState> = _appState
+class GuardianViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val context: Context = application
+    private val repo: AppStateRepository = AppStateRepository.getInstance(application)
+
+    val appState: StateFlow<AppState> = repo.state
 
     /** Safe Regime — stored separately from AppState to prevent bypass via config import */
     private val _safeRegimeEnabled = MutableStateFlow(true)
@@ -120,25 +124,9 @@ class GuardianViewModel : ViewModel() {
     private val _pendingUnlock = MutableStateFlow<PendingUnlock?>(null)
     val pendingUnlock: StateFlow<PendingUnlock?> = _pendingUnlock
 
-    private lateinit var context: Context
-    private lateinit var repo: AppStateRepository
-
-    fun loadData(context: Context) {
-        this.context = context
-        repo = AppStateRepository.getInstance(context)
-
-        // Sync our mirror to the repo and keep it updated. The mirror lets
-        // synchronous reads (e.g. ensureServiceRunning, activateMode's
-        // conflict check) see the latest value without going through the
-        // coroutine boundary. After Phase 2 this can be dropped in favor
-        // of `repo.state` directly.
-        _appState.value = repo.current
-        viewModelScope.launch {
-            repo.state.collect { _appState.value = it }
-        }
-
+    init {
         // Safe Regime is intentionally outside AppState (so config import
-        // can't disable the safety challenge). Keep direct prefs access.
+        // can't disable the safety challenge). Direct prefs access.
         val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
         _safeRegimeEnabled.value = prefs.getBoolean("safe_regime_enabled", true)
 
@@ -155,7 +143,7 @@ class GuardianViewModel : ViewModel() {
 
     private fun ensureServiceRunning() {
         // Only start service if there are active modes OR schedules
-        val currentState = _appState.value
+        val currentState = repo.current
         if (currentState.activeModes.isNotEmpty() || currentState.schedules.isNotEmpty()) {
             if (!BlockerService.isRunning()) {
                 updateBlockerService()
@@ -170,26 +158,26 @@ class GuardianViewModel : ViewModel() {
     }
 
     /**
-     * Persist the current mirror value through the repo and run the
+     * Apply [transform] to the persisted state atomically, then run the
      * standard side effects (service restart, alarm scheduling, widget
-     * refresh). All mutating methods follow the same pattern:
-     * `_appState.value = _appState.value.copy(...); saveState()`.
+     * refresh). All mutating methods go through this helper.
      */
-    private suspend fun saveState() {
-        repo.update { _appState.value }
+    private suspend fun mutate(transform: (AppState) -> AppState): AppState {
+        val newState = repo.update(transform)
         updateBlockerService()
         ScheduleAlarmReceiver.scheduleAllUpcomingAlarms(context)
         GuardianWidget.notifyAllWidgets(context)
+        return newState
     }
 
     private fun updateBlockerService() {
-        val activeModes = _appState.value.modes.filter {
-            _appState.value.activeModes.contains(it.id)
+        val activeModes = repo.current.modes.filter {
+            repo.current.activeModes.contains(it.id)
         }
 
-        val modeNamesMap = _appState.value.modes.associate { it.id to it.name }
+        val modeNamesMap = repo.current.modes.associate { it.id to it.name }
 
-        AppLogger.log("SERVICE", "updateBlockerService: ${activeModes.size} active modes, ids=${_appState.value.activeModes}")
+        AppLogger.log("SERVICE", "updateBlockerService: ${activeModes.size} active modes, ids=${repo.current.activeModes}")
 
         if (activeModes.isNotEmpty()) {
             val hasAllowMode = activeModes.any { it.blockMode == BlockMode.ALLOW_SELECTED }
@@ -207,10 +195,10 @@ class GuardianViewModel : ViewModel() {
                     allAllowedApps,
                     BlockMode.ALLOW_SELECTED,
                     activeModes.map { it.id }.toSet(),
-                    manuallyActivatedModeIds = _appState.value.manuallyActivatedModes,
-                    timedModeDeactivations = _appState.value.timedModeDeactivations,
+                    manuallyActivatedModeIds = repo.current.manuallyActivatedModes,
+                    timedModeDeactivations = repo.current.timedModeDeactivations,
                     modeNames = modeNamesMap,
-                    timedModeReactivations = _appState.value.timedModeReactivations
+                    timedModeReactivations = repo.current.timedModeReactivations
                 )
             } else {
                 val allBlockedApps = mutableSetOf<String>()
@@ -223,10 +211,10 @@ class GuardianViewModel : ViewModel() {
                     allBlockedApps,
                     BlockMode.BLOCK_SELECTED,
                     activeModes.map { it.id }.toSet(),
-                    manuallyActivatedModeIds = _appState.value.manuallyActivatedModes,
-                    timedModeDeactivations = _appState.value.timedModeDeactivations,
+                    manuallyActivatedModeIds = repo.current.manuallyActivatedModes,
+                    timedModeDeactivations = repo.current.timedModeDeactivations,
                     modeNames = modeNamesMap,
-                    timedModeReactivations = _appState.value.timedModeReactivations
+                    timedModeReactivations = repo.current.timedModeReactivations
                 )
             }
         } else {
@@ -237,7 +225,7 @@ class GuardianViewModel : ViewModel() {
                 emptySet(),
                 BlockMode.BLOCK_SELECTED,
                 emptySet(),
-                timedModeReactivations = _appState.value.timedModeReactivations
+                timedModeReactivations = repo.current.timedModeReactivations
             )
         }
     }
@@ -252,68 +240,66 @@ class GuardianViewModel : ViewModel() {
                 nfcTagIds = nfcTagIds,
                 tagUnlockLimits = tagUnlockLimits
             )
-            _appState.value = _appState.value.copy(
-                modes = _appState.value.modes + newMode
-            )
-            saveState()
+            mutate { it.copy(modes = it.modes + newMode) }
         }
     }
 
     fun updateMode(id: String, name: String, blockedApps: List<String>, blockMode: BlockMode, nfcTagIds: List<String>, tagUnlockLimits: Map<String, Long?> = emptyMap()) {
         viewModelScope.launch {
-            _appState.value = _appState.value.copy(
-                modes = _appState.value.modes.map { mode ->
-                    if (mode.id == id) mode.copy(
-                        name = name,
-                        blockedApps = blockedApps,
-                        blockMode = blockMode,
-                        nfcTagId = null,
-                        nfcTagIds = nfcTagIds,
-                        tagUnlockLimits = tagUnlockLimits
-                    ) else mode
-                }
-            )
-            saveState()
+            mutate { state ->
+                state.copy(
+                    modes = state.modes.map { mode ->
+                        if (mode.id == id) mode.copy(
+                            name = name,
+                            blockedApps = blockedApps,
+                            blockMode = blockMode,
+                            nfcTagId = null,
+                            nfcTagIds = nfcTagIds,
+                            tagUnlockLimits = tagUnlockLimits
+                        ) else mode
+                    }
+                )
+            }
         }
     }
 
     fun deleteMode(id: String) {
         viewModelScope.launch {
-            _appState.value = _appState.value.copy(
-                modes = _appState.value.modes.filter { it.id != id },
-                activeModes = _appState.value.activeModes - id,
-                schedules = _appState.value.schedules.map { schedule ->
-                    schedule.copy(linkedModeIds = schedule.linkedModeIds.filter { it != id })
-                },
-                nfcTags = _appState.value.nfcTags.map { tag ->
-                    tag.copy(linkedModeIds = tag.linkedModeIds.filter { it != id })
-                },
-                manuallyActivatedModes = _appState.value.manuallyActivatedModes - id,
-                timedModeDeactivations = _appState.value.timedModeDeactivations - id,
-                timedModeReactivations = _appState.value.timedModeReactivations - id,
-                pausedModeRemainingMs = _appState.value.pausedModeRemainingMs - id
-            )
+            mutate { state ->
+                state.copy(
+                    modes = state.modes.filter { it.id != id },
+                    activeModes = state.activeModes - id,
+                    schedules = state.schedules.map { schedule ->
+                        schedule.copy(linkedModeIds = schedule.linkedModeIds.filter { it != id })
+                    },
+                    nfcTags = state.nfcTags.map { tag ->
+                        tag.copy(linkedModeIds = tag.linkedModeIds.filter { it != id })
+                    },
+                    manuallyActivatedModes = state.manuallyActivatedModes - id,
+                    timedModeDeactivations = state.timedModeDeactivations - id,
+                    timedModeReactivations = state.timedModeReactivations - id,
+                    pausedModeRemainingMs = state.pausedModeRemainingMs - id
+                )
+            }
             cancelTimedDeactivation(id)
             cancelTimedReactivation(id)
-            saveState()
         }
     }
 
     fun activateMode(modeId: String, timedUntilMillis: Long? = null): ActivationResult {
-        val result = ModeActivationLogic.applyModeActivation(_appState.value, modeId, timedUntilMillis)
+        val result = ModeActivationLogic.applyModeActivation(repo.current, modeId, timedUntilMillis)
         return when (result) {
             is ModeActivationLogic.ActivateModeResult.ModeNotFound -> ActivationResult.MODE_NOT_FOUND
             is ModeActivationLogic.ActivateModeResult.Conflict -> {
-                val mode = _appState.value.modes.find { it.id == modeId }
+                val mode = repo.current.modes.find { it.id == modeId }
                 AppLogger.log("MODE", "CONFLICT: Cannot activate '${result.modeName}' (${mode?.blockMode}) — conflicts with active modes")
                 ActivationResult.BLOCK_MODE_CONFLICT
             }
             is ModeActivationLogic.ActivateModeResult.Activated -> {
-                val mode = _appState.value.modes.find { it.id == modeId }
+                val mode = repo.current.modes.find { it.id == modeId }
                 AppLogger.log("MODE", "Activating: '${mode?.name}' (${mode?.blockMode}, ${mode?.blockedApps?.size} apps, nfc=${mode?.effectiveNfcTagIds?.ifEmpty { listOf("any") }}, timed=${timedUntilMillis != null})")
                 viewModelScope.launch {
-                    _appState.value = result.newState
-                    saveState()
+                    mutate { result.newState }
                     cancelTimedReactivation(modeId)
                     if (timedUntilMillis != null) {
                         scheduleTimedDeactivation(modeId, timedUntilMillis)
@@ -325,12 +311,10 @@ class GuardianViewModel : ViewModel() {
     }
 
     fun deactivateMode(modeId: String) {
-        val modeName = _appState.value.modes.find { it.id == modeId }?.name ?: "unknown"
+        val modeName = repo.current.modes.find { it.id == modeId }?.name ?: "unknown"
         AppLogger.log("MODE", "Deactivating: '$modeName' (id=$modeId)")
         viewModelScope.launch {
-            val result = ModeActivationLogic.applyModeDeactivation(_appState.value, modeId)
-            _appState.value = result.newState
-            saveState()
+            mutate { ModeActivationLogic.applyModeDeactivation(it, modeId).newState }
             cancelTimedDeactivation(modeId)
             cancelTimedReactivation(modeId)
         }
@@ -338,19 +322,13 @@ class GuardianViewModel : ViewModel() {
 
     fun markScheduleDeactivated(scheduleId: String) {
         viewModelScope.launch {
-            _appState.value = _appState.value.copy(
-                deactivatedSchedules = _appState.value.deactivatedSchedules + scheduleId
-            )
-            saveState()
+            mutate { it.copy(deactivatedSchedules = it.deactivatedSchedules + scheduleId) }
         }
     }
 
     fun clearScheduleDeactivation(scheduleId: String) {
         viewModelScope.launch {
-            _appState.value = _appState.value.copy(
-                deactivatedSchedules = _appState.value.deactivatedSchedules - scheduleId
-            )
-            saveState()
+            mutate { it.copy(deactivatedSchedules = it.deactivatedSchedules - scheduleId) }
         }
     }
 
@@ -363,41 +341,36 @@ class GuardianViewModel : ViewModel() {
                 linkedModeIds = linkedModeIds,
                 hasEndTime = hasEndTime
             )
-            _appState.value = _appState.value.copy(
-                schedules = _appState.value.schedules + newSchedule
-            )
-            saveState()
+            mutate { it.copy(schedules = it.schedules + newSchedule) }
         }
     }
 
     fun updateSchedule(id: String, name: String, timeSlot: TimeSlot, linkedModeIds: List<String>, hasEndTime: Boolean) {
         viewModelScope.launch {
-            _appState.value = _appState.value.copy(
-                schedules = _appState.value.schedules.map { schedule ->
-                    if (schedule.id == id) schedule.copy(
-                        name = name,
-                        timeSlot = timeSlot,
-                        linkedModeIds = linkedModeIds,
-                        hasEndTime = hasEndTime
-                    ) else schedule
-                }
-            )
-            saveState()
+            mutate { state ->
+                state.copy(
+                    schedules = state.schedules.map { schedule ->
+                        if (schedule.id == id) schedule.copy(
+                            name = name,
+                            timeSlot = timeSlot,
+                            linkedModeIds = linkedModeIds,
+                            hasEndTime = hasEndTime
+                        ) else schedule
+                    }
+                )
+            }
         }
     }
 
     fun deleteSchedule(id: String) {
         viewModelScope.launch {
-            _appState.value = _appState.value.copy(
-                schedules = _appState.value.schedules.filter { it.id != id }
-            )
-            saveState()
+            mutate { it.copy(schedules = it.schedules.filter { s -> s.id != id }) }
         }
     }
 
     // FIX #3: Returns false if tag already registered
     fun addNfcTag(tagId: String, name: String): Boolean {
-        if (_appState.value.nfcTags.any { it.id == tagId }) {
+        if (repo.current.nfcTags.any { it.id == tagId }) {
             return false
         }
         viewModelScope.launch {
@@ -406,49 +379,48 @@ class GuardianViewModel : ViewModel() {
                 name = name,
                 linkedModeIds = emptyList()
             )
-            _appState.value = _appState.value.copy(
-                nfcTags = _appState.value.nfcTags + newTag
-            )
-            saveState()
+            mutate { it.copy(nfcTags = it.nfcTags + newTag) }
         }
         return true
     }
 
     fun updateNfcTag(tagId: String, name: String) {
         viewModelScope.launch {
-            _appState.value = _appState.value.copy(
-                nfcTags = _appState.value.nfcTags.map { tag ->
-                    if (tag.id == tagId) tag.copy(name = name) else tag
-                }
-            )
-            saveState()
+            mutate { state ->
+                state.copy(
+                    nfcTags = state.nfcTags.map { tag ->
+                        if (tag.id == tagId) tag.copy(name = name) else tag
+                    }
+                )
+            }
         }
     }
 
     fun deleteNfcTag(tagId: String) {
         viewModelScope.launch {
-            _appState.value = _appState.value.copy(
-                nfcTags = _appState.value.nfcTags.filter { it.id != tagId },
-                modes = _appState.value.modes.map { mode ->
-                    if (mode.effectiveNfcTagIds.contains(tagId)) mode.copy(
-                        nfcTagId = null,
-                        nfcTagIds = mode.effectiveNfcTagIds.filter { it != tagId }
-                    ) else mode
-                }
-            )
-            saveState()
+            mutate { state ->
+                state.copy(
+                    nfcTags = state.nfcTags.filter { it.id != tagId },
+                    modes = state.modes.map { mode ->
+                        if (mode.effectiveNfcTagIds.contains(tagId)) mode.copy(
+                            nfcTagId = null,
+                            nfcTagIds = mode.effectiveNfcTagIds.filter { it != tagId }
+                        ) else mode
+                    }
+                )
+            }
         }
     }
 
     fun handleNfcTag(tagId: String) {
         viewModelScope.launch {
-            AppLogger.log("NFC", "handleNfcTag: tagId=$tagId, activeModes=${_appState.value.activeModes}")
+            AppLogger.log("NFC", "handleNfcTag: tagId=$tagId, activeModes=${repo.current.activeModes}")
             val calendar = java.util.Calendar.getInstance()
             val currentDayOfWeek = NfcUnlockLogic.calendarDayToScheduleDay(calendar.get(java.util.Calendar.DAY_OF_WEEK))
             val currentMinuteOfDay = calendar.get(java.util.Calendar.HOUR_OF_DAY) * 60 + calendar.get(java.util.Calendar.MINUTE)
 
             val pending = NfcUnlockLogic.computePendingUnlock(
-                state = _appState.value,
+                state = repo.current,
                 tagId = tagId,
                 currentDayOfWeek = currentDayOfWeek,
                 currentMinuteOfDay = currentMinuteOfDay
@@ -466,7 +438,7 @@ class GuardianViewModel : ViewModel() {
         _pendingUnlock.value = null
 
         viewModelScope.launch {
-            val currentState = _appState.value
+            val currentState = repo.current
             val calendar = java.util.Calendar.getInstance()
             val currentDayOfWeek = NfcUnlockLogic.calendarDayToScheduleDay(calendar.get(java.util.Calendar.DAY_OF_WEEK))
             val currentMinuteOfDay = calendar.get(java.util.Calendar.HOUR_OF_DAY) * 60 + calendar.get(java.util.Calendar.MINUTE)
@@ -490,8 +462,7 @@ class GuardianViewModel : ViewModel() {
                 }
             }
 
-            _appState.value = result.newState
-            saveState()
+            mutate { result.newState }
 
             result.unlockedModeIds.forEach { cancelTimedDeactivation(it) }
 
@@ -567,7 +538,7 @@ class GuardianViewModel : ViewModel() {
 
     /** Check for expired timed reactivations and re-enable modes (called from polling loop) */
     private fun checkTimedReactivations() {
-        val currentState = _appState.value
+        val currentState = repo.current
         if (currentState.timedModeReactivations.isEmpty()) return
 
         val now = System.currentTimeMillis()
@@ -582,7 +553,7 @@ class GuardianViewModel : ViewModel() {
     fun reactivateMode(modeId: String) {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
-            val result = NfcUnlockLogic.applyReactivation(_appState.value, modeId, now)
+            val result = NfcUnlockLogic.applyReactivation(repo.current, modeId, now)
 
             when (result) {
                 is NfcUnlockLogic.ReactivationResult.ModeNotFound -> {
@@ -595,7 +566,7 @@ class GuardianViewModel : ViewModel() {
                     AppLogger.log("TIMER", "Reactivation conflict for '${result.modeName}' — skipping, clearing timer")
                 }
                 is NfcUnlockLogic.ReactivationResult.Reactivated -> {
-                    val mode = _appState.value.modes.find { it.id == modeId }
+                    val mode = repo.current.modes.find { it.id == modeId }
                     AppLogger.log("TIMER", "Reactivating mode '${mode?.name}' after timed unlock")
                     if (result.restoredDeactivationAt != null) {
                         val remainingMs = result.restoredDeactivationAt - now
@@ -604,8 +575,7 @@ class GuardianViewModel : ViewModel() {
                 }
             }
 
-            _appState.value = result.newState
-            saveState()
+            mutate { result.newState }
 
             if (result is NfcUnlockLogic.ReactivationResult.Reactivated && result.restoredDeactivationAt != null) {
                 scheduleTimedDeactivation(modeId, result.restoredDeactivationAt)
@@ -615,77 +585,66 @@ class GuardianViewModel : ViewModel() {
 
     fun importConfig(data: ConfigManager.ExportData, mergeMode: Boolean = false) {
         viewModelScope.launch {
-            if (mergeMode) {
-                // Build lookup maps from import data
-                val importModeMap = data.modes.associateBy { it.id }
-                val importScheduleMap = data.schedules.associateBy { it.id }
-                val importTagMap = data.nfcTags.associateBy { it.id }
+            mutate { state ->
+                val afterImport = if (mergeMode) {
+                    // For existing items: fully replace with imported version (restores apps, block mode, schedule links, etc.)
+                    // For new items: add them with nfcTagId migration applied
+                    val importModeMap = data.modes.associateBy { it.id }
+                    val importScheduleMap = data.schedules.associateBy { it.id }
+                    val importTagMap = data.nfcTags.associateBy { it.id }
+                    val existingModeIds = state.modes.map { it.id }.toSet()
+                    val existingScheduleIds = state.schedules.map { it.id }.toSet()
+                    val existingTagIds = state.nfcTags.map { it.id }.toSet()
 
-                val existingModeIds = _appState.value.modes.map { it.id }.toSet()
-                val existingScheduleIds = _appState.value.schedules.map { it.id }.toSet()
-                val existingTagIds = _appState.value.nfcTags.map { it.id }.toSet()
+                    val mergedModes = state.modes.map { existing ->
+                        val imported = importModeMap[existing.id]
+                        if (imported != null) {
+                            imported.copy(nfcTagId = null, nfcTagIds = imported.effectiveNfcTagIds)
+                        } else existing
+                    } + data.modes.filter { it.id !in existingModeIds }.map { m ->
+                        m.copy(nfcTagId = null, nfcTagIds = m.effectiveNfcTagIds)
+                    }
 
-                // For existing items: fully replace with imported version (restores apps, block mode, schedule links, etc.)
-                // For new items: add them with nfcTagId migration applied
-                val mergedModes = _appState.value.modes.map { existing ->
-                    val imported = importModeMap[existing.id]
-                    if (imported != null) {
-                        // Fully replace with imported version, normalizing legacy nfcTagId
-                        imported.copy(nfcTagId = null, nfcTagIds = imported.effectiveNfcTagIds)
-                    } else existing
-                } + data.modes.filter { it.id !in existingModeIds }.map { m ->
-                    m.copy(nfcTagId = null, nfcTagIds = m.effectiveNfcTagIds)
+                    val mergedSchedules = state.schedules.map { existing ->
+                        importScheduleMap[existing.id] ?: existing
+                    } + data.schedules.filter { it.id !in existingScheduleIds }
+
+                    val mergedTags = state.nfcTags.map { existing ->
+                        importTagMap[existing.id] ?: existing
+                    } + data.nfcTags.filter { it.id !in existingTagIds }
+
+                    state.copy(modes = mergedModes, schedules = mergedSchedules, nfcTags = mergedTags)
+                } else {
+                    // Replace: overwrite all config, reset runtime state
+                    val normalizedModes = data.modes.map { m ->
+                        m.copy(nfcTagId = null, nfcTagIds = m.effectiveNfcTagIds)
+                    }
+                    state.copy(
+                        modes = normalizedModes,
+                        schedules = data.schedules,
+                        nfcTags = data.nfcTags,
+                        activeModes = emptySet(),
+                        activeSchedules = emptySet(),
+                        deactivatedSchedules = emptySet(),
+                        manuallyActivatedModes = emptySet(),
+                        timedModeDeactivations = emptyMap(),
+                        timedModeReactivations = emptyMap(),
+                        pausedModeRemainingMs = emptyMap()
+                    )
                 }
 
-                val mergedSchedules = _appState.value.schedules.map { existing ->
-                    val imported = importScheduleMap[existing.id]
-                    // Fully replace with imported version (restores linkedModeIds, hasEndTime, timeSlot)
-                    if (imported != null) imported else existing
-                } + data.schedules.filter { it.id !in existingScheduleIds }
-
-                val mergedTags = _appState.value.nfcTags.map { existing ->
-                    val imported = importTagMap[existing.id]
-                    // Fully replace with imported version (restores linkedModeIds)
-                    if (imported != null) imported else existing
-                } + data.nfcTags.filter { it.id !in existingTagIds }
-
-                _appState.value = _appState.value.copy(
-                    modes = mergedModes,
-                    schedules = mergedSchedules,
-                    nfcTags = mergedTags
-                )
-            } else {
-                // Replace: overwrite all config, reset runtime state
-                // Normalize legacy nfcTagId -> nfcTagIds on all imported modes
-                val normalizedModes = data.modes.map { m ->
-                    m.copy(nfcTagId = null, nfcTagIds = m.effectiveNfcTagIds)
-                }
-                _appState.value = _appState.value.copy(
-                    modes = normalizedModes,
-                    schedules = data.schedules,
-                    nfcTags = data.nfcTags,
-                    activeModes = emptySet(),
-                    activeSchedules = emptySet(),
-                    deactivatedSchedules = emptySet(),
-                    manuallyActivatedModes = emptySet(),
-                    timedModeDeactivations = emptyMap(),
-                    timedModeReactivations = emptyMap(),
-                    pausedModeRemainingMs = emptyMap()
+                // FIX #11: Clean up orphaned nfcTagIds references after import
+                val validTagIds = afterImport.nfcTags.map { it.id }.toSet()
+                afterImport.copy(
+                    modes = afterImport.modes.map { mode ->
+                        val cleaned = mode.effectiveNfcTagIds.filter { it in validTagIds || it == "ANY" }
+                        val cleanedLimits = mode.tagUnlockLimits.filterKeys { it in validTagIds || it == "ANY" }
+                        if (cleaned != mode.effectiveNfcTagIds || cleanedLimits != mode.tagUnlockLimits) {
+                            mode.copy(nfcTagId = null, nfcTagIds = cleaned, tagUnlockLimits = cleanedLimits)
+                        } else mode
+                    }
                 )
             }
-
-            // FIX #11: Clean up orphaned nfcTagIds references after import
-            val validTagIds = _appState.value.nfcTags.map { it.id }.toSet()
-            _appState.value = _appState.value.copy(
-                modes = _appState.value.modes.map { mode ->
-                    val cleaned = mode.effectiveNfcTagIds.filter { it in validTagIds || it == "ANY" }
-                    val cleanedLimits = mode.tagUnlockLimits.filterKeys { it in validTagIds || it == "ANY" }
-                    if (cleaned != mode.effectiveNfcTagIds || cleanedLimits != mode.tagUnlockLimits) {
-                        mode.copy(nfcTagId = null, nfcTagIds = cleaned, tagUnlockLimits = cleanedLimits)
-                    } else mode
-                }
-            )
-            saveState()
         }
     }
 
@@ -693,18 +652,17 @@ class GuardianViewModel : ViewModel() {
      *  This activates the schedule's linked modes and marks the schedule as active,
      *  so the end-alarm will properly deactivate everything. */
     fun activateScheduleManually(scheduleId: String): ActivationResult {
-        val result = ModeActivationLogic.applyManualScheduleActivation(_appState.value, scheduleId)
+        val result = ModeActivationLogic.applyManualScheduleActivation(repo.current, scheduleId)
         return when (result) {
             is ModeActivationLogic.ManualScheduleActivationResult.ScheduleNotFound ->
                 ActivationResult.MODE_NOT_FOUND
             is ModeActivationLogic.ManualScheduleActivationResult.Conflict ->
                 ActivationResult.BLOCK_MODE_CONFLICT
             is ModeActivationLogic.ManualScheduleActivationResult.Activated -> {
-                val schedule = _appState.value.schedules.find { it.id == scheduleId }
+                val schedule = repo.current.schedules.find { it.id == scheduleId }
                 AppLogger.log("SCHEDULE", "Manually activating schedule '${schedule?.name}' with ${schedule?.linkedModeIds?.size} modes")
                 viewModelScope.launch {
-                    _appState.value = result.newState
-                    saveState()
+                    mutate { result.newState }
                     schedule?.linkedModeIds?.forEach { cancelTimedReactivation(it) }
                 }
                 ActivationResult.SUCCESS
@@ -771,7 +729,7 @@ class GuardianViewModel : ViewModel() {
 
     /** Check for expired timed modes and deactivate them (called from polling loop) */
     private fun checkTimedDeactivations() {
-        val currentState = _appState.value
+        val currentState = repo.current
         if (currentState.timedModeDeactivations.isEmpty()) return
 
         val now = System.currentTimeMillis()

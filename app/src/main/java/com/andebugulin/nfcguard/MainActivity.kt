@@ -70,12 +70,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             MinimalistTheme {
                 val viewModel: GuardianViewModel = viewModel()
-                val context = LocalContext.current
-
-                LaunchedEffect(Unit) {
-                    viewModel.loadData(context)
-                }
-
                 MainNavigation(
                     viewModel = viewModel,
                     scannedNfcTagId = scannedNfcTagId,
