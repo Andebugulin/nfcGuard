@@ -91,7 +91,16 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        checkAndRequestPermissions()
+        // Notification permission (Android 13+) is a runtime permission, not a
+        // settings-page intent like the others, so we ask for it directly from
+        // the activity instead of going through the Compose onboarding flow.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001)
+            }
+        }
+
         handleNfcIntent(intent)
     }
 
@@ -149,317 +158,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun checkAndRequestPermissions() {
-        val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-        val hasSeenOnboarding = prefs.getBoolean("has_seen_onboarding", false)
-        val hasCompletedInitialSetup = prefs.getBoolean("initial_permissions_granted", false)
-
-        if (!hasSeenOnboarding) {
-            // Show onboarding first
-            return
-        }
-
-        if (!hasCompletedInitialSetup) {
-            showWelcomeDialog()
-        }
-    }
-
-    private fun showWelcomeDialog() {
-        val builder = android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
-
-        builder.setTitle("WELCOME TO GUARDIAN")
-            .setMessage(
-                "Guardian needs the following permissions to protect your focus:\n\n\n\n" +
-                        "- Notifications (optional) - To display active modes\n\n" +
-                        "- USAGE ACCESS - Detect which apps you're using\n\n" +
-                        "- DISPLAY OVER APPS - Show the block screen\n\n" +
-                        "- BATTERY OPTIMIZATION - Run reliably in background\n\n" +
-                        "- PAUSE APP ACTIVITY - Must be disabled for Guardian\n\n" +
-                        "- ACCESSIBILITY SERVICE - More reliable app detection\n\n\n\n" +
-                        "Let's set these up now."
-            )
-            .setPositiveButton("CONTINUE") { _, _ ->
-                startPermissionFlow()
-            }
-            .setNegativeButton("SKIP") { _, _ ->
-                val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-                prefs.edit().putBoolean("initial_permissions_granted", true).apply()
-            }
-            .setCancelable(false)
-
-        val dialog = builder.create()
-        dialog.window?.apply {
-            setBackgroundDrawableResource(android.R.color.black)
-            decorView.setBackgroundColor(android.graphics.Color.BLACK)
-
-            // Add border
-            val drawable = android.graphics.drawable.GradientDrawable()
-            drawable.setColor(android.graphics.Color.BLACK)
-            drawable.setStroke(6, android.graphics.Color.parseColor("#340000")) // Dark red border for warning
-            setBackgroundDrawable(drawable)
-        }
-        dialog.show()
-
-        // Style buttons after showing
-        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.apply {
-            setTextColor(android.graphics.Color.WHITE)
-            setBackgroundColor(android.graphics.Color.BLACK)
-        }
-        dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.apply {
-            setTextColor(android.graphics.Color.parseColor("#808080"))
-            setBackgroundColor(android.graphics.Color.BLACK)
-        }
-    }
-
-    private fun startPermissionFlow() {
-        val permissionsNeeded = mutableListOf<PermissionRequest>()
-
-        // Check Usage Access
-        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
-        val time = System.currentTimeMillis()
-        val stats = usageStatsManager.queryUsageStats(
-            android.app.usage.UsageStatsManager.INTERVAL_DAILY,
-            time - 1000,
-            time
-        )
-        if (stats.isEmpty()) {
-            permissionsNeeded.add(
-                PermissionRequest(
-                    "Usage Access",
-                    "Required to detect which apps you're using",
-                    Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                )
-            )
-        }
-
-        // Check Display Over Apps
-        if (!Settings.canDrawOverlays(this)) {
-            permissionsNeeded.add(
-                PermissionRequest(
-                    "Display Over Apps",
-                    "Required to show the block screen",
-                    Intent(
-                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:$packageName")
-                    )
-                )
-            )
-        }
-
-        // Check Battery Optimization
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-            permissionsNeeded.add(
-                PermissionRequest(
-                    "Battery Optimization",
-                    "Required to run reliably in the background",
-                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                        data = Uri.parse("package:$packageName")
-                    }
-                )
-            )
-        }
-
-        // Check Notification Permission (Android 13+)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
-                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001)
-            }
-        }
-
-        if (permissionsNeeded.isNotEmpty()) {
-            showPermissionDialog(permissionsNeeded, 0)
-        } else {
-            showPauseAppReminder()
-        }
-    }
-
-    private data class PermissionRequest(
-        val title: String,
-        val description: String,
-        val intent: Intent
-    )
-
-    private fun showPermissionDialog(permissions: List<PermissionRequest>, index: Int) {
-        if (index >= permissions.size) {
-            showPauseAppReminder()
-            return
-        }
-
-        val permission = permissions[index]
-
-        val builder = createStyledDialog(permission.title, permission.description)
-            .setPositiveButton("GRANT") { _, _ ->
-                try {
-                    startActivity(permission.intent)
-                } catch (e: Exception) {
-                    if (permission.title == "Battery Optimization") {
-                        startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                    }
-                }
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    showPermissionDialog(permissions, index + 1)
-                }, 500)
-            }
-            .setNegativeButton("SKIP") { _, _ ->
-                showPermissionDialog(permissions, index + 1)
-            }
-            .setCancelable(false)
-
-        val dialog = builder.create()
-        dialog.window?.apply {
-            setBackgroundDrawableResource(android.R.color.black)
-            decorView.setBackgroundColor(android.graphics.Color.BLACK)
-
-            // Add border
-            val drawable = android.graphics.drawable.GradientDrawable()
-            drawable.setColor(android.graphics.Color.BLACK)
-            drawable.setStroke(6, android.graphics.Color.parseColor("#340000")) // Dark red border for warning
-            setBackgroundDrawable(drawable)
-        }
-        dialog.show()
-
-        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.apply {
-            setTextColor(android.graphics.Color.WHITE)
-            setBackgroundColor(android.graphics.Color.BLACK)
-        }
-        dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.apply {
-            setTextColor(android.graphics.Color.parseColor("#808080"))
-            setBackgroundColor(android.graphics.Color.BLACK)
-        }
-    }
-
-    private fun showPauseAppReminder() {
-        val builder = createStyledDialog(
-            "IMPORTANT: DISABLE 'PAUSE APP IF UNUSED'",
-            "To ensure Guardian works reliably:\n\n" +
-                    "1. Go to Settings > Apps > Guardian\n" +
-                    "2. Find 'Pause app activity if unused'\n" +
-                    "3. Turn it OFF\n\n" +
-                    "This prevents Android from pausing Guardian in the background."
-        )
-            .setPositiveButton("OPEN APP SETTINGS") { _, _ ->
-                try {
-                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.parse("package:$packageName")
-                    }
-                    startActivity(intent)
-                } catch (e: Exception) {}
-
-                val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-                prefs.edit().putBoolean("initial_permissions_granted", true).apply()
-                showAccessibilityRecommendation()
-            }
-            .setNegativeButton("OK") { _, _ ->
-                val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-                prefs.edit().putBoolean("initial_permissions_granted", true).apply()
-                showAccessibilityRecommendation()
-            }
-
-        val dialog = builder.create()
-        dialog.window?.apply {
-            setBackgroundDrawableResource(android.R.color.black)
-            decorView.setBackgroundColor(android.graphics.Color.BLACK)
-
-            // Add border
-            val drawable = android.graphics.drawable.GradientDrawable()
-            drawable.setColor(android.graphics.Color.BLACK)
-            drawable.setStroke(6, android.graphics.Color.parseColor("#340000")) // Dark red border for warning
-            setBackgroundDrawable(drawable)
-        }
-        dialog.show()
-
-        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.apply {
-            setTextColor(android.graphics.Color.WHITE)
-            setBackgroundColor(android.graphics.Color.BLACK)
-        }
-        dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.apply {
-            setTextColor(android.graphics.Color.parseColor("#808080"))
-            setBackgroundColor(android.graphics.Color.BLACK)
-        }
-    }
-
-    private fun showAccessibilityRecommendation() {
-        val prefs = getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
-        if (prefs.getBoolean("accessibility_recommendation_shown", false)) return
-        if (ForegroundDetectorService.isEnabled(this)) return
-
-        val manufacturer = android.os.Build.MANUFACTURER
-        val isRequired = manufacturer.equals("Google", ignoreCase = true) ||
-                manufacturer.equals("Samsung", ignoreCase = true)
-
-        val title = when {
-            manufacturer.equals("Google", ignoreCase = true) -> "PIXEL DEVICE DETECTED"
-            manufacturer.equals("Samsung", ignoreCase = true) -> "SAMSUNG DEVICE DETECTED"
-            else -> "IMPROVE RELIABILITY"
-        }
-
-        val message = when {
-            isRequired ->
-                "Your device has a known issue where app detection can fail " +
-                        "during certain transitions.\n\n" +
-                        "To ensure Guardian blocks apps reliably, please enable the " +
-                        "Accessibility Service permission.\n\n" +
-                        "Guardian only reads which app is in the foreground — it does NOT " +
-                        "read any screen content or personal data."
-            else ->
-                "Enabling the Accessibility Service makes app detection faster " +
-                        "and more reliable.\n\n" +
-                        "This is optional but recommended for the best experience.\n\n" +
-                        "Guardian only reads which app is in the foreground — it does NOT " +
-                        "read any screen content or personal data."
-        }
-
-        val positiveLabel = if (isRequired) "OPEN SETTINGS" else "ENABLE"
-
-        val builder = createStyledDialog(title, message)
-            .setPositiveButton(positiveLabel) { _, _ ->
-                prefs.edit().putBoolean("accessibility_recommendation_shown", true).apply()
-                try {
-                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                } catch (_: Exception) {}
-            }
-            .setNegativeButton("SKIP") { _, _ ->
-                prefs.edit().putBoolean("accessibility_recommendation_shown", true).apply()
-            }
-            .setCancelable(false)
-
-        val dialog = builder.create()
-        dialog.window?.apply {
-            setBackgroundDrawableResource(android.R.color.black)
-            decorView.setBackgroundColor(android.graphics.Color.BLACK)
-            val drawable = android.graphics.drawable.GradientDrawable()
-            drawable.setColor(android.graphics.Color.BLACK)
-            drawable.setStroke(6, android.graphics.Color.parseColor("#340000"))
-            setBackgroundDrawable(drawable)
-        }
-        dialog.show()
-        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.apply {
-            setTextColor(android.graphics.Color.WHITE)
-            setBackgroundColor(android.graphics.Color.BLACK)
-        }
-        dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.apply {
-            setTextColor(android.graphics.Color.parseColor("#808080"))
-            setBackgroundColor(android.graphics.Color.BLACK)
-        }
-    }
-
-    private fun createStyledDialog(
-        title: String,
-        message: String
-    ): android.app.AlertDialog.Builder {
-        val builder = android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
-
-        // Create custom view using window
-        val dialog = builder.create()
-        dialog.window?.apply {
-            setBackgroundDrawableResource(android.R.color.black)
-            decorView.setBackgroundColor(android.graphics.Color.BLACK)
-        }
-
-        return builder.setTitle(title).setMessage(message)
-    }
 }
 
 @Composable
@@ -519,23 +217,25 @@ fun MainNavigation(
         )
     }
 
+    // Show the permission-setup flow after onboarding completes (or on
+    // subsequent launches if it was never finished). The `remember` key is
+    // `hasSeenOnboarding` so completing OnboardingScreen re-evaluates and
+    // triggers the dialog flow without manual postDelayed plumbing.
+    var showPermissionOnboarding by remember(hasSeenOnboarding) {
+        mutableStateOf(com.andebugulin.nfcguard.ui.onboarding.shouldShowOnboarding(context))
+    }
+    if (showPermissionOnboarding) {
+        com.andebugulin.nfcguard.ui.onboarding.PermissionOnboarding(
+            onDone = { showPermissionOnboarding = false }
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         if (!hasSeenOnboarding) {
             OnboardingScreen(
                 onComplete = {
                     prefs.edit().putBoolean("has_seen_onboarding", true).apply()
                     hasSeenOnboarding = true
-                    // Trigger permission flow
-                    (context as? MainActivity)?.let { activity ->
-                        activity.runOnUiThread {
-                            val hasCompletedPermissions = prefs.getBoolean("initial_permissions_granted", false)
-                            if (!hasCompletedPermissions) {
-                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                    activity.checkAndRequestPermissions()
-                                }, 300)
-                            }
-                        }
-                    }
                 }
             )
         } else {
