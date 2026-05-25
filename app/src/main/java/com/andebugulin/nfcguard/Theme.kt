@@ -17,6 +17,7 @@ object GuardianTheme {
     val BackgroundPrimary = Color(0xFF000000)      // Pure black - main background
     val BackgroundSurface = Color(0xFF000000)      // Pure black - cards, surfaces (was 0xFF0A0A0A)
     val BackgroundSurfaceVariant = Color(0xFF000000) // Pure black - alternative surface
+    val SurfaceDim = Color(0xFF1A1A1A)             // Near-black - unselected option backgrounds
 
     // ============ TEXT COLORS ============
     val TextPrimary = Color(0xFFFFFFFF)           // White - main text
@@ -29,6 +30,8 @@ object GuardianTheme {
     val ButtonPrimaryText = Color(0xFF000000)     // Black - text on primary buttons
     val ButtonSecondary = Color(0xFF000000)       // Black - secondary buttons
     val ButtonSecondaryText = Color(0xFFFFFFFF)   // White - text on secondary buttons
+    val ButtonDisabledContainer = Color(0xFF333333) // Dark gray - disabled button background
+    val ButtonDisabledText = Color(0xFF666666)    // Mid gray - text on disabled button
 
     // ============ BORDERS & DIVIDERS ============
     val BorderFocused = Color(0xFFFFFFFF)         // White - focused input borders
@@ -55,6 +58,16 @@ object GuardianTheme {
     val WarningBackground = Color(0xFF1A1A00)     // Dark yellow - warning backgrounds
     val Success = Color(0xFF4CAF50)               // Green - success states
     val SuccessBackground = Color(0xFF001A00)     // Dark green - success backgrounds
+    val HighlightAccent = Color(0xFFFF9800)       // Orange - in-card warning accent (default)
+    val HighlightAccentEmphasized = Color(0xFFE65100) // Deeper orange - same accent when selected
+
+    // ============ LIGHT-SURFACE PALETTE ============
+    // Used when a toggle/option flips its surface to white for emphasis
+    // (e.g. ModeEditorScreen's selected option cards). The base text and
+    // background are plain Color.Black / Color.White (intentional binary
+    // inverse of the dark theme); these are the supporting greys.
+    val OnLightSurfaceSecondaryText = Color(0xFF555555) // Mid gray - secondary text on white
+    val OnLightSurfaceBorder = Color(0xFFCCCCCC)        // Light gray - input border on white
 
     // ============ DIALOG BORDERS (sexy & professional) ============
     val DialogBorderDelete = Color(0xFF340000)    // Dark red - delete/destructive dialogs

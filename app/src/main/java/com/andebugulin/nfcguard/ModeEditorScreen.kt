@@ -128,8 +128,8 @@ fun ModeEditorScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GuardianTheme.ButtonPrimary,
                         contentColor = GuardianTheme.ButtonPrimaryText,
-                        disabledContainerColor = Color(0xFF333333),
-                        disabledContentColor = Color(0xFF666666)
+                        disabledContainerColor = GuardianTheme.ButtonDisabledContainer,
+                        disabledContentColor = GuardianTheme.ButtonDisabledText
                     ),
                     shape = RoundedCornerShape(0.dp)
                 ) {
@@ -515,7 +515,7 @@ fun TagLimitItem(
                         Text(
                             "USED BY $usageCount OTHER MODE${if (usageCount > 1) "S" else ""}",
                             fontSize = 9.sp,
-                            color = if (isSelected) Color(0xFFE65100) else Color(0xFFFF9800),
+                            color = if (isSelected) GuardianTheme.HighlightAccentEmphasized else GuardianTheme.HighlightAccent,
                             letterSpacing = 0.5.sp
                         )
                     }
@@ -599,7 +599,7 @@ fun TagLimitConfigDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(0.dp),
-                    color = if (selectedOption == 0) Color.White else Color(0xFF1A1A1A),
+                    color = if (selectedOption == 0) Color.White else GuardianTheme.SurfaceDim,
                     onClick = { selectedOption = 0 }
                 ) {
                     Column(Modifier.padding(16.dp)) {
@@ -614,7 +614,7 @@ fun TagLimitConfigDialog(
                         Text(
                             "This tag can unlock this mode indefinitely",
                             fontSize = 10.sp,
-                            color = if (selectedOption == 0) Color(0xFF555555) else GuardianTheme.TextTertiary,
+                            color = if (selectedOption == 0) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
                             letterSpacing = 0.5.sp
                         )
                     }
@@ -624,7 +624,7 @@ fun TagLimitConfigDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(0.dp),
-                    color = if (selectedOption == 1) Color.White else Color(0xFF1A1A1A),
+                    color = if (selectedOption == 1) Color.White else GuardianTheme.SurfaceDim,
                     onClick = { selectedOption = 1 }
                 ) {
                     Column(Modifier.padding(16.dp)) {
@@ -639,7 +639,7 @@ fun TagLimitConfigDialog(
                         Text(
                             "This tag will only offer unlock durations up to this limit",
                             fontSize = 10.sp,
-                            color = if (selectedOption == 1) Color(0xFF555555) else GuardianTheme.TextTertiary,
+                            color = if (selectedOption == 1) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
                             letterSpacing = 0.5.sp
                         )
 
@@ -657,7 +657,7 @@ fun TagLimitConfigDialog(
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color.Black,
-                                        unfocusedBorderColor = Color(0xFFCCCCCC),
+                                        unfocusedBorderColor = GuardianTheme.OnLightSurfaceBorder,
                                         focusedTextColor = Color.Black,
                                         unfocusedTextColor = Color.Black,
                                         focusedLabelColor = Color.Black,
@@ -673,7 +673,7 @@ fun TagLimitConfigDialog(
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color.Black,
-                                        unfocusedBorderColor = Color(0xFFCCCCCC),
+                                        unfocusedBorderColor = GuardianTheme.OnLightSurfaceBorder,
                                         focusedTextColor = Color.Black,
                                         unfocusedTextColor = Color.Black,
                                         focusedLabelColor = Color.Black,
