@@ -196,7 +196,7 @@ fun SchedulesScreen(
                 Snackbar(
                     snackbarData = data,
                     containerColor = GuardianTheme.ErrorDark,
-                    contentColor = Color(0xFFFF8888),
+                    contentColor = GuardianTheme.ErrorText,
                     shape = RoundedCornerShape(0.dp)
                 )
             }
@@ -258,8 +258,8 @@ fun SchedulesScreen(
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = GuardianTheme.ButtonPrimary,
                                     contentColor = GuardianTheme.ButtonPrimaryText,
-                                    disabledContainerColor = Color(0xFF333333),
-                                    disabledContentColor = Color(0xFF666666)
+                                    disabledContainerColor = GuardianTheme.ButtonDisabledContainer,
+                                    disabledContentColor = GuardianTheme.ButtonDisabledText
                                 ),
                                 shape = RoundedCornerShape(0.dp),
                                 modifier = Modifier.height(48.dp)
@@ -326,8 +326,8 @@ fun SchedulesScreen(
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = GuardianTheme.BackgroundSurface,
                                     contentColor = GuardianTheme.ButtonSecondaryText,
-                                    disabledContainerColor = Color(0xFF1A1A1A),
-                                    disabledContentColor = Color(0xFF555555)
+                                    disabledContainerColor = GuardianTheme.SurfaceDim,
+                                    disabledContentColor = GuardianTheme.OnLightSurfaceSecondaryText
                                 ),
                                 shape = RoundedCornerShape(0.dp),
                                 modifier = Modifier
@@ -491,7 +491,7 @@ fun SchedulesScreen(
                         Text(
                             "This action cannot be undone",
                             fontSize = 12.sp,
-                            color = Color(0xFFFF8888),
+                            color = GuardianTheme.ErrorText,
                             letterSpacing = 0.5.sp,
                             modifier = Modifier.padding(12.dp)
                         )
@@ -521,7 +521,7 @@ fun SchedulesScreen(
                 TextButton(
                     onClick = { showDeleteDialog = null },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = Color(0xFF808080)
+                        contentColor = GuardianTheme.TextSecondary
                     )
                 ) {
                     Text("CANCEL", letterSpacing = 1.sp)
@@ -593,7 +593,7 @@ fun ScheduleCard(
                         Surface(
                             shape = RoundedCornerShape(0.dp),
                             color = GuardianTheme.BackgroundSurface,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF404040))
+                            border = androidx.compose.foundation.BorderStroke(1.dp, GuardianTheme.TextDisabled)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -604,7 +604,7 @@ fun ScheduleCard(
                                     modifier = Modifier
                                         .size(8.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF808080))
+                                        .background(GuardianTheme.TextSecondary)
                                 )
                                 Text(
                                     "DEACTIVATED",
@@ -958,14 +958,14 @@ fun ScheduleEditorDialog(
                                                 Text(
                                                     "UNTIL",
                                                     fontSize = 10.sp,
-                                                    color = if (endBeforeStart && endTimeError) Color(0xFFFF6666) else GuardianTheme.TextTertiary,
+                                                    color = if (endBeforeStart && endTimeError) GuardianTheme.ErrorTextEmphasized else GuardianTheme.TextTertiary,
                                                     letterSpacing = 1.sp,
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 TextButton(
                                                     onClick = { showEndTimePickerForDay = day },
                                                     colors = ButtonDefaults.textButtonColors(
-                                                        contentColor = if (endBeforeStart && endTimeError) Color(0xFFFF6666) else GuardianTheme.ButtonPrimaryText
+                                                        contentColor = if (endBeforeStart && endTimeError) GuardianTheme.ErrorTextEmphasized else GuardianTheme.ButtonPrimaryText
                                                     )
                                                 ) {
                                                     Text(
@@ -982,7 +982,7 @@ fun ScheduleEditorDialog(
                                                 Text(
                                                     "End time must be after start time",
                                                     fontSize = 9.sp,
-                                                    color = Color(0xFFFF6666),
+                                                    color = GuardianTheme.ErrorTextEmphasized,
                                                     letterSpacing = 0.5.sp
                                                 )
                                             }
@@ -1053,13 +1053,13 @@ fun ScheduleEditorDialog(
                                     Icon(
                                         Icons.Default.Error,
                                         contentDescription = null,
-                                        tint = Color(0xFFFF8888),
+                                        tint = GuardianTheme.ErrorText,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Text(
                                         "Fix end times that are before start times",
                                         fontSize = 11.sp,
-                                        color = Color(0xFFFF8888),
+                                        color = GuardianTheme.ErrorText,
                                         letterSpacing = 0.5.sp
                                     )
                                 }
@@ -1135,7 +1135,7 @@ fun ScheduleEditorDialog(
                                                         "CURRENTLY ACTIVE",
                                                         fontSize = 8.sp,
                                                         fontWeight = FontWeight.Black,
-                                                        color = if (selectedModeIds.contains(mode.id)) Color(0xFF666666) else Color(0xFFFFAA00),
+                                                        color = if (selectedModeIds.contains(mode.id)) GuardianTheme.ButtonDisabledText else GuardianTheme.WarningAccent,
                                                         letterSpacing = 1.sp
                                                     )
                                                 }
@@ -1144,7 +1144,7 @@ fun ScheduleEditorDialog(
                                                 Icon(Icons.Default.Check, null, tint = Color.Black)
                                             }
                                             if (isActive && !selectedModeIds.contains(mode.id)) {
-                                                Icon(Icons.Default.Shield, null, tint = Color(0xFFFFAA00), modifier = Modifier.size(16.dp))
+                                                Icon(Icons.Default.Shield, null, tint = GuardianTheme.WarningAccent, modifier = Modifier.size(16.dp))
                                             }
                                         }
                                     }
@@ -1314,7 +1314,7 @@ fun ClockFace(
             modifier = Modifier
                 .size(220.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF1A1A1A))
+                .background(GuardianTheme.SurfaceDim)
         )
 
         (0..maxValue step displayStep).forEach { num ->

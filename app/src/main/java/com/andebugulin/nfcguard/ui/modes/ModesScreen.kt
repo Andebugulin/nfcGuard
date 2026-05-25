@@ -59,7 +59,7 @@ fun ModesScreen(
                 Snackbar(
                     snackbarData = data,
                     containerColor = GuardianTheme.ErrorDark,
-                    contentColor = Color(0xFFFF8888),
+                    contentColor = GuardianTheme.ErrorText,
                     shape = RoundedCornerShape(0.dp)
                 )
             }
@@ -296,7 +296,7 @@ fun ModesScreen(
                         Text(
                             "This action cannot be undone",
                             fontSize = 12.sp,
-                            color = Color(0xFFFF8888),
+                            color = GuardianTheme.ErrorText,
                             letterSpacing = 0.5.sp,
                             modifier = Modifier.padding(12.dp)
                         )
@@ -326,7 +326,7 @@ fun ModesScreen(
                 TextButton(
                     onClick = { showDeleteDialog = null },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = Color(0xFF808080)
+                        contentColor = GuardianTheme.TextSecondary
                     )
                 ) {
                     Text("CANCEL", letterSpacing = 1.sp)
@@ -433,7 +433,7 @@ fun ModeCard(
                     Text(
                         "${mode.blockedApps.size} APPS \u00B7 ${if (mode.blockMode == BlockMode.BLOCK_SELECTED) "BLOCK" else "ALLOW ONLY"}",
                         fontSize = 10.sp,
-                        color = if (isPaused) Color(0xFF555500) else GuardianTheme.TextTertiary,
+                        color = if (isPaused) GuardianTheme.WarningAccentDim else GuardianTheme.TextTertiary,
                         letterSpacing = 1.sp
                     )
                     if (nfcTags.isNotEmpty()) {
@@ -445,12 +445,12 @@ fun ModeCard(
                                 Icons.Default.Nfc,
                                 contentDescription = null,
                                 modifier = Modifier.size(10.dp),
-                                tint = if (isPaused) Color(0xFF555500) else GuardianTheme.TextTertiary
+                                tint = if (isPaused) GuardianTheme.WarningAccentDim else GuardianTheme.TextTertiary
                             )
                             Text(
                                 "LINKED TO: ${nfcTags.joinToString(", ") { it.name.uppercase() }}",
                                 fontSize = 10.sp,
-                                color = if (isPaused) Color(0xFF555500) else GuardianTheme.TextTertiary,
+                                color = if (isPaused) GuardianTheme.WarningAccentDim else GuardianTheme.TextTertiary,
                                 letterSpacing = 1.sp
                             )
                         }
@@ -490,13 +490,13 @@ fun ModeCard(
                                     sourceIcon,
                                     contentDescription = null,
                                     modifier = Modifier.size(12.dp),
-                                    tint = Color(0xFF555555)
+                                    tint = GuardianTheme.OnLightSurfaceSecondaryText
                                 )
                                 Text(
                                     sourceLabel,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF555555),
+                                    color = GuardianTheme.OnLightSurfaceSecondaryText,
                                     letterSpacing = 1.sp
                                 )
                             }
@@ -516,7 +516,7 @@ fun ModeCard(
                                     if (remaining != null) "PAUSED \u00B7 RE-ENABLES IN ${remaining.coerceAtLeast(0)}M" else "PAUSED \u00B7 PERMANENTLY",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF555500),
+                                    color = GuardianTheme.WarningAccentDim,
                                     letterSpacing = 1.sp
                                 )
                             }
@@ -549,7 +549,7 @@ fun ModeCard(
                         "PAUSED",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF555500),
+                        color = GuardianTheme.WarningAccentDim,
                         letterSpacing = 1.sp
                     )
                 }
@@ -726,7 +726,7 @@ fun ActivationOptionsDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(0.dp),
-                    color = if (selectedOption == 0) Color.White else Color(0xFF1A1A1A),
+                    color = if (selectedOption == 0) Color.White else GuardianTheme.SurfaceDim,
                     onClick = { selectedOption = 0 }
                 ) {
                     Column(Modifier.padding(16.dp)) {
@@ -744,7 +744,7 @@ fun ActivationOptionsDialog(
                             else
                                 "Mode stays active until you tap an NFC tag to unlock",
                             fontSize = 10.sp,
-                            color = if (selectedOption == 0) Color(0xFF555555) else GuardianTheme.TextTertiary,
+                            color = if (selectedOption == 0) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
                             letterSpacing = 0.5.sp
                         )
                     }
@@ -754,7 +754,7 @@ fun ActivationOptionsDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(0.dp),
-                    color = if (selectedOption == 1) Color.White else Color(0xFF1A1A1A),
+                    color = if (selectedOption == 1) Color.White else GuardianTheme.SurfaceDim,
                     onClick = { selectedOption = 1 }
                 ) {
                     Column(Modifier.padding(16.dp)) {
@@ -772,7 +772,7 @@ fun ActivationOptionsDialog(
                             else
                                 "Mode will automatically deactivate after the time expires",
                             fontSize = 10.sp,
-                            color = if (selectedOption == 1) Color(0xFF555555) else GuardianTheme.TextTertiary,
+                            color = if (selectedOption == 1) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
                             letterSpacing = 0.5.sp
                         )
 
@@ -828,12 +828,12 @@ fun ActivationOptionsDialog(
                                         focusedContainerColor = Color.White,
                                         unfocusedContainerColor = Color(0xFFF0F0F0),
                                         focusedIndicatorColor = Color.Black,
-                                        unfocusedIndicatorColor = Color(0xFFCCCCCC),
+                                        unfocusedIndicatorColor = GuardianTheme.OnLightSurfaceBorder,
                                         cursorColor = Color.Black,
                                         focusedTextColor = Color.Black,
                                         unfocusedTextColor = Color.Black,
-                                        focusedLabelColor = Color(0xFF555555),
-                                        unfocusedLabelColor = Color(0xFF888888)
+                                        focusedLabelColor = GuardianTheme.OnLightSurfaceSecondaryText,
+                                        unfocusedLabelColor = GuardianTheme.TextSecondary
                                     ),
                                     shape = RoundedCornerShape(0.dp),
                                     modifier = Modifier.width(72.dp),
@@ -843,7 +843,7 @@ fun ActivationOptionsDialog(
                                     ":",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF555555)
+                                    color = GuardianTheme.OnLightSurfaceSecondaryText
                                 )
                                 OutlinedTextField(
                                     value = timedMinutes,
@@ -858,12 +858,12 @@ fun ActivationOptionsDialog(
                                         focusedContainerColor = Color.White,
                                         unfocusedContainerColor = Color(0xFFF0F0F0),
                                         focusedIndicatorColor = Color.Black,
-                                        unfocusedIndicatorColor = Color(0xFFCCCCCC),
+                                        unfocusedIndicatorColor = GuardianTheme.OnLightSurfaceBorder,
                                         cursorColor = Color.Black,
                                         focusedTextColor = Color.Black,
                                         unfocusedTextColor = Color.Black,
-                                        focusedLabelColor = Color(0xFF555555),
-                                        unfocusedLabelColor = Color(0xFF888888)
+                                        focusedLabelColor = GuardianTheme.OnLightSurfaceSecondaryText,
+                                        unfocusedLabelColor = GuardianTheme.TextSecondary
                                     ),
                                     shape = RoundedCornerShape(0.dp),
                                     modifier = Modifier.width(80.dp),
@@ -878,7 +878,7 @@ fun ActivationOptionsDialog(
                                     "= ${normalizedH}H ${normalizedM}M",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF555555),
+                                    color = GuardianTheme.OnLightSurfaceSecondaryText,
                                     letterSpacing = 1.sp
                                 )
                             }
@@ -1019,7 +1019,7 @@ fun UnlockDurationDialog(
                                     if (mode.limitMinutes == null) "PERMANENT" else "${mode.limitMinutes}M MAX",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) Color(0xFF555555) else GuardianTheme.TextTertiary,
+                                    color = if (isSelected) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
                                     letterSpacing = 0.5.sp
                                 )
                             }
@@ -1048,7 +1048,7 @@ fun UnlockDurationDialog(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(0.dp),
-                        color = if (selectedOption == 0) Color.White else Color(0xFF1A1A1A),
+                        color = if (selectedOption == 0) Color.White else GuardianTheme.SurfaceDim,
                         onClick = { selectedOption = 0 }
                     ) {
                         Column(Modifier.padding(16.dp)) {
@@ -1063,7 +1063,7 @@ fun UnlockDurationDialog(
                             Text(
                                 "Mode stays off until re-enabled by schedule or manually",
                                 fontSize = 10.sp,
-                                color = if (selectedOption == 0) Color(0xFF555555) else GuardianTheme.TextTertiary,
+                                color = if (selectedOption == 0) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
                                 letterSpacing = 0.5.sp
                             )
                         }
@@ -1102,7 +1102,7 @@ fun UnlockDurationDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(0.dp),
-                    color = if (selectedOption == 1) Color.White else Color(0xFF1A1A1A),
+                    color = if (selectedOption == 1) Color.White else GuardianTheme.SurfaceDim,
                     onClick = { selectedOption = 1 }
                 ) {
                     Column(Modifier.padding(16.dp)) {
@@ -1118,7 +1118,7 @@ fun UnlockDurationDialog(
                             if (effectiveLimit != null) "Unlocks for a limited time (max ${effectiveLimit / 60}H ${effectiveLimit % 60}M)"
                             else "Mode will automatically re-enable after the time expires",
                             fontSize = 10.sp,
-                            color = if (selectedOption == 1) Color(0xFF555555) else GuardianTheme.TextTertiary,
+                            color = if (selectedOption == 1) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
                             letterSpacing = 0.5.sp
                         )
 
@@ -1170,7 +1170,7 @@ fun UnlockDurationDialog(
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color.Black,
-                                        unfocusedBorderColor = Color(0xFFCCCCCC),
+                                        unfocusedBorderColor = GuardianTheme.OnLightSurfaceBorder,
                                         focusedTextColor = Color.Black,
                                         unfocusedTextColor = Color.Black,
                                         focusedLabelColor = Color.Black,
@@ -1186,7 +1186,7 @@ fun UnlockDurationDialog(
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color.Black,
-                                        unfocusedBorderColor = Color(0xFFCCCCCC),
+                                        unfocusedBorderColor = GuardianTheme.OnLightSurfaceBorder,
                                         focusedTextColor = Color.Black,
                                         unfocusedTextColor = Color.Black,
                                         focusedLabelColor = Color.Black,
@@ -1202,7 +1202,7 @@ fun UnlockDurationDialog(
                                     "WILL RE-ENABLE IN ${normalizedH}H ${normalizedM}M$limitWarning",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (limitWarning.isNotEmpty()) GuardianTheme.Warning else Color(0xFF555555),
+                                    color = if (limitWarning.isNotEmpty()) GuardianTheme.Warning else GuardianTheme.OnLightSurfaceSecondaryText,
                                     letterSpacing = 1.sp,
                                     modifier = Modifier.padding(top = 4.dp)
                                 )

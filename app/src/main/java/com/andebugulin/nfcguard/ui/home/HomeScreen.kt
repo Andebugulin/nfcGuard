@@ -229,7 +229,7 @@ fun HomeScreen(
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "Settings & Permissions",
-                    tint = if (permissionsGranted) GuardianTheme.IconPrimary else Color(0xFF8B0000),
+                    tint = if (permissionsGranted) GuardianTheme.IconPrimary else GuardianTheme.Error,
                     modifier = Modifier
                         .size(20.dp)
                         .clickable(
@@ -358,7 +358,7 @@ fun HomeScreen(
                                     sourceLabel,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF555555),
+                                    color = GuardianTheme.OnLightSurfaceSecondaryText,
                                     letterSpacing = 1.sp
                                 )
                             }
@@ -416,7 +416,7 @@ fun HomeScreen(
                                         "RE-ENABLES IN $remainText",
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = Color(0xFF555500),
+                                        color = GuardianTheme.WarningAccentDim,
                                         letterSpacing = 1.sp
                                     )
                                 }
@@ -612,13 +612,13 @@ fun EmergencyWarningDialog(
                     Text(
                         "--- Deactivate all active modes",
                         fontSize = 13.sp,
-                        color = Color(0xFFCCCCCC),
+                        color = GuardianTheme.OnLightSurfaceBorder,
                         letterSpacing = 0.5.sp
                     )
                     Text(
                         "--- Delete lost NFC tags",
                         fontSize = 13.sp,
-                        color = Color(0xFFCCCCCC),
+                        color = GuardianTheme.OnLightSurfaceBorder,
                         letterSpacing = 0.5.sp
                     )
                 }
@@ -652,7 +652,7 @@ fun EmergencyWarningDialog(
             TextButton(
                 onClick = onDismiss,
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = Color(0xFF808080)
+                    contentColor = GuardianTheme.TextSecondary
                 )
             ) {
                 Text("CANCEL", letterSpacing = 1.sp)
@@ -693,7 +693,7 @@ fun TagSelectionDialog(
                 Text(
                     "Select which NFC tags you lost:",
                     fontSize = 13.sp,
-                    color = Color(0xFFCCCCCC),
+                    color = GuardianTheme.OnLightSurfaceBorder,
                     letterSpacing = 0.5.sp
                 )
 
@@ -776,7 +776,7 @@ fun TagSelectionDialog(
             TextButton(
                 onClick = onDismiss,
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = Color(0xFF808080)
+                    contentColor = GuardianTheme.TextSecondary
                 )
             ) {
                 Text("CANCEL", letterSpacing = 1.sp)
@@ -1050,7 +1050,7 @@ fun SettingsDialog(
                         Text(
                             "Recommended -” prevents Android from hibernating Guardian in background",
                             fontSize = 9.sp,
-                            color = Color(0xFF999966),
+                            color = GuardianTheme.WarningTextMuted,
                             letterSpacing = 0.3.sp
                         )
                     }
@@ -1115,8 +1115,8 @@ fun SettingsDialog(
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.Black,
                                 checkedTrackColor = Color.White,
-                                uncheckedThumbColor = Color(0xFF666666),
-                                uncheckedTrackColor = Color(0xFF333333)
+                                uncheckedThumbColor = GuardianTheme.ButtonDisabledText,
+                                uncheckedTrackColor = GuardianTheme.ButtonDisabledContainer
                             )
                         )
                     }
@@ -1137,7 +1137,7 @@ fun SettingsDialog(
                             Text(
                                 "Protected: schedule linking to active modes, editing/deleting active schedules, disabling safe regime",
                                 fontSize = 9.sp,
-                                color = Color(0xFF999966),
+                                color = GuardianTheme.WarningTextMuted,
                                 letterSpacing = 0.3.sp
                             )
                         }
@@ -1224,7 +1224,7 @@ fun SettingsDialog(
                             if (accessibilityOn) "Accessibility ON — force-close avoids overlay conflicts on Samsung/Pixel"
                             else "Accessibility OFF — overlay mode active. Enable accessibility for force-close",
                             fontSize = 9.sp,
-                            color = Color(0xFF999966),
+                            color = GuardianTheme.WarningTextMuted,
                             letterSpacing = 0.3.sp
                         )
                     }
@@ -1312,7 +1312,7 @@ fun SettingsDialog(
                             msg.uppercase(),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (msg.contains("success", ignoreCase = true)) GuardianTheme.Success else Color(0xFFFF8888),
+                            color = if (msg.contains("success", ignoreCase = true)) GuardianTheme.Success else GuardianTheme.ErrorText,
                             letterSpacing = 0.5.sp,
                             modifier = Modifier.padding(12.dp)
                         )
@@ -1403,7 +1403,7 @@ fun SettingsDialog(
             dismissButton = {
                 TextButton(
                     onClick = { showExportFormatChooser = false },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF808080))
+                    colors = ButtonDefaults.textButtonColors(contentColor = GuardianTheme.TextSecondary)
                 ) {
                     Text("CANCEL", letterSpacing = 1.sp)
                 }
@@ -1498,7 +1498,7 @@ fun SettingsDialog(
             dismissButton = {
                 TextButton(
                     onClick = { showImportConfirm = false; pendingImportData = null },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF808080))
+                    colors = ButtonDefaults.textButtonColors(contentColor = GuardianTheme.TextSecondary)
                 ) {
                     Text("CANCEL", letterSpacing = 1.sp)
                 }
@@ -1534,7 +1534,7 @@ private fun PermissionRow(
                 tint = when {
                     granted -> GuardianTheme.Success
                     optional -> GuardianTheme.TextSecondary
-                    else -> Color(0xFF8B0000)
+                    else -> GuardianTheme.Error
                 },
                 modifier = Modifier.size(16.dp)
             )
@@ -1558,7 +1558,7 @@ private fun PermissionRow(
                 color = when {
                     granted -> GuardianTheme.TextSecondary
                     optional -> GuardianTheme.TextSecondary
-                    else -> Color(0xFF8B0000)
+                    else -> GuardianTheme.Error
                 },
                 letterSpacing = 0.5.sp
             )

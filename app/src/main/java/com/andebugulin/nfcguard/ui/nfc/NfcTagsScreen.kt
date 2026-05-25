@@ -335,19 +335,19 @@ fun NfcTagsScreen(
                                 "This will:",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFFF8888),
+                                color = GuardianTheme.ErrorText,
                                 letterSpacing = 0.5.sp
                             )
                             Text(
                                 "\u2022 Remove the NFC tag",
                                 fontSize = 11.sp,
-                                color = Color(0xFFFF8888),
+                                color = GuardianTheme.ErrorText,
                                 letterSpacing = 0.5.sp
                             )
                             Text(
                                 "\u2022 Unlink from all modes",
                                 fontSize = 11.sp,
-                                color = Color(0xFFFF8888),
+                                color = GuardianTheme.ErrorText,
                                 letterSpacing = 0.5.sp
                             )
                         }
@@ -383,7 +383,7 @@ fun NfcTagsScreen(
                 TextButton(
                     onClick = { showDeleteDialog = null },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = Color(0xFF808080)
+                        contentColor = GuardianTheme.TextSecondary
                     )
                 ) {
                     Text("CANCEL", letterSpacing = 1.sp)
@@ -540,7 +540,7 @@ fun NfcTagCard(
                     Text("RENAME", fontSize = 11.sp, color = textColor, letterSpacing = 1.sp)
                 }
                 TextButton(onClick = onDelete) {
-                    Text("DELETE", fontSize = 11.sp, color = if (hasActiveMode) Color(0xFF808080) else Color(0xFF808080), letterSpacing = 1.sp)
+                    Text("DELETE", fontSize = 11.sp, color = if (hasActiveMode) GuardianTheme.TextSecondary else GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                 }
             }
         }
@@ -651,14 +651,14 @@ fun NfcTagRegistrationDialog(
                                 Text(
                                     "This NFC tag is already in your list. Try a different tag.",
                                     fontSize = 9.sp,
-                                    color = Color(0xFFFF8888),
+                                    color = GuardianTheme.ErrorText,
                                     letterSpacing = 0.5.sp
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
                                     tagId.take(16) + "...",
                                     fontSize = 9.sp,
-                                    color = Color(0xFFFF8888),
+                                    color = GuardianTheme.ErrorText,
                                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                                 )
                             }

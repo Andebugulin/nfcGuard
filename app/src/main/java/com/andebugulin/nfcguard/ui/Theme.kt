@@ -56,8 +56,13 @@ object GuardianTheme {
     // ============ SEMANTIC COLORS ============
     val Error = Color(0xFF8B0000)                 // Red - errors, delete actions
     val ErrorDark = Color(0xFF8B0000)             // Dark red - error backgrounds
+    val ErrorText = Color(0xFFFF8888)             // Soft pink - error text on dark snackbars/dialogs
+    val ErrorTextEmphasized = Color(0xFFFF6666)   // Brighter pink - emphasized error text
     val Warning = Color(0xFFFFDD88)               // Yellow - warnings
     val WarningBackground = Color(0xFF1A1A00)     // Dark yellow - warning backgrounds
+    val WarningAccent = Color(0xFFFFAA00)         // Amber - alternate warning accent (dialog highlights)
+    val WarningAccentDim = Color(0xFF555500)      // Dark olive - warning border on dark surface
+    val WarningTextMuted = Color(0xFF999966)      // Muted olive - muted warning text
     val Success = Color(0xFF4CAF50)               // Green - success states
     val SuccessBackground = Color(0xFF001A00)     // Dark green - success backgrounds
     val HighlightAccent = Color(0xFFFF9800)       // Orange - in-card warning accent (default)

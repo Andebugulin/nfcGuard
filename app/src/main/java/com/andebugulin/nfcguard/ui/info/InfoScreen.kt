@@ -530,7 +530,7 @@ fun InfoScreen(
                                     Text(
                                         "We recommend enabling the Accessibility Service for the best experience. Force-close mode is faster, more reliable, and works on devices where the overlay may flicker or disappear. You can enable it in Settings \u2192 Accessibility.",
                                         fontSize = 10.sp,
-                                        color = Color(0xFF999966),
+                                        color = GuardianTheme.WarningTextMuted,
                                         letterSpacing = 0.3.sp,
                                         lineHeight = 15.sp
                                     )

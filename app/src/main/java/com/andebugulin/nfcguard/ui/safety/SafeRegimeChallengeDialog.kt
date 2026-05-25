@@ -91,7 +91,7 @@ fun SafeRegimeChallengeDialog(
                 .padding(16.dp)
                 .border(
                     width = GuardianTheme.DialogBorderWidth,
-                    color = if (failed) GuardianTheme.Error else if (inCheckPhase) Color(0xFFFFAA00) else GuardianTheme.DialogBorderWarning,
+                    color = if (failed) GuardianTheme.Error else if (inCheckPhase) GuardianTheme.WarningAccent else GuardianTheme.DialogBorderWarning,
                     shape = RoundedCornerShape(0.dp)
                 ),
             shape = RoundedCornerShape(0.dp),
@@ -153,20 +153,20 @@ fun SafeRegimeChallengeDialog(
                             Icon(
                                 Icons.Default.Close,
                                 contentDescription = null,
-                                tint = Color(0xFFFF8888),
+                                tint = GuardianTheme.ErrorText,
                                 modifier = Modifier.size(48.dp)
                             )
                             Text(
                                 "CHALLENGE FAILED",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Black,
-                                color = Color(0xFFFF8888),
+                                color = GuardianTheme.ErrorText,
                                 letterSpacing = 2.sp
                             )
                             Text(
                                 "You didn't press in time. Action cancelled.",
                                 fontSize = 11.sp,
-                                color = Color(0xFFFF8888),
+                                color = GuardianTheme.ErrorText,
                                 letterSpacing = 0.5.sp,
                                 textAlign = TextAlign.Center
                             )
@@ -194,7 +194,7 @@ fun SafeRegimeChallengeDialog(
                         String.format("%d:%02d", minutes, seconds),
                         fontSize = 56.sp,
                         fontWeight = FontWeight.Black,
-                        color = if (inCheckPhase) Color(0xFFFFAA00) else GuardianTheme.TextPrimary
+                        color = if (inCheckPhase) GuardianTheme.WarningAccent else GuardianTheme.TextPrimary
                     )
 
                     // Progress
@@ -214,7 +214,7 @@ fun SafeRegimeChallengeDialog(
                                 },
                                 modifier = Modifier.fillMaxWidth().height(4.dp),
                                 color = Color.White,
-                                trackColor = Color(0xFF333333)
+                                trackColor = GuardianTheme.ButtonDisabledContainer
                             )
                             Text(
                                 "CHECK $checksCompleted / $totalChecks",
@@ -242,7 +242,7 @@ fun SafeRegimeChallengeDialog(
                                     "PRESS NOW — ${cycleSecondsLeft}s",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = Color(0xFFFFAA00),
+                                    color = GuardianTheme.WarningAccent,
                                     letterSpacing = 2.sp
                                 )
 
@@ -255,7 +255,7 @@ fun SafeRegimeChallengeDialog(
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFFFFAA00),
+                                        containerColor = GuardianTheme.WarningAccent,
                                         contentColor = Color.Black
                                     ),
                                     shape = RoundedCornerShape(0.dp),
