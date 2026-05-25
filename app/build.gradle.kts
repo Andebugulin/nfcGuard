@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.20"
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -82,6 +82,9 @@ android {
 }
 
 dependencies {
+    // Pure-Kotlin domain: AppState + state-machine logic objects.
+    implementation(project(":domain"))
+
     // Existing dependencies
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -100,18 +103,17 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    // Serialization (still needed for ConfigManager.ExportData, etc.)
+    implementation(libs.kotlinx.serialization.json)
 
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
-    // Unit tests
+    // Unit tests (SanityTest only — domain tests live in :domain)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
-    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 }
 
 afterEvaluate {

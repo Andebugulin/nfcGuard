@@ -330,8 +330,9 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                 is NfcUnlockLogic.ReactivationResult.Reactivated -> {
                     val mode = repo.current.modes.find { it.id == modeId }
                     AppLogger.log("TIMER", "Reactivating mode '${mode?.name}' after timed unlock")
-                    if (result.restoredDeactivationAt != null) {
-                        val remainingMs = result.restoredDeactivationAt - now
+                    val restoredAt = result.restoredDeactivationAt
+                    if (restoredAt != null) {
+                        val remainingMs = restoredAt - now
                         AppLogger.log("TIMER", "Restoring timed deactivation for '${mode?.name}': ${remainingMs / 60000}m remaining")
                     }
                 }

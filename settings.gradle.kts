@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "nfcGuard"
 include(":app")
+include(":domain")
  
