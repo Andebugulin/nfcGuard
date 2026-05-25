@@ -24,7 +24,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
         }
 
         AppLogger.log("ALARM", "Watchdog: SERVICE DEAD — restarting with ${appState.activeModes.size} active modes")
-        updateBlockerService(context, appState)
+        StateSyncer.sync(context, appState)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -102,8 +102,8 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     AppLogger.log("ALARM", "Schedule activated: activeModes=${result.newState.activeModes}, activeSchedules=${result.newState.activeSchedules}")
                     android.util.Log.d("SCHEDULE_ALARM", "- Active modes updated to: ${result.newState.activeModes}")
                     android.util.Log.d("SCHEDULE_ALARM", "- Active schedules: ${result.newState.activeSchedules}")
-                    updateBlockerService(context, result.newState)
-                    GuardianWidget.notifyAllWidgets(context)
+                    // Service restart, alarm reschedule, and widget refresh
+                    // are dispatched by AppStateRepository via StateSyncer.
                 }
             }
         } catch (e: Exception) {
@@ -135,79 +135,11 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     }
                     AppLogger.log("ALARM", "Schedule deactivated: removed=${result.deactivatedModeIds}, kept=${result.keptDueToUserTimerModeIds}, activeModes=${result.newState.activeModes}")
                     android.util.Log.d("SCHEDULE_ALARM", "- Active modes updated to: ${result.newState.activeModes}")
-                    updateBlockerService(context, result.newState)
-                    GuardianWidget.notifyAllWidgets(context)
+                    // Side effects dispatched by AppStateRepository via StateSyncer.
                 }
             }
         } catch (e: Exception) {
             android.util.Log.e("SCHEDULE_ALARM", "Error deactivating schedule: ${e.message}", e)
-        }
-    }
-
-    private fun updateBlockerService(context: Context, appState: AppState) {
-        android.util.Log.d("SCHEDULE_ALARM", ">>> Updating BlockerService")
-        android.util.Log.d("SCHEDULE_ALARM", "Active modes: ${appState.activeModes}")
-
-        val activeModes = appState.modes.filter {
-            appState.activeModes.contains(it.id)
-        }
-
-        val modeNamesMap = appState.modes.associate { it.id to it.name }
-
-        if (activeModes.isNotEmpty()) {
-            val hasAllowMode = activeModes.any { it.blockMode == BlockMode.ALLOW_SELECTED }
-
-            if (hasAllowMode) {
-                val allAllowedApps = mutableSetOf<String>()
-                activeModes.forEach { mode ->
-                    if (mode.blockMode == BlockMode.ALLOW_SELECTED) {
-                        allAllowedApps.addAll(mode.blockedApps)
-                    }
-                }
-                android.util.Log.d("SCHEDULE_ALARM", "Starting service in ALLOW mode")
-                BlockerService.start(
-                    context,
-                    allAllowedApps,
-                    BlockMode.ALLOW_SELECTED,
-                    activeModes.map { it.id }.toSet(),
-                    manuallyActivatedModeIds = appState.manuallyActivatedModes,
-                    timedModeDeactivations = appState.timedModeDeactivations,
-                    modeNames = modeNamesMap,
-                    appState.timedModeReactivations
-                )
-            } else {
-                val allBlockedApps = mutableSetOf<String>()
-                activeModes.forEach { mode ->
-                    allBlockedApps.addAll(mode.blockedApps)
-                }
-                android.util.Log.d("SCHEDULE_ALARM", "Starting service in BLOCK mode")
-                BlockerService.start(
-                    context,
-                    allBlockedApps,
-                    BlockMode.BLOCK_SELECTED,
-                    activeModes.map { it.id }.toSet(),
-                    manuallyActivatedModeIds = appState.manuallyActivatedModes,
-                    timedModeDeactivations = appState.timedModeDeactivations,
-                    modeNames = modeNamesMap,
-                    appState.timedModeReactivations
-                )
-            }
-            scheduleWatchdog(context)
-        } else {
-            if (appState.schedules.isNotEmpty()) {
-                android.util.Log.d("SCHEDULE_ALARM", "No active modes, keeping service for schedules")
-                BlockerService.start(
-                    context,
-                    emptySet(),
-                    BlockMode.BLOCK_SELECTED,
-                    emptySet(),
-                    timedModeReactivations = appState.timedModeReactivations
-                )
-            } else {
-                android.util.Log.d("SCHEDULE_ALARM", "No modes or schedules, stopping service")
-                BlockerService.stop(context)
-                cancelWatchdog(context)
-            }
         }
     }
 
@@ -227,8 +159,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 is ScheduleTransitions.TimedDeactivationResult.AlreadyInactive ->
                     android.util.Log.d("SCHEDULE_ALARM", "Mode $modeId already inactive, skipping")
                 is ScheduleTransitions.TimedDeactivationResult.Applied -> {
-                    updateBlockerService(context, result.newState)
-                    GuardianWidget.notifyAllWidgets(context)
+                    // Side effects dispatched by AppStateRepository via StateSyncer.
                 }
             }
         } catch (e: Exception) {
@@ -265,12 +196,10 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                     AppLogger.log("ALARM", "Reactivating mode '${mode?.name}' after timed unlock expired")
                     if (result.restoredDeactivationAt != null) {
                         AppLogger.log("ALARM", "Restoring timed deactivation for '${mode?.name}': ${pausedRemainingMs / 60000}m remaining")
-                    }
-                    updateBlockerService(context, result.newState)
-                    GuardianWidget.notifyAllWidgets(context)
-                    if (result.restoredDeactivationAt != null) {
+                        // Per-mode timer alarm — not part of the batch sync.
                         scheduleTimedDeactivationAlarm(context, modeId, result.restoredDeactivationAt)
                     }
+                    // Service restart + widget refresh dispatched by repo.
                 }
             }
         } catch (e: Exception) {

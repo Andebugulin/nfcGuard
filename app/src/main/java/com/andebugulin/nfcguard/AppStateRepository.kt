@@ -17,7 +17,7 @@ import kotlinx.serialization.json.Json
  * All writers go through [update] / [updateWith]; readers observe
  * [state] (or read [current] for a snapshot).
  */
-class AppStateRepository private constructor(appContext: Context) {
+class AppStateRepository private constructor(private val appContext: Context) {
 
     private val prefs: SharedPreferences =
         appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -49,6 +49,7 @@ class AppStateRepository private constructor(appContext: Context) {
         if (next != previous) {
             _state.value = next
             prefs.edit().putString(APP_STATE_KEY, json.encodeToString(next)).apply()
+            StateSyncer.sync(appContext, next)
         }
         next
     }
@@ -68,6 +69,7 @@ class AppStateRepository private constructor(appContext: Context) {
         if (next != previous) {
             _state.value = next
             prefs.edit().putString(APP_STATE_KEY, json.encodeToString(next)).apply()
+            StateSyncer.sync(appContext, next)
         }
         returned
     }

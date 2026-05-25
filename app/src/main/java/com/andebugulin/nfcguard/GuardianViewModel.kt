@@ -142,11 +142,10 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun ensureServiceRunning() {
-        // Only start service if there are active modes OR schedules
         val currentState = repo.current
         if (currentState.activeModes.isNotEmpty() || currentState.schedules.isNotEmpty()) {
             if (!BlockerService.isRunning()) {
-                updateBlockerService()
+                StateSyncer.sync(context, currentState)
             }
         }
     }
@@ -158,77 +157,12 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * Apply [transform] to the persisted state atomically, then run the
-     * standard side effects (service restart, alarm scheduling, widget
-     * refresh). All mutating methods go through this helper.
+     * Apply [transform] to the persisted state atomically. The repo
+     * fires the standard side effects (service restart, schedule alarms,
+     * widget refresh) via StateSyncer; no per-method dispatch needed.
      */
-    private suspend fun mutate(transform: (AppState) -> AppState): AppState {
-        val newState = repo.update(transform)
-        updateBlockerService()
-        ScheduleAlarmReceiver.scheduleAllUpcomingAlarms(context)
-        GuardianWidget.notifyAllWidgets(context)
-        return newState
-    }
-
-    private fun updateBlockerService() {
-        val activeModes = repo.current.modes.filter {
-            repo.current.activeModes.contains(it.id)
-        }
-
-        val modeNamesMap = repo.current.modes.associate { it.id to it.name }
-
-        AppLogger.log("SERVICE", "updateBlockerService: ${activeModes.size} active modes, ids=${repo.current.activeModes}")
-
-        if (activeModes.isNotEmpty()) {
-            val hasAllowMode = activeModes.any { it.blockMode == BlockMode.ALLOW_SELECTED }
-
-            if (hasAllowMode) {
-                val allAllowedApps = mutableSetOf<String>()
-                activeModes.forEach { mode ->
-                    if (mode.blockMode == BlockMode.ALLOW_SELECTED) {
-                        allAllowedApps.addAll(mode.blockedApps)
-                    }
-                }
-                AppLogger.log("SERVICE", "Starting ALLOW_SELECTED with ${allAllowedApps.size} allowed apps")
-                BlockerService.start(
-                    context,
-                    allAllowedApps,
-                    BlockMode.ALLOW_SELECTED,
-                    activeModes.map { it.id }.toSet(),
-                    manuallyActivatedModeIds = repo.current.manuallyActivatedModes,
-                    timedModeDeactivations = repo.current.timedModeDeactivations,
-                    modeNames = modeNamesMap,
-                    timedModeReactivations = repo.current.timedModeReactivations
-                )
-            } else {
-                val allBlockedApps = mutableSetOf<String>()
-                activeModes.forEach { mode ->
-                    allBlockedApps.addAll(mode.blockedApps)
-                }
-                AppLogger.log("SERVICE", "Starting BLOCK_SELECTED with ${allBlockedApps.size} blocked apps")
-                BlockerService.start(
-                    context,
-                    allBlockedApps,
-                    BlockMode.BLOCK_SELECTED,
-                    activeModes.map { it.id }.toSet(),
-                    manuallyActivatedModeIds = repo.current.manuallyActivatedModes,
-                    timedModeDeactivations = repo.current.timedModeDeactivations,
-                    modeNames = modeNamesMap,
-                    timedModeReactivations = repo.current.timedModeReactivations
-                )
-            }
-        } else {
-            AppLogger.log("SERVICE", "No active modes — starting empty service for schedule monitoring")
-            // Keep service running even with no active modes to handle schedules
-            BlockerService.start(
-                context,
-                emptySet(),
-                BlockMode.BLOCK_SELECTED,
-                emptySet(),
-                timedModeReactivations = repo.current.timedModeReactivations
-            )
-        }
-    }
+    private suspend fun mutate(transform: (AppState) -> AppState): AppState =
+        repo.update(transform)
 
     fun addMode(name: String, blockedApps: List<String>, blockMode: BlockMode = BlockMode.BLOCK_SELECTED, nfcTagIds: List<String> = emptyList(), tagUnlockLimits: Map<String, Long?> = emptyMap()) {
         viewModelScope.launch {

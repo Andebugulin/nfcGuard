@@ -15,10 +15,7 @@ class ServiceRestartReceiver : BroadcastReceiver() {
 
         try {
             val appState = AppStateRepository.getInstance(context).current
-            android.util.Log.d("SERVICE_RESTART", "✓ App state loaded")
-            android.util.Log.d("SERVICE_RESTART", "🎯 Active modes: ${appState.activeModes.size}")
-            android.util.Log.d("SERVICE_RESTART", "   IDs: ${appState.activeModes.joinToString(", ")}")
-            android.util.Log.d("SERVICE_RESTART", "🔧 Service running: ${BlockerService.isRunning()}")
+            android.util.Log.d("SERVICE_RESTART", "✓ App state loaded; active modes: ${appState.activeModes.size}; service running: ${BlockerService.isRunning()}")
 
             if (appState.activeModes.isEmpty()) {
                 android.util.Log.d("SERVICE_RESTART", "   No active modes, nothing to restart")
@@ -32,54 +29,8 @@ class ServiceRestartReceiver : BroadcastReceiver() {
                 return
             }
 
-            android.util.Log.d("SERVICE_RESTART", "───────────────────────────────────────")
-            android.util.Log.d("SERVICE_RESTART", "RESTARTING SERVICE")
-            android.util.Log.d("SERVICE_RESTART", "───────────────────────────────────────")
-            android.util.Log.d("SERVICE_RESTART", "📋 Active modes to restore: ${appState.activeModes.size}")
-
-            val activeModes = appState.modes.filter { appState.activeModes.contains(it.id) }
-
-            android.util.Log.d("SERVICE_RESTART", "📊 Mode details:")
-            activeModes.forEach { mode ->
-                android.util.Log.d("SERVICE_RESTART", "   • ${mode.name}")
-                android.util.Log.d("SERVICE_RESTART", "     - Block mode: ${mode.blockMode}")
-                android.util.Log.d("SERVICE_RESTART", "     - Apps count: ${mode.blockedApps.size}")
-            }
-
-            val hasAllowMode = activeModes.any { it.blockMode == BlockMode.ALLOW_SELECTED }
-            android.util.Log.d("SERVICE_RESTART", "🔧 Has ALLOW mode: $hasAllowMode")
-
-            val appsToBlock = if (hasAllowMode) {
-                val allAllowedApps = mutableSetOf<String>()
-                activeModes.forEach { mode ->
-                    if (mode.blockMode == BlockMode.ALLOW_SELECTED) {
-                        android.util.Log.d("SERVICE_RESTART", "   Collecting from ALLOW mode: ${mode.name}")
-                        allAllowedApps.addAll(mode.blockedApps)
-                    }
-                }
-                android.util.Log.d("SERVICE_RESTART", "✓ Total allowed apps: ${allAllowedApps.size}")
-                allAllowedApps
-            } else {
-                val allBlockedApps = mutableSetOf<String>()
-                activeModes.forEach { mode ->
-                    android.util.Log.d("SERVICE_RESTART", "   Collecting from BLOCK mode: ${mode.name}")
-                    allBlockedApps.addAll(mode.blockedApps)
-                }
-                android.util.Log.d("SERVICE_RESTART", "✓ Total blocked apps: ${allBlockedApps.size}")
-                allBlockedApps
-            }
-
-            BlockerService.start(
-                context,
-                appsToBlock,
-                if (hasAllowMode) BlockMode.ALLOW_SELECTED else BlockMode.BLOCK_SELECTED,
-                appState.activeModes,
-                appState.manuallyActivatedModes,
-                appState.timedModeDeactivations,
-                appState.modes.associate { it.id to it.name },
-                appState.timedModeReactivations
-            )
-
+            android.util.Log.d("SERVICE_RESTART", "RESTARTING SERVICE via StateSyncer")
+            StateSyncer.sync(context, appState)
             ScheduleAlarmReceiver.scheduleWatchdog(context)
             android.util.Log.d("SERVICE_RESTART", "✓✓✓ SERVICE RESTART COMPLETE ✓✓✓")
         } catch (e: Exception) {

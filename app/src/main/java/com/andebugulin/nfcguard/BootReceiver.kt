@@ -17,62 +17,14 @@ class BootReceiver : BroadcastReceiver() {
 
         if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
             intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
-
-            AppLogger.log("BOOT", "Step 1: Rescheduling alarms")
-            ScheduleAlarmReceiver.scheduleAllUpcomingAlarms(context)
-            AppLogger.log("BOOT", "Step 1 done: Alarms rescheduled")
-
             try {
                 val appState = AppStateRepository.getInstance(context).current
                 AppLogger.log("BOOT", "State loaded: ${appState.modes.size} modes, ${appState.activeModes.size} active, ${appState.schedules.size} schedules")
-
-                if (appState.activeModes.isEmpty()) {
-                    AppLogger.log("BOOT", "No active modes to restore")
-                    return
-                }
-
-                val activeModes = appState.modes.filter {
-                    appState.activeModes.contains(it.id)
-                }
-
-                val hasAllowMode = activeModes.any { it.blockMode == BlockMode.ALLOW_SELECTED }
-
-                if (hasAllowMode) {
-                    val allAllowedApps = mutableSetOf<String>()
-                    activeModes.forEach { mode ->
-                        if (mode.blockMode == BlockMode.ALLOW_SELECTED) {
-                            allAllowedApps.addAll(mode.blockedApps)
-                        }
-                    }
-                    AppLogger.log("BOOT", "Restoring ALLOW_SELECTED: ${allAllowedApps.size} apps, modes=${appState.activeModes}")
-                    BlockerService.start(
-                        context,
-                        allAllowedApps,
-                        BlockMode.ALLOW_SELECTED,
-                        appState.activeModes,
-                        appState.manuallyActivatedModes,
-                        appState.timedModeDeactivations,
-                        timedModeReactivations = appState.timedModeReactivations
-                    )
-                } else {
-                    val allBlockedApps = mutableSetOf<String>()
-                    activeModes.forEach { mode ->
-                        allBlockedApps.addAll(mode.blockedApps)
-                    }
-                    AppLogger.log("BOOT", "Restoring BLOCK_SELECTED: ${allBlockedApps.size} apps, modes=${appState.activeModes}")
-                    BlockerService.start(
-                        context,
-                        allBlockedApps,
-                        BlockMode.BLOCK_SELECTED,
-                        appState.activeModes,
-                        appState.manuallyActivatedModes,
-                        appState.timedModeDeactivations,
-                        timedModeReactivations = appState.timedModeReactivations
-                    )
-                }
-
-                AppLogger.log("BOOT", "BlockerService started after boot")
+                // One call restores everything: service start (or empty-keep-alive
+                // for schedule monitoring), schedule alarms, widget refresh.
+                StateSyncer.sync(context, appState)
                 ScheduleAlarmReceiver.scheduleWatchdog(context)
+                AppLogger.log("BOOT", "Boot restoration complete")
             } catch (e: Exception) {
                 AppLogger.log("BOOT", "ERROR: ${e.javaClass.simpleName} - ${e.message}")
                 android.util.Log.e("BOOT_RECEIVER", "Error processing boot", e)

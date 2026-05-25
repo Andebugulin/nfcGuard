@@ -210,7 +210,7 @@ class GuardianWidget : AppWidgetProvider() {
         val timedUntil = if (durationMinutes > 0) System.currentTimeMillis() + durationMinutes * 60_000L else null
 
         AppLogger.log("WIDGET", "Activating '${mode.name}' (timed=${timedUntil != null})")
-        val newState = runBlocking {
+        runBlocking {
             repo.update { state ->
                 val newTimedDeactivations = if (timedUntil != null) {
                     state.timedModeDeactivations + (mode.id to timedUntil)
@@ -225,49 +225,17 @@ class GuardianWidget : AppWidgetProvider() {
                 )
             }
         }
-        startBlockerService(context, newState)
-
+        // Service restart, schedule alarms, and widget refresh dispatched by
+        // AppStateRepository via StateSyncer. Per-mode timer alarm is local.
         if (timedUntil != null) {
             scheduleTimedDeactivation(context, mode.id, timedUntil)
         }
-
-        ScheduleAlarmReceiver.scheduleAllUpcomingAlarms(context)
-        notifyAllWidgets(context)
     }
 
     // ======================== Helpers ========================
 
     private fun loadAppState(context: Context): AppState =
         AppStateRepository.getInstance(context).current
-
-    private fun startBlockerService(context: Context, appState: AppState) {
-        val activeModes = appState.modes.filter { appState.activeModes.contains(it.id) }
-        val modeNames = appState.modes.associate { it.id to it.name }
-
-        if (activeModes.isNotEmpty()) {
-            val hasAllow = activeModes.any { it.blockMode == BlockMode.ALLOW_SELECTED }
-            val apps = mutableSetOf<String>()
-            activeModes.forEach { apps.addAll(it.blockedApps) }
-            BlockerService.start(
-                context,
-                apps,
-                if (hasAllow) BlockMode.ALLOW_SELECTED else BlockMode.BLOCK_SELECTED,
-                activeModes.map { it.id }.toSet(),
-                manuallyActivatedModeIds = appState.manuallyActivatedModes,
-                timedModeDeactivations = appState.timedModeDeactivations,
-                modeNames = modeNames,
-                timedModeReactivations = appState.timedModeReactivations
-            )
-        } else if (appState.schedules.isNotEmpty()) {
-            BlockerService.start(
-                context,
-                emptySet(),
-                BlockMode.BLOCK_SELECTED,
-                emptySet(),
-                timedModeReactivations = appState.timedModeReactivations
-            )
-        }
-    }
 
     private fun scheduleTimedDeactivation(context: Context, modeId: String, deactivateAt: Long) {
         val intent = Intent(context, ScheduleAlarmReceiver::class.java).apply {
