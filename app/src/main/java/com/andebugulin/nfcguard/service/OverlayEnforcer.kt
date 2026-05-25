@@ -1,4 +1,7 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.service
+
+import com.andebugulin.nfcguard.data.AppLogger
+import com.andebugulin.nfcguard.ui.MainActivity
 
 import android.content.Context
 import android.content.Intent

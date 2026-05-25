@@ -1,4 +1,16 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.ui
+
+import com.andebugulin.nfcguard.data.AppLogger
+import com.andebugulin.nfcguard.data.AppStateRepository
+import com.andebugulin.nfcguard.Schedule
+import com.andebugulin.nfcguard.service.ForegroundDetectorService
+import com.andebugulin.nfcguard.ui.home.HomeScreen
+import com.andebugulin.nfcguard.ui.info.InfoScreen
+import com.andebugulin.nfcguard.ui.modes.ModesScreen
+import com.andebugulin.nfcguard.ui.modes.UnlockDurationDialog
+import com.andebugulin.nfcguard.ui.modes.UnlockModeInfo
+import com.andebugulin.nfcguard.ui.nfc.NfcTagsScreen
+import com.andebugulin.nfcguard.ui.schedules.SchedulesScreen
 
 import android.app.PendingIntent
 import android.content.Context

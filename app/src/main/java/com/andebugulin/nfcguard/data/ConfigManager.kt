@@ -1,4 +1,12 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.data
+
+import com.andebugulin.nfcguard.AppState
+import com.andebugulin.nfcguard.BlockMode
+import com.andebugulin.nfcguard.DayTime
+import com.andebugulin.nfcguard.Mode
+import com.andebugulin.nfcguard.NfcTag
+import com.andebugulin.nfcguard.Schedule
+import com.andebugulin.nfcguard.TimeSlot
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString

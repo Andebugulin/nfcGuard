@@ -1,4 +1,21 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.ui
+
+import com.andebugulin.nfcguard.ActivationResult
+import com.andebugulin.nfcguard.AppState
+import com.andebugulin.nfcguard.BlockMode
+import com.andebugulin.nfcguard.data.AppLogger
+import com.andebugulin.nfcguard.data.AppStateRepository
+import com.andebugulin.nfcguard.data.ConfigManager
+import com.andebugulin.nfcguard.Mode
+import com.andebugulin.nfcguard.ModeActivationLogic
+import com.andebugulin.nfcguard.NfcTag
+import com.andebugulin.nfcguard.NfcUnlockLogic
+import com.andebugulin.nfcguard.PendingUnlock
+import com.andebugulin.nfcguard.Schedule
+import com.andebugulin.nfcguard.service.BlockerService
+import com.andebugulin.nfcguard.sync.StateSyncer
+import com.andebugulin.nfcguard.TimeSlot
+import com.andebugulin.nfcguard.ui.schedules.SchedulesScreen
 
 import android.app.Application
 import android.content.Context

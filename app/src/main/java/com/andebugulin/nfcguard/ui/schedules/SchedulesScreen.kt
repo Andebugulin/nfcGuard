@@ -1,4 +1,14 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.ui.schedules
+
+import com.andebugulin.nfcguard.ActivationResult
+import com.andebugulin.nfcguard.AppState
+import com.andebugulin.nfcguard.DayTime
+import com.andebugulin.nfcguard.Mode
+import com.andebugulin.nfcguard.Schedule
+import com.andebugulin.nfcguard.TimeSlot
+import com.andebugulin.nfcguard.ui.GuardianTheme
+import com.andebugulin.nfcguard.ui.GuardianViewModel
+import com.andebugulin.nfcguard.ui.safety.SafeRegimeChallengeDialog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

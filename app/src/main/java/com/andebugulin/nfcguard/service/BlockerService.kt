@@ -1,4 +1,13 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.service
+
+import com.andebugulin.nfcguard.AppState
+import com.andebugulin.nfcguard.BlockDecider
+import com.andebugulin.nfcguard.BlockMode
+import com.andebugulin.nfcguard.data.AppLogger
+import com.andebugulin.nfcguard.data.AppStateRepository
+import com.andebugulin.nfcguard.receiver.ScheduleAlarmReceiver
+import com.andebugulin.nfcguard.receiver.ServiceRestartReceiver
+import com.andebugulin.nfcguard.ui.MainActivity
 
 import android.app.*
 import android.content.Context

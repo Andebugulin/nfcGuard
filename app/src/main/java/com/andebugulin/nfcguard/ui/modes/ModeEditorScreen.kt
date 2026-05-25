@@ -1,4 +1,10 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.ui.modes
+
+import com.andebugulin.nfcguard.BlockDecider
+import com.andebugulin.nfcguard.BlockMode
+import com.andebugulin.nfcguard.Mode
+import com.andebugulin.nfcguard.NfcTag
+import com.andebugulin.nfcguard.ui.GuardianTheme
 
 import android.content.Context
 import android.content.Intent

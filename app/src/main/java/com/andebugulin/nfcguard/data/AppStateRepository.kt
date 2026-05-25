@@ -1,4 +1,8 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.data
+
+import com.andebugulin.nfcguard.AppState
+import com.andebugulin.nfcguard.Mode
+import com.andebugulin.nfcguard.sync.StateSyncer
 
 import android.content.Context
 import android.content.SharedPreferences

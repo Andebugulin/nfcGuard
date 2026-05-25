@@ -1,4 +1,4 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.service
 
 /**
  * Strategy for stopping the user from using a blocked app.

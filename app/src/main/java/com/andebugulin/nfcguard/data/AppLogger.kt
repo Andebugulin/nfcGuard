@@ -1,4 +1,7 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.data
+
+import com.andebugulin.nfcguard.service.BlockerService
+import com.andebugulin.nfcguard.ui.MainActivity
 
 import android.content.Context
 import android.content.Intent

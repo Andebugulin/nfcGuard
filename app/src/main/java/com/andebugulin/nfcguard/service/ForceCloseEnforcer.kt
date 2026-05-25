@@ -1,4 +1,7 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.service
+
+import com.andebugulin.nfcguard.BlockDecider
+import com.andebugulin.nfcguard.data.AppLogger
 
 import android.app.ActivityManager
 import android.content.Context

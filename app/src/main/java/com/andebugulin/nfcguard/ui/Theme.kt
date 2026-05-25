@@ -1,4 +1,6 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.ui
+
+import com.andebugulin.nfcguard.ui.modes.ModeEditorScreen
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp

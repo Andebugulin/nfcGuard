@@ -1,4 +1,14 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.ui.home
+
+import com.andebugulin.nfcguard.AppState
+import com.andebugulin.nfcguard.data.ConfigManager
+import com.andebugulin.nfcguard.NfcTag
+import com.andebugulin.nfcguard.Schedule
+import com.andebugulin.nfcguard.service.ForegroundDetectorService
+import com.andebugulin.nfcguard.ui.GuardianTheme
+import com.andebugulin.nfcguard.ui.GuardianViewModel
+import com.andebugulin.nfcguard.ui.safety.SafeRegimeChallengeDialog
+import com.andebugulin.nfcguard.ui.Screen
 
 import android.content.Context
 import android.content.Intent

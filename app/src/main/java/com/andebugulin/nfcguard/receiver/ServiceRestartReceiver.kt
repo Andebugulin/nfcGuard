@@ -1,4 +1,9 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.receiver
+
+import com.andebugulin.nfcguard.data.AppLogger
+import com.andebugulin.nfcguard.data.AppStateRepository
+import com.andebugulin.nfcguard.service.BlockerService
+import com.andebugulin.nfcguard.sync.StateSyncer
 
 import android.content.BroadcastReceiver
 import android.content.Context

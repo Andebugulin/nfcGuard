@@ -1,4 +1,9 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.sync
+
+import com.andebugulin.nfcguard.AppState
+import com.andebugulin.nfcguard.data.AppLogger
+import com.andebugulin.nfcguard.receiver.ScheduleAlarmReceiver
+import com.andebugulin.nfcguard.Schedule
 
 import android.app.AlarmManager
 import android.app.PendingIntent

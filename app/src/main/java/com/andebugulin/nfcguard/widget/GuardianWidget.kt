@@ -1,4 +1,12 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.widget
+
+import com.andebugulin.nfcguard.R
+import com.andebugulin.nfcguard.AppState
+import com.andebugulin.nfcguard.data.AppLogger
+import com.andebugulin.nfcguard.data.AppStateRepository
+import com.andebugulin.nfcguard.Mode
+import com.andebugulin.nfcguard.sync.StateSyncer
+import com.andebugulin.nfcguard.ui.MainActivity
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager

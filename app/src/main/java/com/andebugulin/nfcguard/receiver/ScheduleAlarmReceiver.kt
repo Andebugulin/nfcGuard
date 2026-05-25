@@ -1,4 +1,14 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.receiver
+
+import com.andebugulin.nfcguard.AppState
+import com.andebugulin.nfcguard.data.AppLogger
+import com.andebugulin.nfcguard.data.AppStateRepository
+import com.andebugulin.nfcguard.Mode
+import com.andebugulin.nfcguard.NfcUnlockLogic
+import com.andebugulin.nfcguard.Schedule
+import com.andebugulin.nfcguard.ScheduleTransitions
+import com.andebugulin.nfcguard.service.BlockerService
+import com.andebugulin.nfcguard.sync.StateSyncer
 
 import android.app.AlarmManager
 import android.app.PendingIntent

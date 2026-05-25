@@ -1,4 +1,4 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.service
 
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager

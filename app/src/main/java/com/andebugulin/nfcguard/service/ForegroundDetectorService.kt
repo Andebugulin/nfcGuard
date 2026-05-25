@@ -1,4 +1,6 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.service
+
+import com.andebugulin.nfcguard.data.AppLogger
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo

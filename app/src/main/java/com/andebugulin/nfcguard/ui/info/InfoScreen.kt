@@ -1,4 +1,7 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.ui.info
+
+import com.andebugulin.nfcguard.data.AppLogger
+import com.andebugulin.nfcguard.ui.GuardianTheme
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

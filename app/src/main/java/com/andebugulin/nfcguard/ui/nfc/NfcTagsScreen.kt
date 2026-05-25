@@ -1,4 +1,11 @@
-package com.andebugulin.nfcguard
+package com.andebugulin.nfcguard.ui.nfc
+
+import com.andebugulin.nfcguard.Mode
+import com.andebugulin.nfcguard.NfcTag
+import com.andebugulin.nfcguard.ui.GuardianTheme
+import com.andebugulin.nfcguard.ui.GuardianViewModel
+import com.andebugulin.nfcguard.ui.MainActivity
+import com.andebugulin.nfcguard.ui.safety.SafeRegimeChallengeDialog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
