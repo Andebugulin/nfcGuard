@@ -156,34 +156,6 @@ class BlockerService : Service() {
         private const val FORCE_CLOSE_COOLDOWN_MS = 3000L // 3s cooldown between force-closes of same app
         private var isRunning = false
 
-        // CRITICAL: Apps that must NEVER be blocked
-        private val CRITICAL_SYSTEM_APPS = setOf(
-            "com.android.settings",
-            "com.android.systemui",
-            "com.google.android.gms",
-            "com.google.android.gsf",
-            "com.android.providers.settings",
-            "com.android.keychain",
-            "android",
-            "com.android.packageinstaller",
-            "com.android.permissioncontroller",
-            "com.google.android.packageinstaller",
-            "com.android.phone",
-            "com.android.contacts",
-            "com.android.dialer",
-            "com.google.android.dialer",
-            "com.android.emergency",
-            "com.android.inputmethod.latin",
-            "com.google.android.inputmethod.latin",
-            "com.samsung.android.honeyboard",
-            "com.andebugulin.nfcguard",
-            "com.android.settings.lockscreen",
-            "com.android.security",
-            "com.miui.securitycenter",
-            "com.samsung.android.lool",
-            "com.coloros.lockscreen"
-        )
-
         fun start(
             context: Context,
             blockedApps: Set<String>,
@@ -284,34 +256,19 @@ class BlockerService : Service() {
             return
         }
 
-        val shouldBlock = when {
-            currentApp == packageName -> {
-                android.util.Log.d("BLOCKER_SERVICE", "--- This is Guardian app - ALLOW")
-                false
-            }
-            isSystemLauncher(currentApp) -> {
-                android.util.Log.d("BLOCKER_SERVICE", "--- This is system launcher - ALLOW")
-                false
-            }
-            isCriticalSystemApp(currentApp) -> {
-                android.util.Log.d("BLOCKER_SERVICE", "--- Critical system app - ALLOW")
-                false
-            }
-            else -> {
-                val result = when (blockMode) {
-                    BlockMode.BLOCK_SELECTED -> blockedApps.contains(currentApp)
-                    BlockMode.ALLOW_SELECTED -> !blockedApps.contains(currentApp)
-                }
-                android.util.Log.d("BLOCKER_SERVICE", "---- Block mode: $blockMode")
-                android.util.Log.d("BLOCKER_SERVICE", "---- App in list: ${blockedApps.contains(currentApp)}")
-                android.util.Log.d("BLOCKER_SERVICE", "---- Should block: $result")
-                result
-            }
-        }
+        val isLauncher = isSystemLauncher(currentApp)
+        val decision = BlockDecider.decide(
+            currentApp = currentApp,
+            isLauncher = isLauncher,
+            activeModeIds = activeModeIds,
+            blockedApps = blockedApps,
+            blockMode = blockMode
+        )
+        android.util.Log.d("BLOCKER_SERVICE", "---- Decision for $currentApp: $decision (launcher=$isLauncher, mode=$blockMode, inList=${blockedApps.contains(currentApp)})")
 
         lastCheckedApp = currentApp
 
-        if (shouldBlock) {
+        if (decision == BlockDecider.Decision.BLOCK) {
             android.util.Log.w("BLOCKER_SERVICE", "---- BLOCKING APP: $currentApp")
             // Auto-detect blocking method:
             // - Accessibility ON  → force-close (send home + kill). Overlay has bugs
@@ -341,14 +298,12 @@ class BlockerService : Service() {
         } else {
             android.util.Log.d("BLOCKER_SERVICE", "--- ALLOWING APP: $currentApp")
             // Only reset force-close state when user is in a REAL app (not launcher
-            // or system). The launcher is transitional — HOME action's animation can
-            // cause spurious a11y events for the blocked app. If we reset cooldown
-            // on launcher, the next spurious event triggers another force-close,
-            // kicking the user home from whatever app they opened next.
-            if (lastForceClosedApp != null
-                && !isSystemLauncher(currentApp)
-                && !isCriticalSystemApp(currentApp)
-                && currentApp != packageName) {
+            // or critical system). The launcher is transitional — HOME action's
+            // animation can cause spurious a11y events for the blocked app. If we
+            // reset cooldown on launcher, the next spurious event triggers another
+            // force-close, kicking the user home from whatever app they opened next.
+            val isCritical = currentApp in BlockDecider.CRITICAL_SYSTEM_APPS
+            if (lastForceClosedApp != null && !isLauncher && !isCritical) {
                 android.util.Log.d("BLOCKER_SERVICE", "---- Cooldown reset: user in real app $currentApp")
                 lastForceClosedApp = null
                 lastForceCloseTime = 0L
@@ -368,10 +323,6 @@ class BlockerService : Service() {
             android.util.Log.d("BLOCKER_SERVICE", "   --- Detected as system launcher: $packageName")
         }
         return isLauncher
-    }
-
-    private fun isCriticalSystemApp(packageName: String): Boolean {
-        return CRITICAL_SYSTEM_APPS.contains(packageName)
     }
 
     /**

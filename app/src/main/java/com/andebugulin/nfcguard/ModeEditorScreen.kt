@@ -34,34 +34,9 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-// CRITICAL: Apps that must NEVER be blocked
-private val CRITICAL_SYSTEM_APPS = setOf(
-    "com.android.settings",
-    "com.android.systemui",
-    "com.google.android.gms",
-    "com.google.android.gsf",
-    "com.android.providers.settings",
-    "com.android.keychain",
-    "android",
-    "com.android.packageinstaller",
-    "com.android.permissioncontroller",
-    "com.google.android.packageinstaller",
-    "com.android.phone",
-    "com.android.contacts",
-    "com.android.dialer",
-    "com.google.android.dialer",
-    "com.android.emergency",
-    "com.android.inputmethod.latin",
-    "com.google.android.inputmethod.latin",
-    "com.samsung.android.honeyboard",
-    "com.andebugulin.nfcguard",  // Guardian itself (hardcoded)
-    // Lock screen / Security apps
-    "com.android.settings.lockscreen",
-    "com.android.security",
-    "com.miui.securitycenter",
-    "com.samsung.android.lool",
-    "com.coloros.lockscreen"
-)
+// Critical-apps list lives in BlockDecider — the picker filters using the
+// same set the service uses to allow, so the two can never drift.
+private val CRITICAL_SYSTEM_APPS get() = BlockDecider.CRITICAL_SYSTEM_APPS
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
