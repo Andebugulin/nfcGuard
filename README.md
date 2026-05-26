@@ -108,16 +108,37 @@ If you lose your NFC tag:
 
 ### Architecture
 
-- **Kotlin** with **Jetpack Compose** for a fully declarative UI
-- **Foreground Service** pattern for persistent app blocking across reboots and task kills
-- **AlarmManager** with exact alarms for precise schedule execution
-- **SharedPreferences** for lightweight state persistence
-- **kotlinx.serialization** for JSON state management and config export
-- **BroadcastReceivers** for boot, package update, and alarm events
+Kotlin + Jetpack Compose, organized as two Gradle modules with strict layering:
+
+```
+:domain   Pure Kotlin (no Android imports — compiler-enforced).
+          AppState + the four logic objects: NfcUnlockLogic,
+          ScheduleTransitions, ModeActivationLogic, BlockDecider.
+          78 unit tests run as plain JVM, no emulator needed.
+
+:app      Everything else. Sub-packaged by layer:
+          ui/  data/  service/  receiver/  sync/  widget/
+```
+
+Inside `:app`, the layers flow in one direction — **Domain → Data → Side effects → Service / UI** — with one owner per concern:
+
+- **`AppStateRepository`** is the single owner of persisted state (`guardian_prefs:app_state`). Every mutation goes through `suspend update(transform: (AppState) -> AppState)`, mutex-guarded. Exactly one file in the codebase references that storage key.
+- **`StateSyncer`** is the single dispatcher for platform side effects. The repo auto-invokes it on every successful write, and it does the right thing: restart `BlockerService` with the new params (or stop it entirely if nothing's left to do), reschedule schedule alarms, diff per-mode timed alarms, refresh widgets. There are exactly two `BlockerService.start(...)` callsites and both are inside `StateSyncer`.
+- **`GuardianViewModel`** is a thin orchestrator over the domain. Mutating methods are 4-6 lines each — pattern-match on a sealed result from a domain logic object, then call `mutate { … }` which goes through the repo.
+- **`BlockerService`** is a lifecycle host over three collaborators: `ForegroundAppDetector` (dual-source detection), `BlockDecider` (pure decision), and an `Enforcer` interface with two implementations (`OverlayEnforcer` and `ForceCloseEnforcer`).
+
+Persistence is `kotlinx.serialization` over `SharedPreferences`. Scheduling is `AlarmManager` with `setExactAndAllowWhileIdle`. Alarms, boot, and service restarts are handled by thin `BroadcastReceiver` adapters that read `repo.current` and call `StateSyncer.sync(context, state)`.
 
 ### How Blocking Works
 
-nfcGuard runs a foreground service that polls the current foreground app via `UsageStatsManager`, with an `AccessibilityService` fallback for devices where `UsageStatsManager` misreports on recent-apps transitions (Pixel, some Samsung). When a blocked app is detected, a full-screen overlay is displayed, preventing interaction until the user switches away or unlocks with an NFC tag.
+A foreground service (`BlockerService`) polls the current foreground app every ~500ms and uses one of two strategies to block, picked per tick based on whether the Accessibility Service permission is granted:
+
+- **Overlay strategy** (accessibility off): a full-screen `SYSTEM_ALERT_WINDOW` is drawn over the blocked app. The user can tap a `GUARDIAN` button to open the app, or scan an NFC tag to unlock.
+- **Force-close strategy** (accessibility on): the user is sent to HOME via the Accessibility Service (bypasses MIUI's background-activity-start restrictions), the blocked app's background processes are killed, and a brief toast is shown. A 3-second cooldown prevents spamming HOME while accessibility events catch up.
+
+Foreground-app detection is dual-source for reliability: the Accessibility Service event timeline (primary, required on Pixel and some Samsung devices where `UsageStatsManager` misreports recents→app transitions), with `UsageStatsManager.queryEvents` and `queryUsageStats` as fallbacks.
+
+Whether the overlay strategy or force-close strategy is right for a given device depends on quirks — overlay races badly with the Accessibility Service on Samsung; force-close needs the Accessibility Service for the HOME action to be reliable on MIUI. The runtime selection per tick covers both.
 
 ## Installation
 
@@ -128,8 +149,14 @@ nfcGuard runs a foreground service that polls the current foreground app via `Us
 ## Manual Installation
 
 1. Clone the repository
-2. Open in Android Studio
-3. Build and run on a physical device (emulator NFC support is limited)
+2. Open in Android Studio, or build from the command line:
+   ```bash
+   ./gradlew :app:assembleDebug         # debug APK → app/build/outputs/apk/debug/
+   ./gradlew :app:installDebug          # install on attached device
+   ./gradlew :domain:test               # pure-JVM unit tests (fast, no Android SDK)
+   ./gradlew test                       # both modules
+   ```
+3. Run on a physical device — NFC requires real hardware; emulator support is unusable.
 
 ## Configuration for Custom ROMs
 
