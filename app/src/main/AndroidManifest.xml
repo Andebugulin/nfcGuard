@@ -28,7 +28,7 @@
         tools:ignore="HardcodedDebugMode">
 
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.NFCGuard"
             android:launchMode="singleTop">
@@ -53,7 +53,7 @@
         </activity>
 
         <service
-            android:name=".BlockerService"
+            android:name=".service.BlockerService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse"
@@ -64,7 +64,7 @@
         </service>
 
         <service
-            android:name=".ForegroundDetectorService"
+            android:name=".service.ForegroundDetectorService"
             android:exported="false"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
@@ -87,12 +87,12 @@
         </provider>
 
         <receiver
-            android:name=".ServiceRestartReceiver"
+            android:name=".receiver.ServiceRestartReceiver"
             android:enabled="true"
             android:exported="false" />
 
         <receiver
-            android:name=".BootReceiver"
+            android:name=".receiver.BootReceiver"
             android:enabled="true"
             android:exported="true"
             android:directBootAware="true">
@@ -105,7 +105,7 @@
         </receiver>
 
         <receiver
-            android:name=".GuardianWidget"
+            android:name=".widget.GuardianWidget"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -116,7 +116,7 @@
         </receiver>
 
         <receiver
-            android:name=".ScheduleAlarmReceiver"
+            android:name=".receiver.ScheduleAlarmReceiver"
             android:enabled="true"
             android:exported="false"
             android:directBootAware="true">
