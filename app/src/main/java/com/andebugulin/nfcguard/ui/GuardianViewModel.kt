@@ -38,6 +38,11 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     private val _safeRegimeEnabled = MutableStateFlow(true)
     val safeRegimeEnabled: StateFlow<Boolean> = _safeRegimeEnabled
 
+    /** Anti-bypass challenge wait time, in seconds. Floor is 90s (raise-only) so
+     *  it can be made harder but never weakened. Stored separately from AppState. */
+    private val _challengeDurationSeconds = MutableStateFlow(CHALLENGE_MIN_SECONDS)
+    val challengeDurationSeconds: StateFlow<Int> = _challengeDurationSeconds
+
     /** Pending NFC unlock awaiting user duration choice */
     private val _pendingUnlock = MutableStateFlow<PendingUnlock?>(null)
     val pendingUnlock: StateFlow<PendingUnlock?> = _pendingUnlock
@@ -47,6 +52,9 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
         // can't disable the safety challenge). Direct prefs access.
         val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
         _safeRegimeEnabled.value = prefs.getBoolean("safe_regime_enabled", true)
+        _challengeDurationSeconds.value =
+            prefs.getInt("safe_regime_challenge_seconds", CHALLENGE_MIN_SECONDS)
+                .coerceAtLeast(CHALLENGE_MIN_SECONDS)
 
         ensureServiceRunning()
 
@@ -72,6 +80,15 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
         _safeRegimeEnabled.value = enabled
         val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
         prefs.edit().putBoolean("safe_regime_enabled", enabled).apply()
+    }
+
+    /** Set the anti-bypass challenge wait time. Coerced to the [CHALLENGE_MIN_SECONDS]
+     *  floor so users can lengthen the challenge but never shorten it below 1:30. */
+    fun setChallengeDurationSeconds(seconds: Int) {
+        val coerced = seconds.coerceAtLeast(CHALLENGE_MIN_SECONDS)
+        _challengeDurationSeconds.value = coerced
+        val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putInt("safe_regime_challenge_seconds", coerced).apply()
     }
 
     /**
@@ -446,6 +463,11 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
             AppLogger.log("TIMER", "Timed deactivation: ${expired.keys}")
             expired.keys.forEach { modeId -> deactivateMode(modeId) }
         }
+    }
+
+    companion object {
+        /** Minimum (and default) anti-bypass challenge wait time, in seconds. */
+        const val CHALLENGE_MIN_SECONDS = 90
     }
 
 }

@@ -9,6 +9,9 @@ import com.andebugulin.nfcguard.ui.GuardianTheme
 import com.andebugulin.nfcguard.ui.GuardianViewModel
 import com.andebugulin.nfcguard.ui.safety.SafeRegimeChallengeDialog
 import com.andebugulin.nfcguard.ui.Screen
+import com.andebugulin.nfcguard.ui.onboarding.FeatureShowcaseDialog
+import com.andebugulin.nfcguard.ui.onboarding.isShowcaseSeen
+import com.andebugulin.nfcguard.ui.onboarding.markShowcaseSeen
 
 import android.content.Context
 import android.content.Intent
@@ -56,6 +59,7 @@ fun HomeScreen(
     onNavigate: (Screen) -> Unit
 ) {
     val appState by viewModel.appState.collectAsState()
+    val challengeDuration by viewModel.challengeDurationSeconds.collectAsState()
     val context = LocalContext.current
 
     var showEmergencyDialog by remember { mutableStateOf(false) }
@@ -63,6 +67,21 @@ fun HomeScreen(
     var showTagSelectionDialog by remember { mutableStateOf(false) }
     var selectedTagsToDelete by remember { mutableStateOf(setOf<String>()) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showcaseFor by remember { mutableStateOf<Screen?>(null) }
+
+    // First-time entry to a section shows a one-off explainer, but only for a
+    // genuinely new user: that section has nothing configured AND the popup
+    // hasn't been seen. Otherwise navigate straight through.
+    val openSection: (Screen) -> Unit = { screen ->
+        val sectionEmpty = when (screen) {
+            Screen.MODES -> appState.modes.isEmpty()
+            Screen.SCHEDULES -> appState.schedules.isEmpty()
+            Screen.NFC_TAGS -> appState.nfcTags.isEmpty()
+            else -> false
+        }
+        if (sectionEmpty && !isShowcaseSeen(context, screen)) showcaseFor = screen
+        else onNavigate(screen)
+    }
 
     // Tick every 30s to keep timer countdowns fresh
     var timeTick by remember { mutableStateOf(0L) }
@@ -266,21 +285,21 @@ fun HomeScreen(
             title = "MODES",
             subtitle = "${appState.modes.size} CREATED",
             icon = Icons.Default.Block,
-            onClick = { onNavigate(Screen.MODES) }
+            onClick = { openSection(Screen.MODES) }
         )
 
         NavigationCard(
             title = "SCHEDULES",
             subtitle = "${appState.schedules.size} CONFIGURED",
             icon = Icons.Default.Schedule,
-            onClick = { onNavigate(Screen.SCHEDULES) }
+            onClick = { openSection(Screen.SCHEDULES) }
         )
 
         NavigationCard(
             title = "NFC TAGS",
             subtitle = "${appState.nfcTags.size} REGISTERED",
             icon = Icons.Default.Nfc,
-            onClick = { onNavigate(Screen.NFC_TAGS) }
+            onClick = { openSection(Screen.NFC_TAGS) }
         )
 
         Spacer(Modifier.weight(1f))
@@ -463,6 +482,7 @@ fun HomeScreen(
     if (showEmergencyChallenge) {
         SafeRegimeChallengeDialog(
             actionDescription = "Emergency reset will deactivate all modes and delete selected NFC tags. This could bypass the blocker.",
+            totalDurationSeconds = challengeDuration,
             onComplete = {
                 showEmergencyChallenge = false
                 showTagSelectionDialog = true
@@ -512,6 +532,17 @@ fun HomeScreen(
             onDismiss = {
                 showSettingsDialog = false
                 permissionCheckTrigger++ // recheck permissions when closing
+            }
+        )
+    }
+
+    showcaseFor?.let { screen ->
+        FeatureShowcaseDialog(
+            screen = screen,
+            onContinue = {
+                markShowcaseSeen(context, screen)
+                showcaseFor = null
+                onNavigate(screen)
             }
         )
     }
@@ -798,6 +829,9 @@ fun SettingsDialog(
     var pendingImportData by remember { mutableStateOf<ConfigManager.ExportData?>(null) }
     var showExportFormatChooser by remember { mutableStateOf(false) }
     var showImportChallenge by remember { mutableStateOf(false) }
+    val challengeDuration by viewModel.challengeDurationSeconds.collectAsState()
+    var showTestChallenge by remember { mutableStateOf(false) }
+    var showDurationPicker by remember { mutableStateOf(false) }
 
     // Auto-refresh permissions when activity resumes + periodic poll
     // (Battery optimization dialog stays in-app, so ON_RESUME doesn't fire for it)
@@ -1089,7 +1123,7 @@ fun SettingsDialog(
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                if (safeRegimeEnabled) "Actions that could bypass blocking require a 5-minute attention challenge"
+                                if (safeRegimeEnabled) "Actions that could bypass blocking require a 1.5-minute attention challenge"
                                 else "Disabled — all actions are unrestricted",
                                 fontSize = 9.sp,
                                 color = GuardianTheme.TextTertiary,
@@ -1144,9 +1178,67 @@ fun SettingsDialog(
                     }
                 }
 
+                // Challenge duration — configurable, but never below 1:30
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(0.dp),
+                    color = GuardianTheme.BackgroundSurface,
+                    onClick = { showDurationPicker = true }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "CHALLENGE DURATION",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = GuardianTheme.TextPrimary,
+                                letterSpacing = 1.sp
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                "How long you must stay attentive (minimum 1:30)",
+                                fontSize = 9.sp,
+                                color = GuardianTheme.TextTertiary,
+                                letterSpacing = 0.3.sp
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "${challengeDuration / 60}:${"%02d".format(challengeDuration % 60)}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                            color = GuardianTheme.TextPrimary,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
+
+                // Test the challenge without needing an active mode
+                Button(
+                    onClick = { showTestChallenge = true },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GuardianTheme.BackgroundSurface,
+                        contentColor = GuardianTheme.TextPrimary
+                    ),
+                    shape = RoundedCornerShape(0.dp),
+                    modifier = Modifier.fillMaxWidth().height(40.dp)
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Shield, null, modifier = Modifier.size(16.dp))
+                        Text("TEST CHALLENGE", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    }
+                }
+
                 if (showSafeRegimeChallenge) {
                     SafeRegimeChallengeDialog(
                         actionDescription = "You are trying to disable Safe Regime while modes are active. This could allow bypassing the blocker.",
+                        totalDurationSeconds = challengeDuration,
                         onComplete = {
                             viewModel.setSafeRegimeEnabled(false)
                             showSafeRegimeChallenge = false
@@ -1415,12 +1507,34 @@ fun SettingsDialog(
     if (showImportChallenge) {
         SafeRegimeChallengeDialog(
             actionDescription = "Importing a config while modes are active could be used to bypass blocking. Verify your intent.",
+            totalDurationSeconds = challengeDuration,
             onComplete = {
                 showImportChallenge = false
                 importLauncher.launch(arrayOf("application/json", "application/x-yaml", "*/*"))
             },
             onCancel = {
                 showImportChallenge = false
+            }
+        )
+    }
+
+    // Let users feel the anti-bypass challenge without an active mode
+    if (showTestChallenge) {
+        SafeRegimeChallengeDialog(
+            actionDescription = "This is a practice run of the anti-bypass challenge. It's how Guardian protects sensitive actions while modes are active.",
+            totalDurationSeconds = challengeDuration,
+            onComplete = { showTestChallenge = false },
+            onCancel = { showTestChallenge = false }
+        )
+    }
+
+    if (showDurationPicker) {
+        ChallengeDurationDialog(
+            currentSeconds = challengeDuration,
+            onDismiss = { showDurationPicker = false },
+            onConfirm = { seconds ->
+                viewModel.setChallengeDurationSeconds(seconds)
+                showDurationPicker = false
             }
         )
     }
@@ -1564,4 +1678,103 @@ private fun PermissionRow(
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChallengeDurationDialog(
+    currentSeconds: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    var mins by remember { mutableStateOf((currentSeconds / 60).toString()) }
+    var secs by remember { mutableStateOf((currentSeconds % 60).toString()) }
+    val total = (mins.toIntOrNull() ?: 0) * 60 + (secs.toIntOrNull() ?: 0)
+    val belowMin = total < 90
+
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = GuardianTheme.BorderFocused,
+        unfocusedBorderColor = GuardianTheme.BorderSubtle,
+        focusedTextColor = GuardianTheme.InputText,
+        unfocusedTextColor = GuardianTheme.InputText,
+        focusedLabelColor = GuardianTheme.TextSecondary,
+        unfocusedLabelColor = GuardianTheme.TextTertiary,
+        cursorColor = GuardianTheme.InputCursor
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = GuardianTheme.ButtonSecondary,
+        tonalElevation = 0.dp,
+        shape = RoundedCornerShape(0.dp),
+        modifier = Modifier.border(
+            width = GuardianTheme.DialogBorderWidth,
+            color = GuardianTheme.DialogBorderInfo,
+            shape = RoundedCornerShape(0.dp)
+        ),
+        title = {
+            Text(
+                "CHALLENGE DURATION",
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp,
+                color = GuardianTheme.TextPrimary,
+                fontSize = 14.sp
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "How long you must stay attentive before a bypass-risky action goes through. The minimum is 1:30 — you can make it longer, never shorter.",
+                    fontSize = 10.sp,
+                    color = GuardianTheme.TextSecondary,
+                    letterSpacing = 0.3.sp
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = mins,
+                        onValueChange = { mins = it.filter { c -> c.isDigit() }.take(2) },
+                        label = { Text("MIN", fontSize = 9.sp, letterSpacing = 1.sp) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        colors = fieldColors,
+                        shape = RoundedCornerShape(0.dp)
+                    )
+                    Text(":", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = GuardianTheme.TextPrimary)
+                    OutlinedTextField(
+                        value = secs,
+                        onValueChange = { secs = it.filter { c -> c.isDigit() }.take(2) },
+                        label = { Text("SEC", fontSize = 9.sp, letterSpacing = 1.sp) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        colors = fieldColors,
+                        shape = RoundedCornerShape(0.dp)
+                    )
+                }
+                if (belowMin) {
+                    Text(
+                        "Minimum is 1:30",
+                        fontSize = 10.sp,
+                        color = GuardianTheme.Error,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(total) }, enabled = !belowMin) {
+                Text("APPLY", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(contentColor = GuardianTheme.TextSecondary)
+            ) {
+                Text("CANCEL", letterSpacing = 1.sp)
+            }
+        }
+    )
 }

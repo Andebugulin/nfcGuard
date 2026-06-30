@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -91,15 +92,9 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Notification permission (Android 13+) is a runtime permission, not a
-        // settings-page intent like the others, so we ask for it directly from
-        // the activity instead of going through the Compose onboarding flow.
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
-                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001)
-            }
-        }
+        // Notification permission (Android 13+) is requested as an explained,
+        // optional step inside the permission onboarding flow — not fired
+        // blindly at launch, where it lands before the user knows what it's for.
 
         handleNfcIntent(intent)
     }
@@ -230,6 +225,12 @@ fun MainNavigation(
         )
     }
 
+    // Back from a sub-screen returns to Home instead of exiting to the
+    // launcher. On Home, Back is left unhandled so the system exits normally.
+    BackHandler(enabled = hasSeenOnboarding && currentScreen != Screen.HOME) {
+        currentScreen = Screen.HOME
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         if (!hasSeenOnboarding) {
             OnboardingScreen(
@@ -284,25 +285,39 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         OnboardingPage(
             title = "MODES",
             subtitle = "FLEXIBLE CONTROL",
-            description = "Create blocking modes for different contexts:\n\n- BLOCK MODE - Block specific distracting apps\n- ALLOW MODE - Block everything except essential apps",
+            description = "Create blocking modes for any situation:\n\n" +
+                    "•  BLOCK — block the specific apps that distract you\n" +
+                    "•  ALLOW ONLY — block everything except the apps you choose",
             icon = "modes"
         ),
         OnboardingPage(
             title = "NFC LOCKS",
             subtitle = "PHYSICAL FRICTION",
-            description = "Optional: Require NFC tags to unlock modes.\n\nPlace tags in inconvenient locations (kitchen, gym, friend's house) to add intentional friction before accessing blocked apps.",
+            description = "Add NFC tags as physical keys to unlock your modes.\n\n" +
+                    "Keep a tag somewhere inconvenient — a drawer, the kitchen, another room — so opening a blocked app takes real, deliberate effort.\n\n" +
+                    "This is an optional extra layer; modes work fine without it.",
             icon = "nfc"
         ),
         OnboardingPage(
             title = "SCHEDULES",
             subtitle = "AUTOMATION",
-            description = "Set modes to activate automatically:\n\n- Weekday work hours (9am-5pm)\n- Sleep schedule (10pm-7am)\n- Weekend deep work sessions",
+            description = "Let modes turn on by themselves, on the days and times you set:\n\n" +
+                    "•  Work hours on weekdays\n" +
+                    "•  Sleep schedule overnight\n" +
+                    "•  Deep-work blocks on weekends",
             icon = "schedule"
         ),
         OnboardingPage(
             title = "READY",
             subtitle = "LET'S GET STARTED",
-            description = "Guardian needs a few permissions to work:\n\n- Usage access - Detect which apps you use\n- Display over apps - Show block screen\n- Battery optimization - Run reliably\n\nLet's set them up now.",
+            description = "Guardian needs a few permissions to do its job. We'll walk through each one and explain why:\n\n" +
+                    "•  Notifications (optional) — show which modes are active\n" +
+                    "•  Usage access — see which app is open\n" +
+                    "•  Display over apps — show the block screen\n" +
+                    "•  Battery optimization — keep running reliably\n" +
+                    "•  Pause app activity — must be turned off for Guardian\n" +
+                    "•  Accessibility — more reliable, instant blocking\n\n" +
+                    "Let's set them up.",
             icon = "ready"
         )
     )
@@ -484,15 +499,18 @@ fun OnboardingPageContent(page: OnboardingPage) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Description
+        // Description — left-aligned so multi-line bullet lists line up
+        // cleanly instead of rendering ragged under centered alignment.
         Text(
             page.description,
             fontSize = 14.sp,
             color = GuardianTheme.TextPrimary,
             letterSpacing = 0.5.sp,
             lineHeight = 22.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
+            textAlign = TextAlign.Start,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
         )
     }
 }
