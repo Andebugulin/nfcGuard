@@ -37,9 +37,9 @@ import kotlinx.coroutines.delay
 fun SafeRegimeChallengeDialog(
     actionDescription: String,
     onComplete: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    totalDurationSeconds: Int = 90 // default 1.5 minutes; configurable in Settings
 ) {
-    val totalDurationSeconds = 90 // 1.5 minutes
     val waitPhaseSeconds = 15     // seconds of passive waiting per cycle
     val checkPhaseSeconds = 5     // seconds the user has to press
 
@@ -50,7 +50,9 @@ fun SafeRegimeChallengeDialog(
     var completed by remember { mutableStateOf(false) }
     var checksCompleted by remember { mutableIntStateOf(0) }
 
-    val totalChecks = totalDurationSeconds / (waitPhaseSeconds + checkPhaseSeconds) // 20
+    // Note: the number of attention checks isn't fixed — pressing quickly fits
+    // more cycles into the total time — so we show checks *passed*, never a
+    // total to chase (a misleading "x / 4" let fast tappers overshoot to 5/4).
 
     // Main timer tick — 1 second resolution
     LaunchedEffect(failed, completed) {
@@ -72,7 +74,7 @@ fun SafeRegimeChallengeDialog(
                 }
             }
         }
-        // 5 minutes passed with all checks — success
+        // 1.5 minutes passed with all checks — success
         completed = true
         onComplete()
     }
@@ -217,7 +219,7 @@ fun SafeRegimeChallengeDialog(
                                 trackColor = GuardianTheme.ButtonDisabledContainer
                             )
                             Text(
-                                "CHECK $checksCompleted / $totalChecks",
+                                "CHECKS PASSED: $checksCompleted",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = GuardianTheme.TextSecondary,

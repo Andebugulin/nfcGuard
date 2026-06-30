@@ -35,6 +35,7 @@ fun NfcTagsScreen(
     onBack: () -> Unit
 ) {
     val appState by viewModel.appState.collectAsState()
+    val challengeDuration by viewModel.challengeDurationSeconds.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var pendingTagId by remember { mutableStateOf<String?>(null) }
     var editingTag by remember { mutableStateOf<NfcTag?>(null) }
@@ -309,14 +310,14 @@ fun NfcTagsScreen(
                         ) {
                             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(
-                                    "ANTI-CHEAT PROTECTION:",
+                                    "ANTI-BYPASS PROTECTION:",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Black,
                                     color = GuardianTheme.Warning,
                                     letterSpacing = 1.sp
                                 )
                                 Text(
-                                    "This tag has active modes. Extra confirmation required to prevent cheating.",
+                                    "This tag has active modes. Extra confirmation is required to prevent bypassing the blocker.",
                                     fontSize = 11.sp,
                                     color = GuardianTheme.Warning,
                                     letterSpacing = 0.5.sp
@@ -396,6 +397,7 @@ fun NfcTagsScreen(
     if (showDeleteChallenge && pendingDeleteTag != null) {
         SafeRegimeChallengeDialog(
             actionDescription = "Deleting NFC tag ${pendingDeleteTag!!.name} while modes are active could make it impossible to deactivate them normally.",
+            totalDurationSeconds = challengeDuration,
             onComplete = {
                 pendingDeleteTag?.let { viewModel.deleteNfcTag(it.id) }
                 showDeleteChallenge = false

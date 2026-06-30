@@ -1,13 +1,18 @@
 package com.andebugulin.nfcguard.ui.onboarding
 
+import android.Manifest
 import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.os.Process
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -64,6 +69,8 @@ private data class PermissionRequest(
 
 private sealed interface OnboardingStep {
     data object Welcome : OnboardingStep
+    /** Android 13+ runtime notification prompt, shown with an explanation first. */
+    data object NotificationPermission : OnboardingStep
     data class GrantPermission(
         val current: PermissionRequest,
         val queue: List<PermissionRequest>
@@ -81,6 +88,13 @@ fun PermissionOnboarding(onDone: () -> Unit) {
     val context = LocalContext.current
     var step by remember { mutableStateOf<OnboardingStep?>(OnboardingStep.Welcome) }
 
+    // POST_NOTIFICATIONS is a runtime permission (not a Settings intent), so we
+    // request it through an Activity-result launcher after explaining why.
+    // Whatever the user chooses, we advance into the rest of the flow.
+    val notificationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { step = afterNotification(context) }
+
     when (val s = step) {
         null -> {
             // Flow finished — signal the host to drop us from composition.
@@ -97,6 +111,10 @@ fun PermissionOnboarding(onDone: () -> Unit) {
                 markInitialPermissionsGranted(context)
                 step = null
             }
+        )
+        OnboardingStep.NotificationPermission -> NotificationPermissionDialog(
+            onAllow = { notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
+            onSkip = { step = afterNotification(context) }
         )
         is OnboardingStep.GrantPermission -> GrantPermissionDialog(
             request = s.current,
@@ -153,11 +171,24 @@ fun PermissionOnboarding(onDone: () -> Unit) {
 // ─── State transitions ─────────────────────────────────────────────────────
 
 private fun nextAfterWelcome(context: Context): OnboardingStep? {
+    if (needsNotificationPermission(context)) return OnboardingStep.NotificationPermission
+    return afterNotification(context)
+}
+
+/** Continue past the (optional) notification step into the remaining permissions. */
+private fun afterNotification(context: Context): OnboardingStep? {
     val needed = computeNeededPermissions(context)
     return when {
         needed.isNotEmpty() -> OnboardingStep.GrantPermission(needed.first(), needed.drop(1))
         else -> nextAfterPermissionsExhausted(context)
     }
+}
+
+private fun needsNotificationPermission(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false
+    return ContextCompat.checkSelfPermission(
+        context, Manifest.permission.POST_NOTIFICATIONS
+    ) != PackageManager.PERMISSION_GRANTED
 }
 
 private fun advancePermissionQueue(queue: List<PermissionRequest>, context: Context): OnboardingStep? {
@@ -229,7 +260,7 @@ private fun computeNeededPermissions(context: Context): List<PermissionRequest> 
     if (!granted) {
         needed += PermissionRequest(
             "Usage Access",
-            "Required to detect which apps you're using",
+            "Lets Guardian see which app is currently open so it can block the right ones. It can't see anything inside your apps.",
             Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
         )
     }
@@ -238,7 +269,7 @@ private fun computeNeededPermissions(context: Context): List<PermissionRequest> 
     if (!Settings.canDrawOverlays(context)) {
         needed += PermissionRequest(
             "Display Over Apps",
-            "Required to show the block screen",
+            "Lets Guardian show the block screen on top of an app you've chosen to block.",
             Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:${context.packageName}")
@@ -251,7 +282,7 @@ private fun computeNeededPermissions(context: Context): List<PermissionRequest> 
     if (!powerManager.isIgnoringBatteryOptimizations(context.packageName)) {
         needed += PermissionRequest(
             "Battery Optimization",
-            "Required to run reliably in the background",
+            "Stops Android from shutting Guardian down in the background, so blocking keeps working even after a while.",
             Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
                 .setData(Uri.parse("package:${context.packageName}"))
         )
@@ -269,16 +300,35 @@ private fun WelcomeDialog(
 ) {
     StyledDialog(
         title = "WELCOME TO GUARDIAN",
-        message = "Guardian needs the following permissions to protect your focus:\n\n" +
-            "• Notifications (optional) — display active modes\n" +
-            "• USAGE ACCESS — detect which apps you're using\n" +
-            "• DISPLAY OVER APPS — show the block screen\n" +
-            "• BATTERY OPTIMIZATION — run reliably in background\n" +
-            "• PAUSE APP ACTIVITY — must be disabled for Guardian\n" +
-            "• ACCESSIBILITY SERVICE — more reliable app detection\n\n" +
+        message = "To protect your focus, Guardian needs a few permissions. " +
+            "We'll go through them one at a time and explain each:\n\n" +
+            "• Notifications (optional) — show which modes are active\n" +
+            "• Usage access — see which app is open\n" +
+            "• Display over apps — show the block screen\n" +
+            "• Battery optimization — keep running reliably\n" +
+            "• Pause app activity — must be turned off for Guardian\n" +
+            "• Accessibility — more reliable, instant blocking\n\n" +
             "Let's set these up now.",
         confirmLabel = "CONTINUE",
         onConfirm = onContinue,
+        dismissLabel = "SKIP",
+        onDismiss = onSkip
+    )
+}
+
+@Composable
+private fun NotificationPermissionDialog(
+    onAllow: () -> Unit,
+    onSkip: () -> Unit
+) {
+    StyledDialog(
+        title = "NOTIFICATIONS (OPTIONAL)",
+        message = "Guardian can show a quiet notification with which modes are " +
+            "active and when a temporary unlock ends.\n\n" +
+            "This is optional — blocking works fine without it, and you can " +
+            "change it anytime in system settings.",
+        confirmLabel = "ALLOW",
+        onConfirm = onAllow,
         dismissLabel = "SKIP",
         onDismiss = onSkip
     )

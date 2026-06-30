@@ -128,6 +128,7 @@ fun SchedulesScreen(
 ) {
     val appState by viewModel.appState.collectAsState()
     val safeRegimeEnabled by viewModel.safeRegimeEnabled.collectAsState()
+    val challengeDuration by viewModel.challengeDurationSeconds.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSchedule by remember { mutableStateOf<Schedule?>(null) }
     var showDeleteDialog by remember { mutableStateOf<Schedule?>(null) }
@@ -162,6 +163,7 @@ fun SchedulesScreen(
     if (showSafeRegimeChallenge) {
         SafeRegimeChallengeDialog(
             actionDescription = challengeDescription,
+            totalDurationSeconds = challengeDuration,
             onComplete = {
                 showSafeRegimeChallenge = false
                 pendingChallengeAction?.invoke()
@@ -1087,7 +1089,7 @@ fun ScheduleEditorDialog(
                                     ) {
                                         Icon(Icons.Default.Shield, null, tint = GuardianTheme.Warning, modifier = Modifier.size(14.dp))
                                         Text(
-                                            "Safe regime: saving will require a 5-min challenge",
+                                            "Safe regime: saving will require a 1.5-min challenge",
                                             fontSize = 9.sp,
                                             color = GuardianTheme.Warning,
                                             letterSpacing = 0.3.sp
