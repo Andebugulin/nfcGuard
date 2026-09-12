@@ -1,12 +1,12 @@
 # Testing
 
-198 tests, 0 failures — 179 on the JVM, 19 on a real device.
+232 tests, 0 failures — 213 on the JVM, 19 on a real device.
 
 ```bash
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # AGP needs JDK 17+
 
 ./gradlew :domain:test              # 78 tests, pure Kotlin, ~3s
-./gradlew :app:testDebugUnitTest    # 101 tests, Robolectric, ~20s
+./gradlew :app:testDebugUnitTest    # 135 tests, Robolectric, ~50s
 ./gradlew test                      # both JVM suites
 ```
 
@@ -46,8 +46,8 @@ HTML reports: `domain/build/reports/tests/test/index.html`,
 | `:app` receiver | 474 | Robolectric | **covered** (10 tests) |
 | `:app` service | 1,244 | Robolectric | **partial** (15 tests) — enforcers untested |
 | `:app` viewmodel | 473 | Robolectric | **covered** (18 tests) |
-| `:app` onboarding UI | 438 | Robolectric + Compose | **covered** (6 tests) |
-| `:app` remaining screens / widget | 8,339 | — | **not covered** |
+| `:app` Compose screens | 7,699 | Robolectric + Compose | **covered** (40 tests) |
+| `:app` widget / showcase / theme | 640 | — | **not covered** |
 | device behaviour | — | instrumented | **covered** (19 tests) |
 
 The split is deliberate rather than accidental: everything above the UI line is
@@ -106,9 +106,31 @@ safe-regime flag and challenge duration that deliberately live outside
 raise-only floor, import replace vs merge, orphan tag cleanup, and the NFC
 unlock round-trip.
 
-`OnboardingScreenTest` (6) drives the real carousel through Compose testing
-under Robolectric — including the "GET STARTED" handoff that issue #12 crashed
-on.
+Every screen has a Compose suite running under Robolectric — no device needed:
+
+| Suite | Tests | Covers |
+|---|---|---|
+| `OnboardingScreenTest` | 6 | the carousel and the "GET STARTED" handoff that #12 crashed on |
+| `ModesScreenTest` | 8 | empty state, listing, both polarities, active badge |
+| `NfcTagsScreenTest` | 6 | empty state, registration entry, listing, unlinked-tag notice |
+| `SchedulesScreenTest` | 5 | "create modes first" gate, creation once a mode exists, listing |
+| `InfoScreenTest` | 4 | renders offline, both enforcement explanations, bug-report entry |
+| `ModeEditorScreenTest` | 4 | both polarities, NFC tag lock section |
+| `SafeRegimeChallengeDialogTest` | 4 | never completes early, giving up cancels rather than satisfies |
+| `HomeScreenTest` | 3 | renders empty, with modes, with an active mode |
+
+These are render-and-key-interaction tests, not exhaustive branch coverage —
+they catch "this screen crashes or stops rendering", which is the class of bug
+issue #12 was.
+
+Three Compose gotchas this codebase hits, all encoded in the suites:
+
+- **Names render `.uppercase()`.** Assert `"DEEP WORK"`, not `"Deep Work"`.
+- **Below-the-fold content in a `LazyColumn` is not composed.** Reach it with
+  `onNode(hasScrollAction()).performScrollToNode(hasText(...))`.
+- **`HomeScreen` runs endless `LaunchedEffect` loops** (2s permission refresh,
+  30s poll), so the auto-advancing clock never reaches idle. Set
+  `compose.mainClock.autoAdvance = false` and advance by frame.
 
 **Testing note:** `GuardianViewModel.init` starts an endless 5-second polling
 loop on `viewModelScope`. `runTest` hangs on it, because its cleanup runs
@@ -176,15 +198,15 @@ pins the default to 34. Tests that care declare their own range.
 
 Not covered, in rough priority order:
 
-1. **The large Compose screens — ~7,900 LOC.** `HomeScreen` (1,765),
-   `SchedulesScreen` (1,373), `ModesScreen` (1,236), `NfcTagsScreen` (845),
-   `ModeEditorScreen` (809), `InfoScreen` (783), `SafeRegimeChallengeDialog`
-   (322), `FeatureShowcase` (226). The harness is proven by
-   `OnboardingScreenTest`, so these are mechanical rather than exploratory.
+1. **`GuardianWidget` (308).** Button actions and rendering. Needs
+   `AppWidgetManager` fakes or an instrumented test.
 2. **`ForceCloseEnforcer` (116).** Sends HOME through accessibility; needs a
    device test that can observe the launcher coming forward.
-3. **`GuardianWidget` (308).** Button actions and rendering.
-4. **NFC tag scanning.** Requires physically tapping a tag; no harness can
+3. **`FeatureShowcase` (226).** First-run popups.
+4. **Dialog branches inside the covered screens.** The suites assert each
+   screen renders and its primary controls work; the create/edit/delete
+   dialogs and their validation paths are largely unexercised.
+5. **NFC tag scanning.** Requires physically tapping a tag; no harness can
    simulate it. The unlock *logic* is fully covered in `:domain` and the
    ViewModel, so only the `MainActivity` intent plumbing is unverified.
 

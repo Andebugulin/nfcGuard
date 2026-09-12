@@ -73,3 +73,15 @@ fun persistedStateJson(context: Context): String? =
         .getString("app_state", null)
 
 fun emptyState() = AppState()
+
+/**
+ * Cancel a ViewModel's scope. `GuardianViewModel.init` starts an endless 5s
+ * polling loop; left running it keeps the test JVM from settling.
+ */
+fun cancelViewModel(vm: androidx.lifecycle.ViewModel) {
+    runCatching {
+        val clear = androidx.lifecycle.ViewModel::class.java.getDeclaredMethod("clear")
+        clear.isAccessible = true
+        clear.invoke(vm)
+    }
+}
