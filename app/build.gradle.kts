@@ -120,6 +120,9 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
+    testImplementation(platform("androidx.compose:compose-bom:2024.09.00"))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+
 }
 
 afterEvaluate {
