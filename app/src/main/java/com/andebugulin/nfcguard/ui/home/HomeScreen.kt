@@ -50,6 +50,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import com.andebugulin.nfcguard.data.Permissions
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -108,15 +109,7 @@ fun HomeScreen(
     }
 
     val permissionsGranted = remember(permissionCheckTrigger) {
-        val usageStatsOk = try {
-            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
-            val mode = appOps.unsafeCheckOpNoThrow(
-                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
-                android.os.Process.myUid(),
-                context.packageName
-            )
-            mode == android.app.AppOpsManager.MODE_ALLOWED
-        } catch (_: Exception) { false }
+        val usageStatsOk = Permissions.hasUsageStats(context)
         val overlayOk = Settings.canDrawOverlays(context)
         val batteryOk = try {
             val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -855,15 +848,7 @@ fun SettingsDialog(
 
     // Permission state - rechecked on every activity resume
     val usageStatsGranted = remember(permRefreshKey) {
-        try {
-            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
-            val mode = appOps.unsafeCheckOpNoThrow(
-                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
-                android.os.Process.myUid(),
-                context.packageName
-            )
-            mode == android.app.AppOpsManager.MODE_ALLOWED
-        } catch (_: Exception) { false }
+        Permissions.hasUsageStats(context)
     }
     val overlayGranted = remember(permRefreshKey) { Settings.canDrawOverlays(context) }
     val batteryGranted = remember(permRefreshKey) {

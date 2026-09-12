@@ -33,6 +33,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.andebugulin.nfcguard.service.ForegroundDetectorService
 import com.andebugulin.nfcguard.ui.GuardianTheme
 import kotlinx.coroutines.delay
+import com.andebugulin.nfcguard.data.Permissions
 
 /**
  * Compose-native onboarding state machine for first-run permission setup.
@@ -249,14 +250,7 @@ private fun computeNeededPermissions(context: Context): List<PermissionRequest> 
     // Usage Access — heuristic: queryUsageStats returns empty if permission missing
     val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE)
         as android.app.usage.UsageStatsManager
-    val granted = try {
-        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-        appOps.unsafeCheckOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            Process.myUid(),
-            context.packageName
-        ) == AppOpsManager.MODE_ALLOWED
-    } catch (_: Exception) { false }
+    val granted = Permissions.hasUsageStats(context)
     if (!granted) {
         needed += PermissionRequest(
             "Usage Access",

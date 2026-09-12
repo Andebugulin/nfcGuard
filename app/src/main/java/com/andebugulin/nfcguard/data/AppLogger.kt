@@ -103,12 +103,7 @@ object AppLogger {
 
         try {
             val overlayOk = Settings.canDrawOverlays(context)
-            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
-            val usageOk = appOps.unsafeCheckOpNoThrow(
-                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
-                android.os.Process.myUid(),
-                context.packageName
-            ) == android.app.AppOpsManager.MODE_ALLOWED
+            val usageOk = Permissions.hasUsageStats(context)
             val pm = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
 
             sb.appendLine("**Permissions:** Overlay=$overlayOk | UsageAccess=$usageOk | ServiceRunning=${BlockerService.isRunning()}")
@@ -143,13 +138,7 @@ object AppLogger {
         sb.appendLine("── PERMISSIONS ─────────────────────────")
         try {
             sb.appendLine("Overlay: ${Settings.canDrawOverlays(context)}")
-            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
-            val mode = appOps.unsafeCheckOpNoThrow(
-                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
-                android.os.Process.myUid(),
-                context.packageName
-            )
-            sb.appendLine("Usage Access: ${mode == android.app.AppOpsManager.MODE_ALLOWED}")
+            sb.appendLine("Usage Access: ${Permissions.hasUsageStats(context)}")
             val pm = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
             sb.appendLine("Battery Optimized: ${!pm.isIgnoringBatteryOptimizations(context.packageName)}")
         } catch (e: Exception) {
