@@ -14,6 +14,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
@@ -174,6 +175,13 @@ class BlockerService : Service() {
         fun isRunning() = isRunning
     }
 
+    private val powerManager by lazy {
+        getSystemService(Context.POWER_SERVICE) as PowerManager
+    }
+    private val keyguardManager by lazy {
+        getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+    }
+
     private fun startMonitoring() {
         serviceScope.launch {
             monitoringMutex.withLock {
@@ -193,7 +201,23 @@ class BlockerService : Service() {
         }
     }
 
+    /** Enforcement only makes sense while the user can actually reach an app. */
+    private fun isScreenUsable(): Boolean =
+        powerManager.isInteractive && !keyguardManager.isKeyguardLocked
+
     private suspend fun checkCurrentApp() {
+        // Issue #13: with the screen off or the keyguard up, the detector
+        // falls through to its usage-stats fallback, which reports the
+        // last-used package — usually the blocked one. Enforcing on that
+        // puts the overlay over the lock screen (it carries
+        // FLAG_SHOW_WHEN_LOCKED) and holds the display awake via
+        // FLAG_KEEP_SCREEN_ON. Nothing is reachable behind the keyguard, so
+        // there is nothing to enforce.
+        if (!isScreenUsable()) {
+            overlayEnforcer.onAllowed(currentApp = "", isLauncher = false)
+            return
+        }
+
         // FIX: If no modes are active, nothing can possibly be blocked.
         // Skip detection entirely to avoid the race condition where we
         // evaluate with stale blocklist data during mode transitions.
