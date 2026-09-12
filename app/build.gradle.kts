@@ -122,6 +122,14 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(platform("androidx.compose:compose-bom:2024.09.00"))
     testImplementation("androidx.compose.ui:ui-test-junit4")
+    // Instrumented tests (real device: NFC, accessibility, overlay, widget)
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.09.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
 
 }
 
