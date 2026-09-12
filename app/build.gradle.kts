@@ -10,14 +10,14 @@ plugins {
 
 android {
     namespace = "com.andebugulin.nfcguard"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.andebugulin.nfcguard"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 13
-        versionName = "1.1.7"
+        targetSdk = 36
+        versionCode = 14
+        versionName = "1.1.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
