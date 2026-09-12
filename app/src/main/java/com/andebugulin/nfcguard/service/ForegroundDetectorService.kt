@@ -1,6 +1,9 @@
 package com.andebugulin.nfcguard.service
 
 import com.andebugulin.nfcguard.data.AppLogger
+import com.andebugulin.nfcguard.data.AppStateRepository
+import com.andebugulin.nfcguard.receiver.ScheduleAlarmReceiver
+import com.andebugulin.nfcguard.sync.StateSyncer
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
@@ -24,6 +27,7 @@ class ForegroundDetectorService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        AppLogger.init(this)
         val info = AccessibilityServiceInfo().apply {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
@@ -37,6 +41,25 @@ class ForegroundDetectorService : AccessibilityService() {
         isRunning = true
         android.util.Log.d("FG_DETECTOR", "ForegroundDetectorService connected")
         AppLogger.log("SERVICE", "ForegroundDetectorService connected")
+
+        // Issue #10: a force-stop puts the app in stopped state — pending
+        // alarms are cancelled and implicit broadcasts are withheld, so
+        // neither the 15-minute watchdog nor BootReceiver can bring blocking
+        // back. An enabled AccessibilityService is the one component the
+        // system rebinds on its own, which makes this the only dependable
+        // recovery hook. Restore enforcement from persisted state.
+        try {
+            val state = AppStateRepository.getInstance(this).current
+            StateSyncer.sync(this, state)
+            ScheduleAlarmReceiver.scheduleWatchdog(this)
+            AppLogger.log(
+                "SERVICE",
+                "Blocking restored on accessibility connect " +
+                    "(${state.activeModes.size} active modes)"
+            )
+        } catch (e: Exception) {
+            AppLogger.log("SERVICE", "Restore on accessibility connect failed: ${e.message}")
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
