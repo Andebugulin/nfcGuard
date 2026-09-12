@@ -1,14 +1,33 @@
 # Testing
 
-155 tests, 0 failures. Two suites, both plain JVM — no device, no emulator.
+198 tests, 0 failures — 179 on the JVM, 19 on a real device.
 
 ```bash
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # AGP needs JDK 17+
 
 ./gradlew :domain:test              # 78 tests, pure Kotlin, ~3s
-./gradlew :app:testDebugUnitTest    # 77 tests, Robolectric, ~20s
-./gradlew test                      # everything
+./gradlew :app:testDebugUnitTest    # 101 tests, Robolectric, ~20s
+./gradlew test                      # both JVM suites
 ```
+
+### Instrumented suite (real device)
+
+Do **not** use `./gradlew :app:connectedDebugAndroidTest`: it reinstalls the
+APK on every run, and a reinstall wipes the appops grants and the accessibility
+setting the suite depends on. Install once, then drive the runner directly:
+
+```bash
+./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+bash scripts/grant-test-permissions.sh
+adb shell am instrument -w \
+  com.andebugulin.nfcguard.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+On Xiaomi/HyperOS each install needs a manual tap — "Install via USB" is
+Mi-account gated and `pm install` is rejected outright with
+`INSTALL_FAILED_USER_RESTRICTED`.
 
 First Robolectric run downloads `android-all` jars per API level (several
 minutes, once). Cached runs are seconds. Add `--rerun-tasks` when results look
@@ -26,7 +45,10 @@ HTML reports: `domain/build/reports/tests/test/index.html`,
 | `:app` sync | 243 | Robolectric | **covered** (10 tests) |
 | `:app` receiver | 474 | Robolectric | **covered** (10 tests) |
 | `:app` service | 1,244 | Robolectric | **partial** (15 tests) — enforcers untested |
-| `:app` ui / viewmodel / widget | 9,250 | — | **not covered** |
+| `:app` viewmodel | 473 | Robolectric | **covered** (18 tests) |
+| `:app` onboarding UI | 438 | Robolectric + Compose | **covered** (6 tests) |
+| `:app` remaining screens / widget | 8,339 | — | **not covered** |
+| device behaviour | — | instrumented | **covered** (19 tests) |
 
 The split is deliberate rather than accidental: everything above the UI line is
 reachable on the JVM, and that is where all three reported production bugs
@@ -76,6 +98,51 @@ self-chaining, boot restore, service-restart re-sync.
 | `BlockerServiceScreenGateTest` | 4 | enforcement gated on interactive + unlocked |
 | `ForegroundDetectorServiceTest` | 3 | accessibility reconnect restores blocking |
 
+## `:app` viewmodel and UI
+
+`GuardianViewModelTest` (18) covers what is not mere delegation: the
+safe-regime flag and challenge duration that deliberately live outside
+`AppState` (so a config import cannot weaken the safety gate), the 90-second
+raise-only floor, import replace vs merge, orphan tag cleanup, and the NFC
+unlock round-trip.
+
+`OnboardingScreenTest` (6) drives the real carousel through Compose testing
+under Robolectric — including the "GET STARTED" handoff that issue #12 crashed
+on.
+
+**Testing note:** `GuardianViewModel.init` starts an endless 5-second polling
+loop on `viewModelScope`. `runTest` hangs on it, because its cleanup runs
+`advanceUntilIdle` against virtual time that never drains. Use a plain
+`@Test` with `UnconfinedTestDispatcher`, and cancel the ViewModel in
+`@After`.
+
+## Instrumented suite (19 tests)
+
+What the JVM cannot answer:
+
+| Suite | Tests | Covers |
+|---|---|---|
+| `EnvironmentTest` | 7 | preflight — every grant the suite needs, each failure naming its own `adb` fix |
+| `DeviceBehaviourTest` | 8 | live `UsageStatsManager` detection, real accessibility binding, the #13 gate against real `PowerManager`/`KeyguardManager`, real SharedPreferences persistence |
+| `OverlayEnforcerInstrumentedTest` | 4 | a real `TYPE_APPLICATION_OVERLAY` window: show, hide, double-block idempotence, teardown |
+
+Two things learned the hard way, both encoded in the tests:
+
+- **Never `runBlocking` inside `runOnMainSync`** when driving `OverlayEnforcer`.
+  Its show/hide animations post completion callbacks to the main looper, which
+  a blocked main thread can never drain — instant deadlock.
+- **Starting `BlockerService` from an instrumentation context kills the app.**
+  Android raises `ForegroundServiceDidNotStartInTimeException` asynchronously
+  and takes the process down, which also unbinds the accessibility service and
+  leaves it in the system's `Crashed services` list. There is deliberately no
+  instrumented test that starts the service; its Intent contract is asserted
+  by `StateSyncerTest` instead.
+
+Accessibility assertions use `Assume` rather than `assertTrue`: `am instrument`
+restarts the target process and the system rebinds an AccessibilityService on
+its own schedule, so those tests skip instead of failing when the rebind has
+not landed.
+
 ## Regression tests tied to real issues
 
 Each production bug now has a test that fails without its fix.
@@ -109,21 +176,17 @@ pins the default to 34. Tests that care declare their own range.
 
 Not covered, in rough priority order:
 
-1. **Compose UI — ~8,400 LOC.** `HomeScreen` (1,765), `SchedulesScreen`
-   (1,373), `ModesScreen` (1,236), `NfcTagsScreen` (845), `ModeEditorScreen`
-   (809), `InfoScreen` (783), `MainActivity` (566), `PermissionOnboarding`
-   (438), `SafeRegimeChallengeDialog` (322), `FeatureShowcase` (226).
-   Reachable via `compose-ui-test` under Robolectric. `PermissionOnboarding`
-   deserves it first — it is the #12 crash path.
-2. **`GuardianViewModel` (473).** Thin over the repository, but the 5-second
-   polling safety net and `importConfig` orphan cleanup are untested.
-3. **Enforcers (513).** `OverlayEnforcer` and `ForceCloseEnforcer` need
-   `WindowManager` / accessibility fakes. The block/allow *decision* is covered;
-   the *execution* is not.
-4. **`GuardianWidget` (308).** Button actions and rendering.
-5. **NFC hardware paths.** Device-only; emulator NFC is unusable. The unlock
-   *logic* is fully covered in `:domain` — only the `MainActivity` intent
-   plumbing is not.
+1. **The large Compose screens — ~7,900 LOC.** `HomeScreen` (1,765),
+   `SchedulesScreen` (1,373), `ModesScreen` (1,236), `NfcTagsScreen` (845),
+   `ModeEditorScreen` (809), `InfoScreen` (783), `SafeRegimeChallengeDialog`
+   (322), `FeatureShowcase` (226). The harness is proven by
+   `OnboardingScreenTest`, so these are mechanical rather than exploratory.
+2. **`ForceCloseEnforcer` (116).** Sends HOME through accessibility; needs a
+   device test that can observe the launcher coming forward.
+3. **`GuardianWidget` (308).** Button actions and rendering.
+4. **NFC tag scanning.** Requires physically tapping a tag; no harness can
+   simulate it. The unlock *logic* is fully covered in `:domain` and the
+   ViewModel, so only the `MainActivity` intent plumbing is unverified.
 
 Manual device checks that no suite replaces: widget buttons, force-closing a
 blocked app with accessibility on, and one NFC unlock round-trip.
