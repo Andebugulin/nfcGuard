@@ -1,14 +1,23 @@
 # Testing
 
-232 tests, 0 failures — 213 on the JVM, 19 on a real device.
+330 tests, 0 failures — 259 on the JVM, 71 on a real device.
 
 ```bash
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # AGP needs JDK 17+
 
 ./gradlew :domain:test              # 78 tests, pure Kotlin, ~3s
-./gradlew :app:testDebugUnitTest    # 135 tests, Robolectric, ~50s
-./gradlew test                      # both JVM suites
+./gradlew :app:testDebugUnitTest    # 181 tests, Robolectric, ~2min
+./gradlew test                      # both of the above
 ```
+
+`./gradlew test` means `:domain:test` + `:app:testDebugUnitTest`, because the
+release unit-test variant is switched off in `app/build.gradle.kts`. It has to
+be: the Compose test manifest that supplies the `ComponentActivity` every
+`createComposeRule` test launches into ships as `debugImplementation`, so a
+Compose test in the release variant dies with *"Unable to resolve activity for
+Intent … androidx.activity.ComponentActivity"*. Release unit tests would re-run
+identical sources for no extra signal — minification does not apply to unit
+tests — so the variant is disabled rather than worked around.
 
 ### Instrumented suite (real device)
 
@@ -18,16 +27,22 @@ setting the suite depends on. Install once, then drive the runner directly:
 
 ```bash
 ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb install -r -t app/build/outputs/apk/debug/app-debug.apk
+adb install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 bash scripts/grant-test-permissions.sh
 adb shell am instrument -w \
   com.andebugulin.nfcguard.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-On Xiaomi/HyperOS each install needs a manual tap — "Install via USB" is
-Mi-account gated and `pm install` is rejected outright with
-`INSTALL_FAILED_USER_RESTRICTED`.
+`scripts/grant-test-permissions.sh` also sets `hidden_api_policy=1`, which the
+simulated NFC taps need (see [Simulating an NFC tap](#simulating-an-nfc-tap)).
+Restore the device default afterwards with
+`adb shell settings delete global hidden_api_policy`.
+
+On Xiaomi/HyperOS `-t` matters (`adb install -r -t`); without it some builds
+reject the test APK. Older HyperOS releases gate "Install via USB" behind a
+Mi account and reject `pm install` with `INSTALL_FAILED_USER_RESTRICTED`, which
+needs a manual tap per install.
 
 First Robolectric run downloads `android-all` jars per API level (several
 minutes, once). Cached runs are seconds. Add `--rerun-tasks` when results look
@@ -44,15 +59,13 @@ HTML reports: `domain/build/reports/tests/test/index.html`,
 | `:app` data | 971 | Robolectric | **covered** (41 tests) |
 | `:app` sync | 243 | Robolectric | **covered** (10 tests) |
 | `:app` receiver | 474 | Robolectric | **covered** (10 tests) |
-| `:app` service | 1,244 | Robolectric | **partial** (15 tests) — enforcers untested |
+| `:app` service | 1,244 | Robolectric | **covered** (23 tests) |
 | `:app` viewmodel | 473 | Robolectric | **covered** (18 tests) |
-| `:app` Compose screens | 7,699 | Robolectric + Compose | **covered** (40 tests) |
-| `:app` widget / showcase / theme | 640 | — | **not covered** |
-| device behaviour | — | instrumented | **covered** (19 tests) |
-
-The split is deliberate rather than accidental: everything above the UI line is
-reachable on the JVM, and that is where all three reported production bugs
-lived. The UI layer is the honest gap — see [Gaps](#gaps).
+| `:app` Compose screens | 7,699 | Robolectric + Compose | **covered** (52 tests) |
+| `:app` widget | 308 | Robolectric | **covered** (16 tests) |
+| `:app` first-run showcase | 226 | Robolectric | **covered** (8 tests) |
+| app end-to-end (nav, NFC, dialogs, emergency reset, tag caps) | — | instrumented | **covered** (49 tests) |
+| device behaviour | — | instrumented | **covered** (22 tests) |
 
 ## `:domain` — pure state math
 
@@ -95,8 +108,41 @@ self-chaining, boot restore, service-restart re-sync.
 | Suite | Tests | Covers |
 |---|---|---|
 | `ForegroundAppDetectorTest` | 8 | all three strategies, priority order, and the "load-bearing" resume-after-pause timestamp comparison |
+| `ForceCloseEnforcerTest` | 8 | the 3-second cooldown and exactly what resets it |
 | `BlockerServiceScreenGateTest` | 4 | enforcement gated on interactive + unlocked |
 | `ForegroundDetectorServiceTest` | 3 | accessibility reconnect restores blocking |
+
+`ForceCloseEnforcer` was previously listed as device-only ("needs a device test
+that can observe the launcher coming forward"). Observing the launcher is not
+necessary: the HOME **intent** is the observable, and with
+`ForegroundDetectorService.isRunning` forced false the accessibility path is
+skipped and the documented Intent fallback runs deterministically. That makes
+the cooldown rules testable on the JVM — including the two that are easy to get
+wrong, and which the KDoc calls out: passing through the **launcher** or a
+**critical system app** must *not* reset the cooldown, or a stale accessibility
+event ejects the user out of whatever they opened next.
+
+What stays device-only is whether accessibility's `goHome()` actually moves the
+launcher on a given OEM build.
+
+## `:app` widget
+
+`GuardianWidgetTest` (16). Robolectric's `ShadowAppWidgetManager` inflates the
+real `RemoteViews`, so rendered text can be read back, and the buttons are plain
+broadcasts, so `onReceive` can be called directly — no device needed.
+
+Covers every render state (no modes, inactive, active, active-and-timed,
+conflicting polarity, stackable same-polarity), mode and duration cycling
+including wrap-around in both directions, activation as a *manual* activation,
+timed activation, conflict refusal, clearing a pending NFC reactivation,
+`onDeleted` forgetting per-widget prefs, and a stale selection index being
+clamped rather than crashing when modes are deleted in the app.
+
+The action strings are duplicated in the test on purpose. They are private to
+the provider but they are also a *published contract* — baked into
+`PendingIntent`s that live in the launcher's process and survive app upgrades.
+Pinning the literals means renaming one breaks the test, which is the point:
+already-placed widgets would silently stop working.
 
 ## `:app` viewmodel and UI
 
@@ -106,24 +152,20 @@ safe-regime flag and challenge duration that deliberately live outside
 raise-only floor, import replace vs merge, orphan tag cleanup, and the NFC
 unlock round-trip.
 
-Every screen has a Compose suite running under Robolectric — no device needed:
-
 | Suite | Tests | Covers |
 |---|---|---|
+| `ModesScreenTest` | 13 | empty state, listing, both polarities, active badge, delete dialog (incl. naming affected schedules), activation dialog |
+| `UnlockDurationDialogTest` | 7 | uncapped unlock paths, multi-mode selection, the last mode not being deselectable |
+| `NfcTagsScreenTest` | 8 | empty state, listing, unlinked-tag notice, delete dialog |
+| `FeatureShowcaseTest` | 8 | per-screen content, the lost-tag recovery tip, sticky per-screen "seen" |
 | `OnboardingScreenTest` | 6 | the carousel and the "GET STARTED" handoff that #12 crashed on |
-| `ModesScreenTest` | 8 | empty state, listing, both polarities, active badge |
-| `NfcTagsScreenTest` | 6 | empty state, registration entry, listing, unlinked-tag notice |
 | `SchedulesScreenTest` | 5 | "create modes first" gate, creation once a mode exists, listing |
 | `InfoScreenTest` | 4 | renders offline, both enforcement explanations, bug-report entry |
 | `ModeEditorScreenTest` | 4 | both polarities, NFC tag lock section |
 | `SafeRegimeChallengeDialogTest` | 4 | never completes early, giving up cancels rather than satisfies |
 | `HomeScreenTest` | 3 | renders empty, with modes, with an active mode |
 
-These are render-and-key-interaction tests, not exhaustive branch coverage —
-they catch "this screen crashes or stops rendering", which is the class of bug
-issue #12 was.
-
-Three Compose gotchas this codebase hits, all encoded in the suites:
+Four Compose gotchas this codebase hits, all encoded in the suites:
 
 - **Names render `.uppercase()`.** Assert `"DEEP WORK"`, not `"Deep Work"`.
 - **Below-the-fold content in a `LazyColumn` is not composed.** Reach it with
@@ -131,6 +173,34 @@ Three Compose gotchas this codebase hits, all encoded in the suites:
 - **`HomeScreen` runs endless `LaunchedEffect` loops** (2s permission refresh,
   30s poll), so the auto-advancing clock never reaches idle. Set
   `compose.mainClock.autoAdvance = false` and advance by frame.
+- **A dialog's button label is usually also on the screen behind it** — the mode
+  card's own DELETE sits under the delete dialog's DELETE. Scope the match with
+  `hasAnyAncestor(isDialog())` rather than guessing at node order.
+
+### A dialog with a text field cannot be tested under Robolectric
+
+This is the one real boundary in the JVM UI suite, and it is worth knowing
+before you spend an afternoon on it.
+
+A Compose dialog containing an `OutlinedTextField` **never reaches idle** under
+Robolectric. Composition spins until Espresso gives up after 60 seconds with
+`AppNotIdleException: Compose did not get idle after ~450000 attempts`. It is
+not the clock, so `mainClock.autoAdvance = false` does not help; and it is not
+the app, since an otherwise identical dialog with the text field removed is
+fine in the same graphics mode. It reproduces in a ten-line test with a
+hand-written `AlertDialog`, in both `NATIVE` and `LEGACY` graphics.
+
+So every branch that needs typing — the mode create dialog, the tag register
+and rename dialogs, and the unlock dialog's *capped* paths (a cap opens the
+dialog on the timed option, which renders the HOURS/MINUTES fields) — is
+covered on a real device in `DialogFlowsEndToEndTest`, where it all works. The
+delete and activation dialogs have no text field, so they stayed on the JVM.
+
+A future alternative: the unlock dialog's limit arithmetic (resolve the
+effective limit across selected modes, clamp the typed duration) is pure logic
+living in a composable. Extracting it into `:domain` would make the app's most
+safety-critical rules testable in milliseconds. That is a production refactor,
+not a test change, so it has not been done here.
 
 **Testing note:** `GuardianViewModel.init` starts an endless 5-second polling
 loop on `viewModelScope`. `runTest` hangs on it, because its cleanup runs
@@ -138,27 +208,163 @@ loop on `viewModelScope`. `runTest` hangs on it, because its cleanup runs
 `@Test` with `UnconfinedTestDispatcher`, and cancel the ViewModel in
 `@After`.
 
-## Instrumented suite (19 tests)
+## Instrumented suite (71 tests)
 
-What the JVM cannot answer:
+Split in two: the end-to-end suites that drive the real app through its own
+entry point, and the device-behaviour suites that answer what the JVM cannot.
 
 | Suite | Tests | Covers |
 |---|---|---|
-| `EnvironmentTest` | 7 | preflight — every grant the suite needs, each failure naming its own `adb` fix |
+| `DialogFlowsEndToEndTest` | 16 | every dialog branch that needs typing, incl. the unlock caps |
+| `EmergencyResetEndToEndTest` | 11 | the lost-tag escape hatch and the challenge that gates it |
+| `TagLimitEndToEndTest` | 11 | where per-tag unlock caps are *set*, and that they bind at unlock |
 | `DeviceBehaviourTest` | 8 | live `UsageStatsManager` detection, real accessibility binding, the #13 gate against real `PowerManager`/`KeyguardManager`, real SharedPreferences persistence |
+| `EnvironmentTest` | 7 | preflight — every grant the suite needs, each failure naming its own `adb` fix |
+| `NfcTapEndToEndTest` | 6 | simulated taps: register, unlock, wrong tag, cold start |
+| `AppNavigationEndToEndTest` | 5 | navigation, Back semantics, first-run onboarding, create/activate persistence |
 | `OverlayEnforcerInstrumentedTest` | 4 | a real `TYPE_APPLICATION_OVERLAY` window: show, hide, double-block idempotence, teardown |
+| `MockNfcTagProbeTest` | 3 | that a `Tag` really can be fabricated on this device |
 
-Two things learned the hard way, both encoded in the tests:
+The whole run takes around 200 seconds, most of it one test: the emergency
+reset's happy path sits out the real 90-second attention challenge. That is
+explained below and is deliberate.
+
+### The emergency reset — the only flow that can switch blocking off
+
+`EmergencyResetEndToEndTest` covers the lost-tag escape hatch, which had no
+coverage at all: the only mention of "Emergency Reset" anywhere in the suites
+was `FeatureShowcaseTest` asserting that a *tip* about it renders.
+
+The branch that matters is `HomeScreen`'s decision on CONTINUE — challenge when
+modes are active, straight through when none are. Both halves are pinned, along
+with the stricter property that the gate does **not** consult
+`safe_regime_enabled`: that setting lives outside `AppState` so an imported
+config cannot weaken the safety challenge, and a gate a toggle could switch off
+would undo that. Every abort path (cancel the warning, give up the challenge,
+cancel tag selection, confirm with nothing selected) is asserted to leave modes
+active and tags intact.
+
+One test is slow on purpose — about 100 seconds — because it presses through the
+real challenge, every 15 seconds, for the full 90. The duration floor is
+raise-only, so it genuinely cannot be shortened from a test. It buys the only
+proof of the part reachable *only* through the challenge: confirming deactivates
+**every** active mode, not just the one behind the deleted tag.
+
+### Where unlock caps are set
+
+`TagLimitEndToEndTest` covers `TagLimitConfigDialog`, closing an asymmetry: the
+suite pinned that a cap is *enforced* at unlock time, but nothing covered the
+screen that writes `tagUnlockLimits`, because the enforcement tests seed the map
+directly. A bug storing the wrong key or number would have sailed through.
+
+It covers the round-trip (set 30 minutes, read back "0H 30M", reopen prefilled),
+clearing a cap back to permanent, cancel keeping the old value, the `ANY`
+wildcard storing under its literal key, and the "NO PERMANENT UNLOCK" guard that
+fires when *every* selected tag is capped — including that backing out of that
+warning writes nothing. The last test joins both ends: a cap typed into the
+editor is the cap the unlock dialog honours after a tag tap.
+
+### Simulating an NFC tap
+
+TESTS.md used to list NFC scanning as permanently uncoverable — "requires
+physically tapping a tag; no harness can simulate it". That turns out to be
+wrong. The NFC stack hands the Activity an `ACTION_TECH_DISCOVERED` intent
+carrying an `android.nfc.Tag` parcelable; everything the app does is downstream
+of that intent. `MockNfcTag` fabricates the `Tag`, and the whole flow runs
+unmodified: hex encoding, the wrong-tag guard, `MainNavigation`'s routing
+`LaunchedEffect`, the unlock dialog, and the resulting state write.
+
+Three things make it work:
+
+- **There is no public way to build a `Tag`.** No public constructor; the only
+  factory is the `@hide` `Tag.createMockTag`. Its signature has changed across
+  platform versions (Android 14 added a trailing `long` cookie), so
+  `MockNfcTag` matches parameters **by type at runtime** instead of pinning one
+  release.
+- **The hidden-API blocklist hides it from reflection entirely** — on API 35
+  `Tag::class.java.declaredMethods` does not even list `createMockTag` until
+  `adb shell settings put global hidden_api_policy 1`. That is why
+  `MockNfcTagProbeTest` exists and why the suites `Assume` on
+  `MockNfcTag.isSupported()`: without the policy the tests skip loudly instead
+  of passing vacuously.
+- **Two delivery paths, both covered.** A tap on the already-open app goes to
+  `onNewIntent`; a tap that wakes the app from cold goes through `onCreate`.
+  `tapNfcTagFromColdStart` uses a genuine `ActivityScenario.launch(intent)`, so
+  AMS delivery is exercised for real. The warm path calls `onNewIntent`
+  directly — see the teardown note below for why.
+
+What is still **not** covered: the radio itself and `enableForegroundDispatch`.
+Those belong to the platform.
+
+### The end-to-end harness
+
+`GuardianHarness` + `Robots.kt` (in `app/src/androidTest/.../harness/`) drive
+the real app: seed a known state, launch `MainActivity`, then interact as a
+user. The Robolectric screen suites compose one screen at a time with a
+ViewModel they own, so they cannot see the seams between screens — the
+`when (currentScreen)` dispatch, the BackHandler that sends sub-screens Home
+instead of exiting, the onboarding gate, or whether a mode created through the
+UI actually survives in `AppStateRepository`. That is what these cover.
+
+Robots are text-driven page objects (the app sets no `testTag`s) and encode the
+app's UI conventions once: names render uppercased, lists are `LazyColumn`s so
+off-screen rows must be scrolled into composition, and dialog controls are
+matched with `isDialog()`.
+
+Four things learned the hard way here, all encoded in the harness:
+
+- **Click the node that owns the click action, not the label.** A label matches
+  *two* nodes: the clickable container (whose merged semantics include the
+  label) and the inner `Text`. `onFirst()` can land on the `Text`, and the tap
+  is then silently swallowed — the test reports success while nothing happened.
+  The unlock dialog's mode rows behaved exactly that way. `Robot.click` prefers
+  `matcher and hasClickAction()`.
+- **Never let `ActivityScenario.close()` drive teardown.** It works through
+  `InstrumentationActivityInvoker`, whose helper Activity is hosted in the
+  *test* package's own process. Once the app is in front, that process goes
+  cached and the system reaps it (`lowmemorykiller … adj=900`, confirmed in
+  logcat on this Xiaomi). `close()` then blocks for its full 45-second timeout
+  waiting for a DESTROYED it can no longer cause — every test failed in
+  teardown with a perfectly healthy body, and the suite took 230s instead of 7s.
+  `GuardianHarness.close` calls `finish()` in-process and waits on the
+  lifecycle monitor.
+- **Do not seed an *active* mode.** `StateSyncer` would start `BlockerService`
+  while the app is in the background, and Android answers the late
+  `startForeground` with `ForegroundServiceDidNotStartInTimeException`, taking
+  the whole process down. Seed **config** only and activate through the UI,
+  which is a legal foreground start and what a user does anyway.
+- **Wait for background loads explicitly.** `waitForIdle` knows nothing about a
+  coroutine on `Dispatchers.IO`, so the mode editor's app picker is briefly
+  settled *and* empty. `Robot.waitFor` waits for the node.
+- **Never wait with `Thread.sleep`.** A Compose test rule drives the clock that
+  composed `delay(...)` loops tick on, and that clock only advances while the
+  test framework is pumping. Sleeping on the test thread freezes them: the
+  safe-regime countdown sat at 1:30 on screen for the whole test, which looks
+  exactly like an app-side race and is not one — the same dialog ticks
+  correctly when the app is driven by hand with `adb shell input`. Use
+  `compose.waitUntil`, which keeps the framework pumping.
+- **Identify a row by a sibling, not by order.** Every tag row shows
+  "PERMANENT" until a cap is set, so the label alone is ambiguous;
+  `hasAnySibling(hasText(name))` picks the right row's button without depending
+  on the order rows happen to render in.
+
+State is seeded through `AppStateRepository.update`, not by nulling the
+singleton as the Robolectric fixtures do: instrumentation shares a process with
+the app, so it is the *same* singleton the running Activity observes. Resetting
+it would leave two repositories writing one prefs file and the Activity holding
+the dead one.
+
+The picker's app list comes from the app's own `loadInstalledApps`, so the tests
+do not assume Chrome is installed and stay in step with critical-app filtering.
+
+### Device-behaviour notes
 
 - **Never `runBlocking` inside `runOnMainSync`** when driving `OverlayEnforcer`.
   Its show/hide animations post completion callbacks to the main looper, which
   a blocked main thread can never drain — instant deadlock.
-- **Starting `BlockerService` from an instrumentation context kills the app.**
-  Android raises `ForegroundServiceDidNotStartInTimeException` asynchronously
-  and takes the process down, which also unbinds the accessibility service and
-  leaves it in the system's `Crashed services` list. There is deliberately no
-  instrumented test that starts the service; its Intent contract is asserted
-  by `StateSyncerTest` instead.
+- **Starting `BlockerService` from an instrumentation context kills the app**,
+  as above. There is deliberately no instrumented test that starts the service;
+  its Intent contract is asserted by `StateSyncerTest` instead.
 
 Accessibility assertions use `Assume` rather than `assertTrue`: `am instrument`
 restarts the target process and the system rebinds an AccessibilityService on
@@ -171,7 +377,7 @@ Each production bug now has a test that fails without its fix.
 
 | Issue | Test | Reproduces |
 |---|---|---|
-| [#12](https://github.com/Andebugulin/nfcGuard/issues/12) Galaxy S8 crash | `PermissionsTest`, `AppLoggerTest` | `unsafeCheckOpNoThrow` is API 29+; on API 26/28 it raised `NoSuchMethodError`, which `catch (Exception)` does not catch |
+| [#12](https://github.com/Andebugulin/nfcGuard/issues/12) Galaxy S8 crash | `PermissionsTest`, `AppLoggerTest`, `AppNavigationEndToEndTest` | `unsafeCheckOpNoThrow` is API 29+; on API 26/28 it raised `NoSuchMethodError`, which `catch (Exception)` does not catch. The e2e test walks the whole carousel and asserts the permission flow takes over, which is the handoff that crashed |
 | [#13](https://github.com/Andebugulin/nfcGuard/issues/13) app opens on unlock | `BlockerServiceScreenGateTest` | screen-off detection fell back to "last used app", so the overlay appeared over the lock screen |
 | [#10](https://github.com/Andebugulin/nfcGuard/issues/10) force-stop bypass | `ForegroundDetectorServiceTest` | force-stop kills alarms and broadcasts; the rebound accessibility service is the only recovery hook |
 
@@ -198,29 +404,50 @@ pins the default to 34. Tests that care declare their own range.
 
 Not covered, in rough priority order:
 
-1. **`GuardianWidget` (308).** Button actions and rendering. Needs
-   `AppWidgetManager` fakes or an instrumented test.
-2. **`ForceCloseEnforcer` (116).** Sends HOME through accessibility; needs a
-   device test that can observe the launcher coming forward.
-3. **`FeatureShowcase` (226).** First-run popups.
-4. **Dialog branches inside the covered screens.** The suites assert each
-   screen renders and its primary controls work; the create/edit/delete
-   dialogs and their validation paths are largely unexercised.
-5. **NFC tag scanning.** Requires physically tapping a tag; no harness can
-   simulate it. The unlock *logic* is fully covered in `:domain` and the
-   ViewModel, so only the `MainActivity` intent plumbing is unverified.
+1. **Schedule dialogs.** `SchedulesScreen` (1,373 lines) is now the largest
+   screen with the least dialog coverage — `ScheduleEditorDialog`,
+   `ModernTimePickerDialog` and `ClockFace` are unexercised, so day/time
+   selection and mode linking are untested. The alarm-driven *transitions* are
+   fully covered in `:domain`.
+2. **`HomeScreen`'s settings sheet.** `SettingsDialog`, `PermissionRow` and
+   `ChallengeDurationDialog` — permission rows, the safe-regime toggle, the
+   blocking-method display and the export/import entry points. (The emergency
+   reset, previously the worst gap on this screen, is now covered.)
+3. **`PermissionOnboarding` past its first step.** Only `WelcomeDialog` is
+   reached, by the first-run e2e test. The permission queue, notification
+   prompt, pause-app reminder and the OEM-branching accessibility dialog are
+   untested — and issue #12 lived in this area.
+4. **`ModeEditorScreen`'s app picker.** Per-tag limits are now covered; app
+   search, deselection and polarity switching are only touched through
+   `createMode`'s happy path.
+5. **`InfoScreen`'s `LogViewerDialog`** and the `FileProvider` share/open sheet
+   behind bug reports and config export.
+6. **`ForceCloseEnforcer`'s accessibility path.** The cooldown and the HOME
+   Intent fallback are covered; whether `goHome()` actually moves the launcher
+   is per-OEM and still a manual check.
+7. **The NFC radio and `enableForegroundDispatch`.** Everything downstream of
+   the intent is covered; the radio is the platform's.
 
-Manual device checks that no suite replaces: widget buttons, force-closing a
-blocked app with accessibility on, and one NFC unlock round-trip.
+Manual device checks that no suite replaces: a real tag tap against a real
+radio, force-closing a blocked app with accessibility on, and the widget on an
+actual launcher.
 
 ## Adding tests
 
 - Pure logic with no Android types → `:domain`, plain JUnit. Prefer this.
 - Anything touching `Context`, prefs, alarms, services → `:app`, Robolectric.
-- Use the builders in `app/src/test/java/.../testing/Fixtures.kt`
-  (`mode()`, `schedule()`, `tag()`).
-- Call `resetAppStateRepository()` in `@Before` — it is a process-wide
-  singleton and would otherwise leak a dead `Context` between tests.
+- Anything that needs typing into a dialog, the real Activity, or a simulated
+  NFC tap → `:app` `androidTest`, via `GuardianHarness` and the robots.
+- Domain builders (`mode()`, `schedule()`, `tag()`, `emptyState()`) live in
+  `app/src/testShared/java/.../testing/Builders.kt`, wired into **both** the
+  `test` and `androidTest` source sets in `app/build.gradle.kts`. Robolectric-only
+  helpers stay in `app/src/test/java/.../testing/Fixtures.kt`, because
+  Robolectric is not on the instrumented classpath.
+- Call `resetAppStateRepository()` in `@Before` for Robolectric tests — it is a
+  process-wide singleton and would otherwise leak a dead `Context`. Do **not**
+  do this in instrumented tests; seed through the repository instead.
 - Call `grantOverlayPermission()` whenever a path reaches
   `BlockerService.start`; it early-returns without it.
+- Use `setDetectorState("isRunning", …)` to pose as accessibility being bound
+  or not; the field is `private set`.
 - Name tests as sentences describing the behaviour, not the method.
