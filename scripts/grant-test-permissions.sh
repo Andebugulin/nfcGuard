@@ -30,8 +30,16 @@ case ":$EXISTING:" in
 esac
 adb shell settings put secure accessibility_enabled 1
 
+# Simulated NFC taps need android.nfc.Tag.createMockTag, which is @hide: the
+# non-SDK-interface blocklist hides it from reflection entirely (getDeclaredMethods
+# does not even list it) until this policy is relaxed. 1 = allow all.
+# Restore the device default afterwards with:
+#   adb shell settings delete global hidden_api_policy
+adb shell settings put global hidden_api_policy 1
+
 adb shell input keyevent KEYCODE_WAKEUP
 
 echo "usage access : $(adb shell appops get $PKG GET_USAGE_STATS | tr -d '\r')"
 echo "overlay      : $(adb shell appops get $PKG SYSTEM_ALERT_WINDOW | tr -d '\r')"
 echo "a11y services: $(adb shell settings get secure enabled_accessibility_services | tr -d '\r')"
+echo "hidden api   : $(adb shell settings get global hidden_api_policy | tr -d '\r') (1 = mock NFC taps work)"
