@@ -1,12 +1,12 @@
 # Testing
 
-353 tests, 0 failures — 267 on the JVM, 86 on a real device.
+382 tests, 0 failures — 294 on the JVM, 88 on a real device.
 
 ```bash
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # AGP needs JDK 17+
 
 ./gradlew :domain:test              # 78 tests, pure Kotlin, ~3s
-./gradlew :app:testDebugUnitTest    # 189 tests, Robolectric, ~25s
+./gradlew :app:testDebugUnitTest    # 216 tests, Robolectric, ~30s
 ./gradlew test                      # both of the above
 ```
 
@@ -61,7 +61,7 @@ HTML reports: `domain/build/reports/tests/test/index.html`,
 | `:app` receiver | 474 | Robolectric | **covered** (10 tests) |
 | `:app` service | 1,244 | Robolectric | **covered** (23 tests) |
 | `:app` viewmodel | 473 | Robolectric | **covered** (18 tests) |
-| `:app` Compose screens | 7,699 | Robolectric + Compose | **covered** (60 tests) |
+| `:app` Compose screens | 7,699 | Robolectric + Compose | **covered** (87 tests) |
 | `:app` widget | 308 | Robolectric | **covered** (16 tests) |
 | `:app` first-run showcase | 226 | Robolectric | **covered** (8 tests) |
 | app end-to-end (nav, NFC, dialogs, emergency reset, tag caps, schedules) | — | instrumented | **covered** (64 tests) |
@@ -154,6 +154,8 @@ unlock round-trip.
 
 | Suite | Tests | Covers |
 |---|---|---|
+| `SettingsDialogTest` | 15 | permission rows, the anti-bypass toggle and its gate, blocking method, data section |
+| `PermissionOnboardingTest` | 12 | the step machine past WELCOME: the permission queue, the pause reminder, OEM branching |
 | `ModesScreenTest` | 13 | empty state, listing, both polarities, active badge, delete dialog (incl. naming affected schedules), activation dialog |
 | `UnlockDurationDialogTest` | 7 | uncapped unlock paths, multi-mode selection, the last mode not being deselectable |
 | `NfcTagsScreenTest` | 8 | empty state, listing, unlinked-tag notice, delete dialog |
@@ -208,15 +210,15 @@ loop on `viewModelScope`. `runTest` hangs on it, because its cleanup runs
 `@Test` with `UnconfinedTestDispatcher`, and cancel the ViewModel in
 `@After`.
 
-## Instrumented suite (86 tests)
+## Instrumented suite (88 tests)
 
 Split in two: the end-to-end suites that drive the real app through its own
 entry point, and the device-behaviour suites that answer what the JVM cannot.
 
 | Suite | Tests | Covers |
 |---|---|---|
-| `DialogFlowsEndToEndTest` | 16 | every dialog branch that needs typing, incl. the unlock caps |
-| `EmergencyResetEndToEndTest` | 11 | the lost-tag escape hatch and the challenge that gates it |
+| `DialogFlowsEndToEndTest` | 19 | every dialog branch that needs typing — unlock caps, tag naming, the challenge-duration floor |
+| `EmergencyResetEndToEndTest` | 10 | the lost-tag escape hatch and the challenge that gates it |
 | `ScheduleEditorEndToEndTest` | 15 | building and editing a schedule, and the gate on active edits |
 | `TagLimitEndToEndTest` | 11 | where per-tag unlock caps are *set*, and that they bind at unlock |
 | `DeviceBehaviourTest` | 8 | live `UsageStatsManager` detection, real accessibility binding, the #13 gate against real `PowerManager`/`KeyguardManager`, real SharedPreferences persistence |
@@ -226,9 +228,9 @@ entry point, and the device-behaviour suites that answer what the JVM cannot.
 | `OverlayEnforcerInstrumentedTest` | 4 | a real `TYPE_APPLICATION_OVERLAY` window: show, hide, double-block idempotence, teardown |
 | `MockNfcTagProbeTest` | 3 | that a `Tag` really can be fabricated on this device |
 
-The whole run takes around 250 seconds, most of it one test: the emergency
-reset's happy path sits out the real 90-second attention challenge. That is
-explained below and is deliberate.
+The whole run takes around 100 seconds. Keep it that way: no test should sit
+through wall-clock waits. See the note on the attention challenge below for the
+one case where that was tempting.
 
 ### The emergency reset — the only flow that can switch blocking off
 
@@ -245,11 +247,15 @@ would undo that. Every abort path (cancel the warning, give up the challenge,
 cancel tag selection, confirm with nothing selected) is asserted to leave modes
 active and tags intact.
 
-One test is slow on purpose — about 100 seconds — because it presses through the
-real challenge, every 15 seconds, for the full 90. The duration floor is
-raise-only, so it genuinely cannot be shortened from a test. It buys the only
-proof of the part reachable *only* through the challenge: confirming deactivates
-**every** active mode, not just the one behind the deleted tag.
+**Actually passing the challenge is deliberately not automated.** It is a
+90-second attention gate — 15 seconds of waiting, then a 5-second window to
+press, repeatedly — and it cannot be shortened from a test. The duration floor
+is raise-only, and the countdown runs on *real* time: `mainClock.advanceTimeBy`
+drives recomposition but not the dialog's `delay()`, so pausing Compose's clock
+only freezes the countdown instead of fast-forwarding it. A test that presses
+through it added ~100 seconds to every run for a single assertion, and was
+removed. The gate itself — required, skipped, given up, and nothing changing on
+any of those paths — is covered above in milliseconds.
 
 ### Where unlock caps are set
 
@@ -264,6 +270,33 @@ wildcard storing under its literal key, and the "NO PERMANENT UNLOCK" guard that
 fires when *every* selected tag is capped — including that backing out of that
 warning writes nothing. The last test joins both ends: a cap typed into the
 editor is the cap the unlock dialog honours after a tag tap.
+
+### The settings sheet and the permission flow
+
+`SettingsDialogTest` covers the sheet on the JVM — it holds no text field of its
+own, only `ChallengeDurationDialog` does, so that one dialog is covered on
+device in `DialogFlowsEndToEndTest` (the 1:30 floor is *refused*, not silently
+coerced) and everything else runs in milliseconds.
+
+The gate here is a third variant, and all three are now pinned side by side:
+
+| Action | Gated when |
+|---|---|
+| Emergency reset | `activeModes.isNotEmpty()` — ignores the toggle |
+| Schedule edit/delete | `safeRegimeEnabled && activeModes.isNotEmpty()` |
+| Switching the toggle off | `activeModes.isNotEmpty()` |
+
+`PermissionOnboardingTest` covers the flow past its first step — it is a dialog
+state machine, not a screen, and none of its dialogs holds a text field, so it
+runs on the JVM against the real permission state that drives it: the queue
+advancing in order, GRANT firing the right Settings intent, the pause reminder
+marking the flow complete, and the manufacturer branching (Pixel and Samsung are
+told accessibility is required; everyone else is offered it). This is the
+neighbourhood issue #12 lived in.
+
+Note that `ChallengeDurationDialog`'s row sits *outside* the
+`if (safeRegimeEnabled)` block, so it stays configurable with protection off.
+That is pinned as current behaviour rather than asserted as correct.
 
 ### Schedules, and two gates that differ on purpose
 
@@ -363,6 +396,15 @@ Four things learned the hard way here, all encoded in the harness:
   exactly like an app-side race and is not one — the same dialog ticks
   correctly when the app is driven by hand with `adb shell input`. Use
   `compose.waitUntil`, which keeps the framework pumping.
+- **Scroll on *displayed*, never on present.** A `verticalScroll` column
+  composes every child, so "does this node exist?" is always true and a
+  scroll-before-tap that asks it never scrolls — the tap then lands off-screen
+  and silently does nothing, which reads as a dead button. (A `LazyColumn`
+  hides this, because its off-screen rows really are absent.) `Robot.scrollTo`
+  checks `assertIsDisplayed` instead.
+- **Assert on displayed, with a wait.** A dialog animates in, so its buttons are
+  composed a frame or two before they are on screen, and `waitForIdle` can
+  return inside that window. `Robot.assertVisible` waits for display.
 - **Identify a row by a sibling, not by order.** Every tag row shows
   "PERMANENT" until a cap is set, so the label alone is ambiguous;
   `hasAnySibling(hasText(name))` picks the right row's button without depending
@@ -424,26 +466,20 @@ pins the default to 34. Tests that care declare their own range.
 
 Not covered, in rough priority order:
 
-1. **`HomeScreen`'s settings sheet.** `SettingsDialog`, `PermissionRow` and
-   `ChallengeDurationDialog` — permission rows, the safe-regime toggle, the
-   blocking-method display and the export/import entry points. (The emergency
-   reset, previously the worst gap on this screen, is now covered.)
-2. **`PermissionOnboarding` past its first step.** Only `WelcomeDialog` is
-   reached, by the first-run e2e test. The permission queue, notification
-   prompt, pause-app reminder and the OEM-branching accessibility dialog are
-   untested — and issue #12 lived in this area.
-3. **`ModeEditorScreen`'s app picker.** Per-tag limits are now covered; app
+1. **`ModeEditorScreen`'s app picker.** Per-tag limits are now covered; app
    search, deselection and polarity switching are only touched through
    `createMode`'s happy path.
-4. **`InfoScreen`'s `LogViewerDialog`** and the `FileProvider` share/open sheet
+2. **`InfoScreen`'s `LogViewerDialog`** and the `FileProvider` share/open sheet
    behind bug reports and config export.
-5. **`ForceCloseEnforcer`'s accessibility path.** The cooldown and the HOME
+3. **`ForceCloseEnforcer`'s accessibility path.** The cooldown and the HOME
    Intent fallback are covered; whether `goHome()` actually moves the launcher
    is per-OEM and still a manual check.
-6. **Per-day start/end times in a schedule.** The editor suite covers days and
+4. **Per-day start/end times in a schedule.** The editor suite covers days and
    links; `CUSTOM END TIMES` and per-day time adjustment still rely on the
    picker being correct in isolation.
-7. **The NFC radio and `enableForegroundDispatch`.** Everything downstream of
+5. **Export/import file I/O.** The format chooser and `ConfigManager`'s
+   round-trips are covered; the `FileProvider` share/open sheet is not.
+6. **The NFC radio and `enableForegroundDispatch`.** Everything downstream of
    the intent is covered; the radio is the platform's.
 
 Manual device checks that no suite replaces: a real tag tap against a real
