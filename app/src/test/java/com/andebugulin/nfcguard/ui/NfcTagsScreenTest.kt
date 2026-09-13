@@ -3,7 +3,16 @@ package com.andebugulin.nfcguard.ui
 import android.app.Application
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import com.andebugulin.nfcguard.data.ConfigManager
@@ -97,5 +106,64 @@ class NfcTagsScreenTest {
     @Test fun `leaves registration mode off until asked`() {
         show()
         assertEquals(false, registrationMode.value)
+    }
+
+    // ---------------- registration + dialog branches ----------------
+    //
+    // `scannedNfcTagId` is the hoisted state MainActivity writes a tag id into,
+    // so a tap can be simulated here on the JVM by writing it directly. That
+    // covers the registration screen's half of the flow; the Activity's intent
+    // plumbing that fills it is covered on device by `NfcTapEndToEndTest`.
+    //
+    // The register dialog holds a text field, whose cursor blink is an endless
+    // animation — an auto-advancing clock never reaches idle and Espresso
+    // throws AppNotIdleException. So the clock is driven by hand, as
+    // HomeScreenTest does for its endless LaunchedEffect loops.
+
+    private fun showManualClock() {
+        compose.mainClock.autoAdvance = false
+        show()
+        settle()
+    }
+
+    private fun settle() = repeat(4) { compose.mainClock.advanceTimeByFrame() }
+
+    // A dialog containing an OutlinedTextField never reaches idle under
+    // Robolectric — Compose spins recomposing until Espresso gives up with
+    // AppNotIdleException, whatever the graphics mode, and `autoAdvance = false`
+    // does not help because the stall is in composition, not the clock. (An
+    // identical dialog *without* a text field is fine.) So every branch that
+    // needs typing — the create/rename/register dialogs and the unlock dialog's
+    // capped path — is covered on a real device in
+    // `app/src/androidTest/.../DialogFlowsEndToEndTest.kt`, where it works.
+
+    private fun inDialog(text: String) =
+        compose.onAllNodes(hasAnyAncestor(isDialog()) and hasText(text)).onFirst()
+
+    private fun seedTags(vararg tags: com.andebugulin.nfcguard.NfcTag) =
+        vm.importConfig(ConfigManager.ExportData(1, emptyList(), emptyList(), tags.toList()))
+
+    @Test fun `deleting a tag removes it`() {
+        seedTags(tag(id = "t1", name = "Desk key"))
+        showManualClock()
+        compose.onNodeWithText("DELETE").performClick()
+        settle()
+
+        inDialog("DELETE").performClick()
+        settle()
+
+        assertEquals(emptyList<String>(), vm.appState.value.nfcTags.map { it.id })
+    }
+
+    @Test fun `cancelling a delete keeps the tag`() {
+        seedTags(tag(id = "t1", name = "Desk key"))
+        showManualClock()
+        compose.onNodeWithText("DELETE").performClick()
+        settle()
+
+        inDialog("CANCEL").performClick()
+        settle()
+
+        assertEquals(listOf("t1"), vm.appState.value.nfcTags.map { it.id })
     }
 }

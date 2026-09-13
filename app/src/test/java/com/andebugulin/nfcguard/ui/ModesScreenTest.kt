@@ -2,6 +2,15 @@ package com.andebugulin.nfcguard.ui
 
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -14,6 +23,7 @@ import com.andebugulin.nfcguard.testing.cancelViewModel
 import com.andebugulin.nfcguard.testing.grantOverlayPermission
 import com.andebugulin.nfcguard.testing.mode
 import com.andebugulin.nfcguard.testing.resetAppStateRepository
+import com.andebugulin.nfcguard.testing.schedule
 import com.andebugulin.nfcguard.ui.modes.ModesScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -108,5 +118,103 @@ class ModesScreenTest {
         show(onBack = { backs++ })
         compose.onNodeWithText("MODES").assertIsDisplayed()
         assertEquals(0, backs)
+    }
+
+    // ---------------- dialog branches ----------------
+    //
+    // The suites above assert each screen renders and its primary controls
+    // work. The create/edit/delete dialogs and their validation were the
+    // "largely unexercised" gap in TESTS.md.
+    //
+    // Two mechanics these need:
+    //
+    //  - **Dialogs holding a text field never reach idle.** The field's cursor
+    //    blink is an endless animation, so the auto-advancing clock spins until
+    //    Espresso throws AppNotIdleException. Same fix as HomeScreen's endless
+    //    LaunchedEffect loops: drive the clock by hand.
+    //  - **The add-mode button has two forms.** "CREATE MODE" in the empty
+    //    state, "+ NEW MODE" at the foot of the list once modes exist — and the
+    //    latter is below the fold in a LazyColumn.
+    //  - Dialog controls are matched with `isDialog()` because their labels are
+    //    reused by the screen behind them: the mode card's own DELETE sits
+    //    under the delete dialog's DELETE.
+
+    // A dialog containing an OutlinedTextField never reaches idle under
+    // Robolectric — Compose spins recomposing until Espresso gives up with
+    // AppNotIdleException, whatever the graphics mode, and `autoAdvance = false`
+    // does not help because the stall is in composition, not the clock. (An
+    // identical dialog *without* a text field is fine.) So every branch that
+    // needs typing — the create/rename/register dialogs and the unlock dialog's
+    // capped path — is covered on a real device in
+    // `app/src/androidTest/.../DialogFlowsEndToEndTest.kt`, where it works.
+
+    private fun inDialog(text: String) =
+        compose.onAllNodes(hasAnyAncestor(isDialog()) and hasText(text)).onFirst()
+
+    /** Hand-driven clock, for anything that opens a dialog with a text field. */
+    private fun showManualClock() {
+        compose.mainClock.autoAdvance = false
+        compose.setContent { MinimalistTheme { ModesScreen(viewModel = vm, onBack = {}) } }
+        settle()
+    }
+
+    private fun settle() = repeat(4) { compose.mainClock.advanceTimeByFrame() }
+
+    @Test fun `the delete dialog names the schedules that would be affected`() {
+        vm.importConfig(ConfigManager.ExportData(
+            1,
+            listOf(mode(id = "m1", name = "Deep Work")),
+            listOf(schedule(id = "s1", name = "Work Hours", modeIds = listOf("m1"))),
+            emptyList()
+        ))
+        show()
+        compose.onNodeWithText("DELETE").performClick()
+
+        compose.onNodeWithText("LINKED SCHEDULES AFFECTED:").assertIsDisplayed()
+        compose.onAllNodesWithText("WORK HOURS", substring = true).onFirst().assertIsDisplayed()
+    }
+
+    @Test fun `confirming the delete dialog removes the mode`() {
+        seed(mode(id = "m1", name = "Deep Work"))
+        show()
+        compose.onNodeWithText("DELETE").performClick()
+
+        inDialog("DELETE").performClick()
+
+        assertEquals(emptyList<String>(), vm.appState.value.modes.map { it.id })
+    }
+
+    @Test fun `cancelling the delete dialog keeps the mode`() {
+        seed(mode(id = "m1", name = "Deep Work"))
+        show()
+        compose.onNodeWithText("DELETE").performClick()
+
+        inDialog("CANCEL").performClick()
+
+        assertEquals(listOf("m1"), vm.appState.value.modes.map { it.id })
+    }
+
+    @Test fun `activating offers both an NFC-held and a timed option`() {
+        seed(mode(id = "m1", name = "Deep Work"))
+        showManualClock()
+        compose.onNodeWithText("ACTIVATE").performClick()
+        settle()
+
+        compose.onNodeWithText("UNTIL NFC TAG").assertIsDisplayed()
+        compose.onNodeWithText("FOR A SET DURATION").assertIsDisplayed()
+    }
+
+    @Test fun `the activation dialog does not activate anything until confirmed`() {
+        seed(mode(id = "m1", name = "Deep Work"))
+        showManualClock()
+        compose.onNodeWithText("ACTIVATE").performClick()
+        settle()
+
+        assertEquals(emptySet<String>(), vm.appState.value.activeModes)
+
+        inDialog("ACTIVATE").performClick()
+        settle()
+
+        assertEquals(setOf("m1"), vm.appState.value.activeModes)
     }
 }
