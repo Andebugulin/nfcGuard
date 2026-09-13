@@ -93,6 +93,19 @@ android {
     }
 }
 
+// The Compose test manifest (which supplies the ComponentActivity every
+// `createComposeRule` test launches into) ships as `debugImplementation`, so the
+// release unit-test variant cannot host a Compose test at all — it fails with
+// "Unable to resolve activity for Intent ... androidx.activity.ComponentActivity".
+// Release unit tests would otherwise re-run the identical sources for no extra
+// signal (minification does not apply to unit tests), so the variant is turned
+// off and `./gradlew test` means debug + :domain, as TESTS.md documents.
+androidComponents {
+    beforeVariants(selector().withBuildType("release")) { variant ->
+        variant.enableUnitTest = false
+    }
+}
+
 dependencies {
     // Pure-Kotlin domain: AppState + state-machine logic objects.
     implementation(project(":domain"))
