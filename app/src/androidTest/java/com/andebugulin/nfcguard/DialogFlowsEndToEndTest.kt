@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import com.andebugulin.nfcguard.harness.GuardianHarness
 import com.andebugulin.nfcguard.harness.HomeRobot
 import com.andebugulin.nfcguard.harness.NfcTagsRobot
+import com.andebugulin.nfcguard.harness.SettingsRobot
 import com.andebugulin.nfcguard.harness.UnlockDialogRobot
 import com.andebugulin.nfcguard.nfc.MockNfcTag
 import com.andebugulin.nfcguard.testing.mode
@@ -264,6 +265,46 @@ class DialogFlowsEndToEndTest {
             .assertPermanentNotOffered()
             .deselectMode("Sleep")
             .assertPermanentOffered()
+    }
+
+    // ---------------- the challenge duration dialog ----------------
+
+    /**
+     * The 1:30 floor is the app's own protection against a user weakening the
+     * anti-bypass gate in a weak moment, so the UI must refuse to go under it —
+     * not merely coerce afterwards.
+     */
+    @Test fun theChallengeDurationCannotBeSetBelowTheFloor() {
+        harness.launch()
+
+        HomeRobot(compose).openSettings()
+            .openChallengeDuration()
+            .setMinutes("0")
+            .setSeconds("30")
+            .assertBelowMinimumWarned()
+            .assertCannotApply()
+    }
+
+    @Test fun theChallengeDurationCanBeRaised() {
+        harness.launch()
+
+        HomeRobot(compose).openSettings()
+            .openChallengeDuration()
+            .setMinutes("3")
+            .setSeconds("0")
+            .assertCanApply()
+            .applyDuration()
+            .assertVisible("3:00")
+    }
+
+    @Test fun exactlyTheFloorIsAccepted() {
+        harness.launch()
+
+        HomeRobot(compose).openSettings()
+            .openChallengeDuration()
+            .setMinutes("1")
+            .setSeconds("30")
+            .assertCanApply()
     }
 
     private fun assumeMockTags() = assumeTrue(

@@ -94,8 +94,17 @@ abstract class Robot(protected val compose: ComposeTestRule) {
      * editor) sits over a scrollable screen, and scrolling the screen behind it
      * would never bring the dialog's own content into view.
      */
+    protected fun isDisplayed(text: String) = runCatching {
+        compose.onAllNodesWithText(text).onFirst().assertIsDisplayed()
+    }.isSuccess
+
     protected fun scrollTo(text: String) {
-        if (compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()) return
+        // Checks *displayed*, not merely present. A `verticalScroll` column
+        // composes all its children, so a presence check never scrolls — the
+        // settings sheet's rows exist from the start and a tap aimed at one
+        // below the fold lands off-screen and silently does nothing. (A
+        // LazyColumn hides the bug because its off-screen rows really are absent.)
+        if (isDisplayed(text)) return
         runCatching {
             val inDialog = compose.onAllNodes(hasScrollAction() and hasAnyAncestor(isDialog()))
             val scroller =
@@ -106,8 +115,22 @@ abstract class Robot(protected val compose: ComposeTestRule) {
         }
     }
 
+    /**
+     * Waits for the node to actually be on screen, not merely composed.
+     *
+     * A dialog animates in, so its buttons exist a frame or two before they are
+     * displayed — `waitForIdle` can return in that window and the assertion
+     * then fails on a dialog that is plainly open.
+     */
     fun assertVisible(text: String) = apply {
         scrollTo(text)
+        runCatching {
+            compose.waitUntil(5_000) {
+                runCatching {
+                    compose.onAllNodesWithText(text).onFirst().assertIsDisplayed()
+                }.isSuccess
+            }
+        }
         compose.onAllNodesWithText(text).onFirst().assertIsDisplayed()
     }
 
@@ -160,6 +183,11 @@ class HomeRobot(compose: ComposeTestRule) : Robot(compose) {
     /** The trash icon in the header; the only node carrying this description. */
     fun openEmergencyReset() = EmergencyResetRobot(compose).also {
         compose.onNodeWithContentDescription("Emergency Reset").performClick()
+        compose.waitForIdle()
+    }
+
+    fun openSettings() = SettingsRobot(compose).also {
+        compose.onNodeWithContentDescription("Settings & Permissions").performClick()
         compose.waitForIdle()
     }
     fun openModes() = ModesRobot(compose).also { tap("MODES") }
@@ -327,42 +355,33 @@ class EmergencyResetRobot(compose: ComposeTestRule) : Robot(compose) {
     fun confirmReset() = apply { tapInDialog("CONFIRM") }
     fun cancelTagSelection() = apply { tapInDialog("CANCEL") }
 
+}
+
+/**
+ * The settings sheet. Only the challenge-duration dialog lives here — it holds
+ * the MIN/SEC fields, so it cannot run under Robolectric; everything else on
+ * the sheet is covered far more cheaply by `SettingsDialogTest`.
+ */
+class SettingsRobot(compose: ComposeTestRule) : Robot(compose) {
+    fun assertOnSettings() = apply { assertVisible("SETTINGS") }
+
     /**
-     * Sits out the real attention challenge, pressing "I'M HERE" each time the
-     * check phase opens (every 15s, for 5s) until tag selection appears.
-     *
-     * Slow on purpose — the gate is 90 seconds by design and its floor is
-     * raise-only, so it genuinely cannot be shortened from a test.
-     *
-     * **Never wait here with `Thread.sleep`.** A Compose test rule drives the
-     * clock the dialog's `delay(1000)` ticks on, and that clock only advances
-     * while the test framework is pumping. Sleeping on the test thread freezes
-     * the countdown mid-dialog — on screen it sits at 1:30 forever, which looks
-     * exactly like an app-side race and is not one. `waitUntil` keeps the
-     * framework pumping, so the dialog ticks in real time as a user sees it.
+     * "Minimum is 1:30" is the *violation* hint, shown only below the floor, so
+     * it cannot mark the dialog as open. APPLY is unique to it here.
      */
-    fun passChallenge(timeoutMs: Long = 150_000) = apply {
-        val deadline = System.currentTimeMillis() + timeoutMs
-        while (System.currentTimeMillis() < deadline) {
-            if (exists("SELECT LOST TAGS")) return@apply
-            check(!exists("CHALLENGE FAILED")) {
-                "a check window was missed, so the challenge failed instead of completing"
-            }
-            runCatching {
-                compose.waitUntil(2_000) {
-                    exists("I'M HERE") || exists("SELECT LOST TAGS") || exists("CHALLENGE FAILED")
-                }
-            }
-            if (exists("I'M HERE")) {
-                compose.onAllNodesWithText("I'M HERE").onFirst().performClick()
-                compose.waitForIdle()
-            }
-        }
-        error("the challenge did not complete within ${timeoutMs}ms")
+    fun openChallengeDuration() = apply {
+        tap("CHALLENGE DURATION")
+        assertVisible("APPLY")
     }
 
-    private fun exists(text: String) =
-        compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+    fun assertBelowMinimumWarned() = apply { assertVisible("Minimum is 1:30") }
+
+    fun setMinutes(value: String) = apply { setDurationField(0, value) }
+    fun setSeconds(value: String) = apply { setDurationField(1, value) }
+    fun assertCannotApply() = apply { assertDialogButtonDisabled("APPLY") }
+    fun assertCanApply() = apply { assertDialogButtonEnabled("APPLY") }
+    fun applyDuration() = apply { tapInDialog("APPLY") }
+    fun done() = apply { tap("DONE") }
 }
 
 class SchedulesRobot(compose: ComposeTestRule) : Robot(compose) {

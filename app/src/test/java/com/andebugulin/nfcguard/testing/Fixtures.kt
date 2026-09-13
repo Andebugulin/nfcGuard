@@ -37,6 +37,22 @@ fun setDetectorState(name: String, value: Any?) {
     field.set(null, value)
 }
 
+/**
+ * Pose as the accessibility service being enabled in system settings.
+ *
+ * Distinct from [setDetectorState] on purpose: `isRunning` says the service is
+ * *bound right now* (which enforcer a tick picks), while the Settings.Secure
+ * list says the user has *granted* it — which is what the settings sheet reads
+ * to report the blocking method.
+ */
+fun enableAccessibilityService(context: Context) {
+    android.provider.Settings.Secure.putString(
+        context.contentResolver,
+        android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+        "${context.packageName}/${ForegroundDetectorService::class.java.canonicalName}"
+    )
+}
+
 /** `BlockerService.start` bails out early without this. */
 fun grantOverlayPermission() = ShadowSettings.setCanDrawOverlays(true)
 
