@@ -87,11 +87,21 @@ abstract class Robot(protected val compose: ComposeTestRule) {
         compose.waitForIdle()
     }
 
-    /** No-op when the screen does not scroll, or the node is already composed. */
+    /**
+     * No-op when the screen does not scroll, or the node is already composed.
+     *
+     * Prefers a scrollable *inside* an open dialog: a tall dialog (the schedule
+     * editor) sits over a scrollable screen, and scrolling the screen behind it
+     * would never bring the dialog's own content into view.
+     */
     protected fun scrollTo(text: String) {
         if (compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()) return
         runCatching {
-            compose.onNode(hasScrollAction()).performScrollToNode(hasText(text))
+            val inDialog = compose.onAllNodes(hasScrollAction() and hasAnyAncestor(isDialog()))
+            val scroller =
+                if (inDialog.fetchSemanticsNodes().isNotEmpty()) inDialog.onFirst()
+                else compose.onNode(hasScrollAction())
+            scroller.performScrollToNode(hasText(text))
             compose.waitForIdle()
         }
     }
@@ -357,6 +367,61 @@ class EmergencyResetRobot(compose: ComposeTestRule) : Robot(compose) {
 
 class SchedulesRobot(compose: ComposeTestRule) : Robot(compose) {
     fun assertOnSchedules() = apply { assertVisible("SCHEDULES") }
+    fun assertScheduleListed(name: String) = apply { assertVisible(name.uppercase()) }
+
+    /** "CREATE SCHEDULE" in the empty state, "+ NEW SCHEDULE" once one exists. */
+    fun openEditor() = apply {
+        if (compose.onAllNodesWithText("CREATE SCHEDULE").fetchSemanticsNodes().isNotEmpty()) {
+            tap("CREATE SCHEDULE")
+        } else {
+            tap("+ NEW SCHEDULE")
+        }
+        assertVisible("NEW SCHEDULE")
+    }
+
+    fun openEditorFor(name: String) = apply {
+        scrollTo(name.uppercase())
+        tap("EDIT")
+        assertVisible("EDIT SCHEDULE")
+    }
+
+    fun typeName(name: String) = apply { typeInDialog(name) }
+
+    /**
+     * Replaces an existing name. `performTextInput` inserts at the cursor,
+     * which sits at offset 0 in a prefilled field, so typing alone would
+     * prepend rather than append.
+     */
+    fun renameTo(name: String) = apply {
+        clearDialogText()
+        typeInDialog(name)
+    }
+
+    fun toggleDay(day: String) = apply { tap(day.uppercase()) }
+    fun toggleMode(name: String) = apply { tap(name.uppercase()) }
+
+    fun assertCannotSubmit() = apply { assertDialogButtonDisabled("CREATE") }
+    fun assertCanSubmit() = apply { assertDialogButtonEnabled("CREATE") }
+    fun assertDuplicateNameRejected() = apply {
+        assertVisible("A schedule with this name already exists")
+        assertCannotSubmit()
+    }
+
+    fun create() = apply { tapInDialog("CREATE") }
+    fun saveEdit() = apply { tapInDialog("SAVE") }
+    fun cancelEditor() = apply { tapInDialog("CANCEL") }
+
+    fun deleteSchedule(name: String) = apply {
+        scrollTo(name.uppercase())
+        tap("DELETE")
+    }
+    fun assertDeleteConfirmShown() = apply { assertVisible("DELETE SCHEDULE?") }
+    fun confirmDelete() = apply { tapInDialog("DELETE") }
+    fun cancelDelete() = apply { tapInDialog("CANCEL") }
+
+    fun assertChallengeRequired() = apply { assertVisible("SAFE REGIME") }
+    fun assertChallengeSkipped() = apply { assertAbsent("SAFE REGIME") }
+    fun giveUpChallenge() = apply { tap("GIVE UP") }
 }
 
 class NfcTagsRobot(compose: ComposeTestRule) : Robot(compose) {
