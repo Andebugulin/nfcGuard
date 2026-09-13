@@ -13,6 +13,7 @@ import com.andebugulin.nfcguard.ui.safety.SafeRegimeChallengeDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -25,14 +26,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.PI
+import kotlin.math.roundToInt
 import java.util.Calendar
 import kotlinx.coroutines.launch
 
@@ -1282,6 +1286,26 @@ fun ModernTimePickerDialog(
     )
 }
 
+/**
+ * The clock value at [position] within a face of [size].
+ *
+ * Rounds to the nearest mark rather than truncating, so each number's
+ * catchment is centred on its own label. Truncating put the band between a
+ * label and the next one — harmless while the face was drag-only, because the
+ * indicator snaps and the user keeps adjusting, but wrong the moment a tap
+ * commits in one shot: a press on "3" would have set 2.
+ */
+private fun valueForPosition(position: Offset, size: IntSize, maxValue: Int): Int {
+    val x = position.x - size.width / 2f
+    val y = position.y - size.height / 2f
+
+    var angle = atan2(y, x) * 180 / PI + 90
+    if (angle < 0) angle += 360
+
+    val slots = maxValue + 1
+    return ((angle / 360.0) * slots).roundToInt() % slots
+}
+
 @Composable
 fun ClockFace(
     value: Int,
@@ -1292,22 +1316,17 @@ fun ClockFace(
     Box(
         modifier = Modifier
             .size(220.dp)
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { },
-                    onDragEnd = { },
-                    onDragCancel = { }
-                ) { change, _ ->
-                    val centerX = size.width / 2f
-                    val centerY = size.height / 2f
-                    val x = change.position.x - centerX
-                    val y = change.position.y - centerY
-
-                    var angle = atan2(y, x) * 180 / PI + 90
-                    if (angle < 0) angle += 360
-
-                    val newValue = ((angle / 360.0) * (maxValue + 1)).toInt() % (maxValue + 1)
-                    onValueChange(newValue)
+            // Tapping a number is what most people try first, so the face
+            // accepts a tap as well as a drag. Two pointerInput blocks: a
+            // single block runs one detector, which would swallow the gesture.
+            .pointerInput(maxValue) {
+                detectTapGestures { position ->
+                    onValueChange(valueForPosition(position, size, maxValue))
+                }
+            }
+            .pointerInput(maxValue) {
+                detectDragGestures { change, _ ->
+                    onValueChange(valueForPosition(change.position, size, maxValue))
                 }
             },
         contentAlignment = Alignment.Center

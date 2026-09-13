@@ -92,42 +92,12 @@ class ModernTimePickerDialogTest {
         assertNull("cancel must not report a time", confirmed)
     }
 
-    /** Centre of the screen-space band that selects [value], in the "3" label's local space. */
-    private fun bandCentreFor(value: Int): Offset {
-        val here = compose.onAllNodesWithText("3").onFirst().fetchSemanticsNode().boundsInRoot
-        val next = compose.onAllNodesWithText("${value + 1}").onFirst().fetchSemanticsNode().boundsInRoot
-        val mid = Offset((here.center.x + next.center.x) / 2f, (here.center.y + next.center.y) / 2f)
-        return Offset(mid.x - here.left, mid.y - here.top)
-    }
-
     /**
-     * The face reads gestures with `detectDragGestures`, so the value follows
-     * where a drag *ends*. Aimed at the middle of the band that selects 3 —
-     * see the next test for why the "3" label itself is not that point.
+     * Both gestures set the time, and both now land on the number they are
+     * aimed at: the face rounds to the nearest mark, so a label sits in the
+     * middle of its own catchment rather than on its edge.
      */
-    @Test fun `dragging to a position on the clock face selects that hour`() {
-        show(hour = 9, minute = 0)
-
-        compose.onAllNodesWithText("3").onFirst().performTouchInput {
-            down(Offset(centerX - 60f, centerY))
-            moveTo(bandCentreFor(3))
-            up()
-        }
-
-        compose.onNodeWithText("SET").performClick()
-        assertEquals(3, confirmed?.first)
-    }
-
-    /**
-     * Documents a real off-by-one rather than asserting it is right.
-     *
-     * The hit test truncates — `((angle / 360.0) * (maxValue + 1)).toInt()` —
-     * so each number's catchment starts *at* its label and runs clockwise to
-     * the next one. Landing precisely on "3" therefore lands on the boundary,
-     * and sub-pixel error drops it into the band below. Rounding instead of
-     * truncating would centre each band on its label.
-     */
-    @Test fun `landing exactly on a number can select the one before it`() {
+    @Test fun `dragging onto a number on the clock face selects it`() {
         show(hour = 9, minute = 0)
 
         compose.onAllNodesWithText("3").onFirst().performTouchInput {
@@ -137,23 +107,37 @@ class ModernTimePickerDialogTest {
         }
 
         compose.onNodeWithText("SET").performClick()
-        assertEquals(
-            "the label sits on a band boundary, so it reads one low",
-            2, confirmed?.first
-        )
+        assertEquals(3, confirmed?.first)
     }
 
     /**
-     * Documents a real interaction gap rather than asserting it is correct: the
-     * face handles drags only, so a plain tap on a number — the first thing most
-     * people try on a clock picker — leaves the time untouched.
+     * Regression proof for the tap fix. The face used to read
+     * `detectDragGestures` only, so a plain tap — the first thing most people
+     * try on a clock picker — did nothing at all.
      */
-    @Test fun `a plain tap on the clock face does not change the time`() {
+    @Test fun `tapping a number on the clock face selects it`() {
         show(hour = 9, minute = 0)
 
         compose.onAllNodesWithText("3").onFirst().performClick()
 
         compose.onNodeWithText("SET").performClick()
-        assertEquals(9 to 0, confirmed)
+        assertEquals(3, confirmed?.first)
+    }
+
+    /**
+     * The other half of the same fix, and the reason it had to ship with the
+     * tap: rounding centres each number's band on its label. While the face was
+     * drag-only a half-slot offset was invisible — the indicator snaps and the
+     * user keeps adjusting — but a tap commits in one shot, and a press on "3"
+     * used to set 2.
+     */
+    @Test fun `tapping a minute mark selects that minute`() {
+        show(hour = 7, minute = 0)
+        compose.onAllNodesWithText("00").onFirst().performClick()   // switch to minutes
+
+        compose.onAllNodesWithText("15").onFirst().performClick()
+
+        compose.onNodeWithText("SET").performClick()
+        assertEquals(7 to 15, confirmed)
     }
 }
