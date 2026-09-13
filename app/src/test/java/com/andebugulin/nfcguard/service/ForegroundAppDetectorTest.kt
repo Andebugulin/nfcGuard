@@ -4,6 +4,7 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.andebugulin.nfcguard.testing.setDetectorState
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -27,16 +28,10 @@ class ForegroundAppDetectorTest {
     private val usm: UsageStatsManager
         get() = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
-    private fun setStatic(name: String, value: Any?) {
-        val f = ForegroundDetectorService::class.java.getDeclaredField(name)
-        f.isAccessible = true
-        f.set(null, value)
-    }
-
     @Before fun reset() {
-        setStatic("isRunning", false)
-        setStatic("lastDetectedPackage", null)
-        setStatic("lastDetectedTime", 0L)
+        setDetectorState("isRunning", false)
+        setDetectorState("lastDetectedPackage", null)
+        setDetectorState("lastDetectedTime", 0L)
     }
 
     @After fun tearDown() = reset()
@@ -47,26 +42,26 @@ class ForegroundAppDetectorTest {
     // ─── strategy 1: accessibility ────────────────────────────────────────
 
     @Test fun `uses a fresh accessibility reading`() {
-        setStatic("isRunning", true)
-        setStatic("lastDetectedPackage", "com.fresh")
-        setStatic("lastDetectedTime", System.currentTimeMillis())
+        setDetectorState("isRunning", true)
+        setDetectorState("lastDetectedPackage", "com.fresh")
+        setDetectorState("lastDetectedTime", System.currentTimeMillis())
 
         assertEquals("com.fresh", ForegroundAppDetector(context).current())
     }
 
     @Test fun `ignores a stale accessibility reading older than 5s`() {
-        setStatic("isRunning", true)
-        setStatic("lastDetectedPackage", "com.stale")
-        setStatic("lastDetectedTime", System.currentTimeMillis() - 6_000)
+        setDetectorState("isRunning", true)
+        setDetectorState("lastDetectedPackage", "com.stale")
+        setDetectorState("lastDetectedTime", System.currentTimeMillis() - 6_000)
 
         // No usage events seeded either → nothing to report.
         assertNull(ForegroundAppDetector(context).current())
     }
 
     @Test fun `ignores accessibility data when the service is not running`() {
-        setStatic("isRunning", false)
-        setStatic("lastDetectedPackage", "com.notrunning")
-        setStatic("lastDetectedTime", System.currentTimeMillis())
+        setDetectorState("isRunning", false)
+        setDetectorState("lastDetectedPackage", "com.notrunning")
+        setDetectorState("lastDetectedTime", System.currentTimeMillis())
 
         assertNull(ForegroundAppDetector(context).current())
     }
@@ -103,9 +98,9 @@ class ForegroundAppDetectorTest {
     @Test fun `accessibility takes priority over usage events`() {
         val now = System.currentTimeMillis()
         addEvent("com.fromevents", now - 1_000, UsageEvents.Event.ACTIVITY_RESUMED)
-        setStatic("isRunning", true)
-        setStatic("lastDetectedPackage", "com.fromaccessibility")
-        setStatic("lastDetectedTime", now)
+        setDetectorState("isRunning", true)
+        setDetectorState("lastDetectedPackage", "com.fromaccessibility")
+        setDetectorState("lastDetectedTime", now)
 
         assertEquals("com.fromaccessibility", ForegroundAppDetector(context).current())
     }

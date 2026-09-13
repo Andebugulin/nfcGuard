@@ -75,6 +75,14 @@ android {
         compose = true
     }
 
+    // Domain builders used by BOTH the Robolectric and instrumented suites.
+    // Robolectric-only helpers stay in src/test; they cannot be shared because
+    // Robolectric is not on the instrumented classpath.
+    sourceSets {
+        getByName("test").java.srcDir("src/testShared/java")
+        getByName("androidTest").java.srcDir("src/testShared/java")
+    }
+
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }

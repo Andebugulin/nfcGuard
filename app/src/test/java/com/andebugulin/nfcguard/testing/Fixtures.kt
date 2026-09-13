@@ -1,53 +1,18 @@
 package com.andebugulin.nfcguard.testing
 
-import com.andebugulin.nfcguard.AppState
-import com.andebugulin.nfcguard.BlockMode
-import com.andebugulin.nfcguard.DayTime
-import com.andebugulin.nfcguard.Mode
-import com.andebugulin.nfcguard.NfcTag
-import com.andebugulin.nfcguard.Schedule
-import com.andebugulin.nfcguard.TimeSlot
 import com.andebugulin.nfcguard.data.AppStateRepository
+import com.andebugulin.nfcguard.service.ForegroundDetectorService
 
 import android.content.Context
 import org.robolectric.shadows.ShadowSettings
 
-/** Builders and harness helpers shared across the `:app` Robolectric suite. */
-
-fun mode(
-    id: String = "m1",
-    name: String = "Focus",
-    apps: List<String> = listOf("com.example.social"),
-    blockMode: BlockMode = BlockMode.BLOCK_SELECTED,
-    tagIds: List<String> = emptyList(),
-    limits: Map<String, Long?> = emptyMap()
-) = Mode(
-    id = id,
-    name = name,
-    blockedApps = apps,
-    blockMode = blockMode,
-    nfcTagIds = tagIds,
-    tagUnlockLimits = limits
-)
-
-fun schedule(
-    id: String = "s1",
-    name: String = "Work",
-    modeIds: List<String> = listOf("m1"),
-    day: Int = 1,
-    startHour: Int = 9,
-    endHour: Int = 17,
-    hasEndTime: Boolean = true
-) = Schedule(
-    id = id,
-    name = name,
-    timeSlot = TimeSlot(listOf(DayTime(day, startHour, 0, endHour, 0))),
-    linkedModeIds = modeIds,
-    hasEndTime = hasEndTime
-)
-
-fun tag(id: String = "t1", name: String = "Desk tag", modeIds: List<String> = emptyList()) =
-    NfcTag(id = id, name = name, linkedModeIds = modeIds)
+/**
+ * Robolectric-only harness helpers for the `:app` unit suite.
+ *
+ * The domain builders (`mode()`, `schedule()`, `tag()`, `emptyState()`) live in
+ * `src/testShared/.../testing/Builders.kt` so the instrumented suite can share
+ * them; everything here depends on Robolectric shadows and cannot.
+ */
 
 /**
  * The repository is a process-wide singleton. Robolectric hands each test a
@@ -58,6 +23,18 @@ fun resetAppStateRepository() {
     val field = AppStateRepository::class.java.getDeclaredField("INSTANCE")
     field.isAccessible = true
     field.set(null, null)
+}
+
+/**
+ * `ForegroundDetectorService.isRunning` / `lastDetectedTime` are `private set`,
+ * so tests that need to pose as "accessibility is (not) bound" write the
+ * backing field directly. Which enforcer `BlockerService` picks, and which of
+ * `ForegroundAppDetector`'s three strategies runs, both hang off these.
+ */
+fun setDetectorState(name: String, value: Any?) {
+    val field = ForegroundDetectorService::class.java.getDeclaredField(name)
+    field.isAccessible = true
+    field.set(null, value)
 }
 
 /** `BlockerService.start` bails out early without this. */
@@ -71,8 +48,6 @@ fun seedPersistedState(context: Context, rawJson: String) {
 fun persistedStateJson(context: Context): String? =
     context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
         .getString("app_state", null)
-
-fun emptyState() = AppState()
 
 /**
  * Cancel a ViewModel's scope. `GuardianViewModel.init` starts an endless 5s
