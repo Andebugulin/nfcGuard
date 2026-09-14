@@ -53,6 +53,20 @@ fun enableAccessibilityService(context: Context) {
     )
 }
 
+/**
+ * Empty the logger's in-memory buffer.
+ *
+ * `AppLogger.clear()` is not usable here: it deliberately records that it
+ * happened, so it leaves one entry behind and a test asserting an empty log
+ * would see a count of 1. The buffer is a static, so it also survives between
+ * tests in a sandbox — reset it in @Before when the count matters.
+ */
+fun resetAppLogger() {
+    val field = com.andebugulin.nfcguard.data.AppLogger::class.java.getDeclaredField("entries")
+    field.isAccessible = true
+    (field.get(com.andebugulin.nfcguard.data.AppLogger) as MutableCollection<*>).clear()
+}
+
 /** `BlockerService.start` bails out early without this. */
 fun grantOverlayPermission() = ShadowSettings.setCanDrawOverlays(true)
 

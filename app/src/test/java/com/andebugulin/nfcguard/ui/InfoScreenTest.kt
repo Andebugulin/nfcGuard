@@ -4,7 +4,10 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import com.andebugulin.nfcguard.ui.info.InfoScreen
 import org.junit.Rule
@@ -56,5 +59,17 @@ class InfoScreenTest {
         compose.onNodeWithText("OVERLAY MODE").assertIsDisplayed()
         scrollTo("FORCE-CLOSE MODE")
         compose.onNodeWithText("FORCE-CLOSE MODE").assertIsDisplayed()
+    }
+
+    @Test fun `the VIEW button opens the event log`() {
+        show()
+        scrollTo("VIEW")
+
+        compose.onNodeWithText("VIEW").performClick()
+        compose.waitForIdle()
+
+        // The dialog itself is covered by LogViewerDialogTest; this pins the
+        // route to it, which is what a user follows when asked for logs.
+        compose.onAllNodesWithText("EVENT LOG", substring = true).onFirst().assertIsDisplayed()
     }
 }
