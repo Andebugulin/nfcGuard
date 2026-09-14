@@ -1,12 +1,12 @@
 # Testing
 
-418 tests, 0 failures — 323 on the JVM, 95 on a real device.
+429 tests, 0 failures — 334 on the JVM, 95 on a real device.
 
 ```bash
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # AGP needs JDK 17+
 
 ./gradlew :domain:test              # 78 tests, pure Kotlin, ~3s
-./gradlew :app:testDebugUnitTest    # 245 tests, Robolectric, ~30s
+./gradlew :app:testDebugUnitTest    # 256 tests, Robolectric, ~30s
 ./gradlew test                      # both of the above
 ```
 
@@ -59,7 +59,7 @@ HTML reports: `domain/build/reports/tests/test/index.html`,
 | `:app` data | 971 | Robolectric | **covered** (41 tests) |
 | `:app` sync | 243 | Robolectric | **covered** (10 tests) |
 | `:app` receiver | 474 | Robolectric | **covered** (10 tests) |
-| `:app` service | 1,244 | Robolectric | **covered** (23 tests) |
+| `:app` service | 1,244 | Robolectric | **covered** (34 tests) |
 | `:app` viewmodel | 473 | Robolectric | **covered** (18 tests) |
 | `:app` Compose screens | 7,699 | Robolectric + Compose | **covered** (116 tests) |
 | `:app` widget | 308 | Robolectric | **covered** (16 tests) |
@@ -109,8 +109,24 @@ self-chaining, boot restore, service-restart re-sync.
 |---|---|---|
 | `ForegroundAppDetectorTest` | 8 | all three strategies, priority order, and the "load-bearing" resume-after-pause timestamp comparison |
 | `ForceCloseEnforcerTest` | 8 | the 3-second cooldown and exactly what resets it |
+| `BlockerServiceLifecycleTest` | 11 | onCreate/onStartCommand/onDestroy, the notification, and the restart guard |
 | `BlockerServiceScreenGateTest` | 4 | enforcement gated on interactive + unlocked |
 | `ForegroundDetectorServiceTest` | 3 | accessibility reconnect restores blocking |
+
+`BlockerServiceLifecycleTest` covers the service's own lifecycle, which was
+listed here as effectively untestable on the grounds that starting the service
+kills the process. That is true of *instrumentation* — Android answers a late
+`startForeground` with `ForegroundServiceDidNotStartInTimeException` and takes
+the app down — but not of the JVM, where Robolectric drives the lifecycle
+directly and no foreground-service deadline applies.
+
+It pins the far end of the intent contract (`StateSyncerTest` asserts what is
+sent; this asserts what is read), the notification the user actually sees
+(active vs monitoring vs *paused* — an NFC unlock leaves a mode paused, not
+off), that `START_STICKY` is returned so the system recreates the service, and
+the restart-on-death guard in both directions: swiping the task away with a
+mode active schedules the service back, and with nothing active it does not
+resurrect itself.
 
 `ForceCloseEnforcer` was previously listed as device-only ("needs a device test
 that can observe the launcher coming forward"). Observing the launcher is not
@@ -517,10 +533,9 @@ Not covered, in rough priority order:
    is per-OEM and still a manual check.
 2. **The system share sheet.** `FileProvider` hand-off for bug reports and
    config export — the app's side is covered, the chooser itself is not.
-3. **`BlockerService`'s own lifecycle.** Its collaborators and the screen gate
-   are covered; `onStartCommand`, the notification and per-tick enforcer
-   selection are not, and starting the service under instrumentation kills the
-   process.
+3. **`BlockerService`'s per-tick enforcer selection.** The lifecycle and the
+   decision inputs are now covered; which enforcer a given tick picks, and the
+   monitoring loop's timing, are not.
 4. **The NFC radio and `enableForegroundDispatch`.** Everything downstream of
    the intent is covered; the radio is the platform's.
 
