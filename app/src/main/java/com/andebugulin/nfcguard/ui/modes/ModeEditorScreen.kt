@@ -5,6 +5,7 @@ import com.andebugulin.nfcguard.BlockMode
 import com.andebugulin.nfcguard.Mode
 import com.andebugulin.nfcguard.NfcTag
 import com.andebugulin.nfcguard.ui.GuardianTheme
+import com.andebugulin.nfcguard.ui.TestTags
 
 import android.content.Context
 import android.content.Intent
@@ -30,6 +31,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -131,6 +133,7 @@ fun ModeEditorScreen(
                         }
                     },
                     enabled = selectedApps.isNotEmpty(),
+                    modifier = Modifier.testTag(TestTags.ModeEditor.SAVE),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GuardianTheme.ButtonPrimary,
                         contentColor = GuardianTheme.ButtonPrimaryText,
@@ -255,6 +258,7 @@ fun ModeEditorScreen(
                         val isAnySelected = selectedNfcTagIds.contains("ANY")
                         TagLimitItem(
                             name = "ANY OTHER NFC TAG",
+                            tagId = "ANY",
                             isSelected = isAnySelected,
                             limitMinutes = tagUnlockLimits["ANY"],
                             onToggle = {
@@ -276,6 +280,7 @@ fun ModeEditorScreen(
                                 name = tag.name.uppercase(),
                                 isSelected = isSelected,
                                 limitMinutes = tagUnlockLimits[tag.id],
+                                tagId = tag.id,
                                 usageCount = usageCount,
                                 onToggle = {
                                     selectedNfcTagIds = if (isSelected) {
@@ -312,6 +317,7 @@ fun ModeEditorScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
+                    .testTag(TestTags.ModeEditor.SEARCH)
             )
 
             Spacer(Modifier.height(16.dp))
@@ -454,6 +460,7 @@ fun ModeEditorScreen(
             },
             confirmButton = {
                 Button(
+                    modifier = Modifier.testTag(TestTags.ModeEditor.NO_PERMANENT_SAVE_ANYWAY),
                     onClick = {
                         showPermanentUnlockWarning = false
                         onSave(selectedApps.toList(), blockMode, selectedNfcTagIds.toList(), tagUnlockLimits)
@@ -481,6 +488,7 @@ fun TagLimitItem(
     name: String,
     isSelected: Boolean,
     limitMinutes: Long?,
+    tagId: String,
     usageCount: Int = 0,
     onToggle: () -> Unit,
     onConfigureLimit: () -> Unit
@@ -488,7 +496,7 @@ fun TagLimitItem(
     Surface(
         shape = RoundedCornerShape(0.dp),
         color = if (isSelected) Color.White else Color.Black,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().testTag(TestTags.ModeEditor.tagRow(tagId))
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -531,6 +539,7 @@ fun TagLimitItem(
             // Right part: Duration (Configure max limit)
             Surface(
                 onClick = onConfigureLimit,
+                modifier = Modifier.testTag(TestTags.ModeEditor.tagLimit(tagId)),
                 color = Color.Black,
                 shape = RoundedCornerShape(0.dp)
             ) {
@@ -603,7 +612,7 @@ fun TagLimitConfigDialog(
 
                 // Option 1: Permanent
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_PERMANENT).fillMaxWidth(),
                     shape = RoundedCornerShape(0.dp),
                     color = if (selectedOption == 0) Color.White else GuardianTheme.SurfaceDim,
                     onClick = { selectedOption = 0 }
@@ -628,7 +637,7 @@ fun TagLimitConfigDialog(
 
                 // Option 2: Timed limit
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_TIMED).fillMaxWidth(),
                     shape = RoundedCornerShape(0.dp),
                     color = if (selectedOption == 1) Color.White else GuardianTheme.SurfaceDim,
                     onClick = { selectedOption = 1 }
@@ -659,7 +668,7 @@ fun TagLimitConfigDialog(
                                     value = timedHours,
                                     onValueChange = { timedHours = it.filter { c -> c.isDigit() }.take(2) },
                                     label = { Text("HOURS", fontSize = 9.sp, letterSpacing = 1.sp) },
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier.weight(1f).testTag(TestTags.ModeEditor.LIMIT_HOURS),
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color.Black,
@@ -675,7 +684,7 @@ fun TagLimitConfigDialog(
                                     value = timedMinutes,
                                     onValueChange = { timedMinutes = it.filter { c -> c.isDigit() }.take(3) },
                                     label = { Text("MINUTES", fontSize = 9.sp, letterSpacing = 1.sp) },
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier.weight(1f).testTag(TestTags.ModeEditor.LIMIT_MINUTES),
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color.Black,
@@ -695,6 +704,7 @@ fun TagLimitConfigDialog(
         },
         confirmButton = {
             TextButton(
+                modifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_APPLY),
                 onClick = {
                     onConfirm(if (selectedOption == 0) null else totalMinutes)
                 },
@@ -704,7 +714,8 @@ fun TagLimitConfigDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                modifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_CANCEL),onClick = onDismiss) {
                 Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
@@ -716,7 +727,7 @@ fun AppItem(app: AppInfo, isSelected: Boolean, onToggle: () -> Unit) {
     val imageBitmap = remember(app.packageName) { app.icon.asImageBitmap() }
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag(TestTags.ModeEditor.appRow(app.packageName)),
         shape = RoundedCornerShape(0.dp),
         color = if (isSelected) Color.White else GuardianTheme.BackgroundSurface,
         onClick = onToggle

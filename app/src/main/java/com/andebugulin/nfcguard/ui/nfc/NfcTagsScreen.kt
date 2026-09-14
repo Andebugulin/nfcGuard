@@ -3,6 +3,7 @@ package com.andebugulin.nfcguard.ui.nfc
 import com.andebugulin.nfcguard.Mode
 import com.andebugulin.nfcguard.NfcTag
 import com.andebugulin.nfcguard.ui.GuardianTheme
+import com.andebugulin.nfcguard.ui.TestTags
 import com.andebugulin.nfcguard.ui.GuardianViewModel
 import com.andebugulin.nfcguard.ui.MainActivity
 import com.andebugulin.nfcguard.ui.safety.SafeRegimeChallengeDialog
@@ -18,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -155,7 +157,7 @@ fun NfcTagsScreen(
                                 contentColor = GuardianTheme.ButtonPrimaryText
                             ),
                             shape = RoundedCornerShape(0.dp),
-                            modifier = Modifier.height(48.dp)
+                            modifier = Modifier.height(48.dp).testTag(TestTags.NfcTags.REGISTER)
                         ) {
                             Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
@@ -196,6 +198,7 @@ fun NfcTagsScreen(
                             shape = RoundedCornerShape(0.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
+                                    .testTag(TestTags.NfcTags.REGISTER)
                                 .height(56.dp)
                         ) {
                             Icon(Icons.Default.Nfc, contentDescription = null)
@@ -371,7 +374,8 @@ fun NfcTagsScreen(
                         containerColor = GuardianTheme.Error,
                         contentColor = GuardianTheme.ButtonSecondaryText
                     ),
-                    shape = RoundedCornerShape(0.dp)
+                    shape = RoundedCornerShape(0.dp),
+                    modifier = Modifier.testTag(TestTags.NfcTags.DELETE_CONFIRM)
                 ) {
                     Text(
                         if (hasActiveMode) "CONTINUE" else "DELETE",
@@ -538,10 +542,16 @@ fun NfcTagCard(
             Spacer(Modifier.height(16.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                TextButton(onClick = onEdit) {
+                TextButton(
+                    onClick = onEdit,
+                    modifier = Modifier.testTag(TestTags.NfcTags.rename(tag.id))
+                ) {
                     Text("RENAME", fontSize = 11.sp, color = textColor, letterSpacing = 1.sp)
                 }
-                TextButton(onClick = onDelete) {
+                TextButton(
+                    onClick = onDelete,
+                    modifier = Modifier.testTag(TestTags.NfcTags.delete(tag.id))
+                ) {
                     Text("DELETE", fontSize = 11.sp, color = if (hasActiveMode) GuardianTheme.TextSecondary else GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                 }
             }
@@ -714,7 +724,7 @@ fun NfcTagRegistrationDialog(
                             unfocusedTextColor = GuardianTheme.InputText
                         ),
                         shape = RoundedCornerShape(0.dp),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testTag(TestTags.NfcTags.REGISTER_NAME_INPUT),
                         supportingText = {
                             // FIX #6: Duplicate name feedback
                             if (nameExists) {
@@ -745,7 +755,8 @@ fun NfcTagRegistrationDialog(
                     }
                 },
                 // FIX #3 + #6: Disable when duplicate tag or duplicate name
-                enabled = name.isNotBlank() && tagId.isNotBlank() && !isDuplicate && !nameExists
+                enabled = name.isNotBlank() && tagId.isNotBlank() && !isDuplicate && !nameExists,
+                modifier = Modifier.testTag(TestTags.NfcTags.REGISTER_CONFIRM)
             ) {
                 Text("REGISTER", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
@@ -804,7 +815,7 @@ fun NfcTagEditDialog(
                     unfocusedTextColor = GuardianTheme.InputText
                 ),
                 shape = RoundedCornerShape(0.dp),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag(TestTags.NfcTags.RENAME_INPUT),
                 supportingText = {
                     if (nameExists) {
                         Text(
@@ -831,7 +842,8 @@ fun NfcTagEditDialog(
                         onSave(name.trim())
                     }
                 },
-                enabled = name.isNotBlank() && !nameExists  // FIX #6
+                enabled = name.isNotBlank() && !nameExists,  // FIX #6
+                modifier = Modifier.testTag(TestTags.NfcTags.RENAME_SAVE)
             ) {
                 Text("SAVE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }

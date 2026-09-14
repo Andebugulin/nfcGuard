@@ -7,6 +7,7 @@ import com.andebugulin.nfcguard.NfcTag
 import com.andebugulin.nfcguard.Schedule
 import com.andebugulin.nfcguard.ui.GuardianTheme
 import com.andebugulin.nfcguard.ui.GuardianViewModel
+import com.andebugulin.nfcguard.ui.TestTags
 import com.andebugulin.nfcguard.ui.home.HomeScreen
 
 import androidx.compose.foundation.background
@@ -21,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -117,7 +119,7 @@ fun ModesScreen(
                                     contentColor = GuardianTheme.ButtonPrimaryText
                                 ),
                                 shape = RoundedCornerShape(0.dp),
-                                modifier = Modifier.height(48.dp)
+                                modifier = Modifier.height(48.dp).testTag(TestTags.Modes.ADD)
                             ) {
                                 Text(
                                     "CREATE MODE",
@@ -179,6 +181,7 @@ fun ModesScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(56.dp)
+                                    .testTag(TestTags.Modes.ADD)
                             ) {
                                 Text(
                                     "+ NEW MODE",
@@ -313,7 +316,8 @@ fun ModesScreen(
                         containerColor = GuardianTheme.Error,
                         contentColor = GuardianTheme.ButtonSecondaryText
                     ),
-                    shape = RoundedCornerShape(0.dp)
+                    shape = RoundedCornerShape(0.dp),
+                    modifier = Modifier.testTag(TestTags.Modes.DELETE_CONFIRM)
                 ) {
                     Text(
                         "DELETE",
@@ -527,6 +531,7 @@ fun ModeCard(
                 if (!isActive && !isPaused) {
                     Button(
                         onClick = onActivate,
+                        modifier = Modifier.testTag(TestTags.Modes.activate(mode.id)),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = GuardianTheme.ButtonPrimary,
                             contentColor = GuardianTheme.ButtonPrimaryText
@@ -579,10 +584,16 @@ fun ModeCard(
                             )
                         }
                     } else {
-                        TextButton(onClick = onEdit) {
+                        TextButton(
+                            onClick = onEdit,
+                            modifier = Modifier.testTag(TestTags.Modes.edit(mode.id))
+                        ) {
                             Text("EDIT", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
                         }
-                        TextButton(onClick = onDelete) {
+                        TextButton(
+                            onClick = onDelete,
+                            modifier = Modifier.testTag(TestTags.Modes.delete(mode.id))
+                        ) {
                             Text("DELETE", fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                         }
                     }
@@ -624,6 +635,7 @@ fun ModeNameDialog(
             Column {
                 OutlinedTextField(
                     value = name,
+                    modifier = Modifier.testTag(TestTags.Modes.NAME_INPUT),
                     onValueChange = { if (it.length <= 30) name = it },  // FIX #7: Max length
                     placeholder = { Text("MODE NAME", fontSize = 12.sp, letterSpacing = 1.sp) },
                     colors = TextFieldDefaults.colors(
@@ -660,7 +672,8 @@ fun ModeNameDialog(
         confirmButton = {
             TextButton(
                 onClick = { if (name.isNotBlank() && !nameExists) onSave(name.trim()) },
-                enabled = name.isNotBlank() && !nameExists  // FIX #6
+                enabled = name.isNotBlank() && !nameExists,  // FIX #6
+                modifier = Modifier.testTag(TestTags.Modes.NAME_CONFIRM)
             ) {
                 Text("CREATE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
@@ -897,7 +910,8 @@ fun ActivationOptionsDialog(
                         onActivate(null)
                     }
                 },
-                enabled = selectedOption == 0 || totalMinutes > 0
+                enabled = selectedOption == 0 || totalMinutes > 0,
+                modifier = Modifier.testTag(TestTags.Modes.ACTIVATE_CONFIRM)
             ) {
                 Text("ACTIVATE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
@@ -983,7 +997,7 @@ fun UnlockDurationDialog(
                     modes.forEach { mode ->
                         val isSelected = selectedModeIds.contains(mode.id)
                         Surface(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testTag(TestTags.Unlock.modeRow(mode.id)),
                             shape = RoundedCornerShape(0.dp),
                             color = if (isSelected) Color.White else Color.Black,
                             onClick = {
@@ -1046,7 +1060,7 @@ fun UnlockDurationDialog(
                 // Option 1: Permanent unlock (only if no limit on selected modes)
                 if (effectiveLimit == null) {
                     Surface(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testTag(TestTags.Unlock.PERMANENT_OPTION),
                         shape = RoundedCornerShape(0.dp),
                         color = if (selectedOption == 0) Color.White else GuardianTheme.SurfaceDim,
                         onClick = { selectedOption = 0 }
@@ -1166,7 +1180,7 @@ fun UnlockDurationDialog(
                                     value = timedHours,
                                     onValueChange = { timedHours = it.filter { c -> c.isDigit() }.take(2) },
                                     label = { Text("HOURS", fontSize = 9.sp, letterSpacing = 1.sp) },
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier.weight(1f).testTag(TestTags.Unlock.HOURS),
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color.Black,
@@ -1182,7 +1196,7 @@ fun UnlockDurationDialog(
                                     value = timedMinutes,
                                     onValueChange = { timedMinutes = it.filter { c -> c.isDigit() }.take(3) },
                                     label = { Text("MINUTES", fontSize = 9.sp, letterSpacing = 1.sp) },
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier.weight(1f).testTag(TestTags.Unlock.MINUTES),
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color.Black,
@@ -1222,7 +1236,8 @@ fun UnlockDurationDialog(
                         onConfirm(null, selectedModeIds)
                     }
                 },
-                enabled = selectedModeIds.isNotEmpty() && ((selectedOption == 0 && effectiveLimit == null) || (selectedOption == 1 && cappedMinutes > 0))
+                enabled = selectedModeIds.isNotEmpty() && ((selectedOption == 0 && effectiveLimit == null) || (selectedOption == 1 && cappedMinutes > 0)),
+                modifier = Modifier.testTag(TestTags.Unlock.CONFIRM)
             ) {
                 Text("UNLOCK", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }

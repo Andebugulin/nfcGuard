@@ -7,6 +7,7 @@ import com.andebugulin.nfcguard.Mode
 import com.andebugulin.nfcguard.Schedule
 import com.andebugulin.nfcguard.TimeSlot
 import com.andebugulin.nfcguard.ui.GuardianTheme
+import com.andebugulin.nfcguard.ui.TestTags
 import com.andebugulin.nfcguard.ui.GuardianViewModel
 import com.andebugulin.nfcguard.ui.safety.SafeRegimeChallengeDialog
 
@@ -24,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
@@ -268,7 +270,7 @@ fun SchedulesScreen(
                                     disabledContentColor = GuardianTheme.ButtonDisabledText
                                 ),
                                 shape = RoundedCornerShape(0.dp),
-                                modifier = Modifier.height(48.dp)
+                                modifier = Modifier.testTag(TestTags.Schedules.ADD).height(48.dp)
                             ) {
                                 Text(
                                     if (appState.modes.isNotEmpty()) "CREATE SCHEDULE" else "CREATE MODES FIRST",
@@ -336,7 +338,7 @@ fun SchedulesScreen(
                                     disabledContentColor = GuardianTheme.OnLightSurfaceSecondaryText
                                 ),
                                 shape = RoundedCornerShape(0.dp),
-                                modifier = Modifier
+                                modifier = Modifier.testTag(TestTags.Schedules.ADD)
                                     .fillMaxWidth()
                                     .height(56.dp)
                             ) {
@@ -514,7 +516,8 @@ fun SchedulesScreen(
                         containerColor = GuardianTheme.Error,
                         contentColor = GuardianTheme.ButtonSecondaryText
                     ),
-                    shape = RoundedCornerShape(0.dp)
+                    shape = RoundedCornerShape(0.dp),
+                    modifier = Modifier.testTag(TestTags.Schedules.DELETE_CONFIRM)
                 ) {
                     Text(
                         "DELETE",
@@ -714,10 +717,16 @@ fun ScheduleCard(
                     }
                 }
 
-                TextButton(onClick = onEdit) {
+                TextButton(
+                    onClick = onEdit,
+                    modifier = Modifier.testTag(TestTags.Schedules.edit(schedule.id))
+                ) {
                     Text("EDIT", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
                 }
-                TextButton(onClick = onDelete) {
+                TextButton(
+                    onClick = onDelete,
+                    modifier = Modifier.testTag(TestTags.Schedules.delete(schedule.id))
+                ) {
                     Text("DELETE", fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                 }
             }
@@ -807,7 +816,8 @@ fun ScheduleEditorDialog(
                         onSave(name.trim(), timeSlot, selectedModeIds.toList(), hasEndTime)
                     }
                 },
-                enabled = name.isNotBlank() && selectedDays.isNotEmpty() && selectedModeIds.isNotEmpty() && !nameExists
+                enabled = name.isNotBlank() && selectedDays.isNotEmpty() && selectedModeIds.isNotEmpty() && !nameExists,
+                modifier = Modifier.testTag(TestTags.Schedules.EDITOR_CONFIRM)
             ) {
                 Text(if (existingSchedule != null) "SAVE" else "CREATE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
@@ -871,7 +881,7 @@ fun ScheduleEditorDialog(
                                 unfocusedTextColor = GuardianTheme.InputText
                             ),
                             shape = RoundedCornerShape(0.dp),
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testTag(TestTags.Schedules.EDITOR_NAME),
                             supportingText = {
                                 // FIX #6: Duplicate name feedback
                                 if (nameExists) {
@@ -918,6 +928,7 @@ fun ScheduleEditorDialog(
                                     shape = RoundedCornerShape(0.dp),
                                     color = if (selectedDays.contains(day)) Color.White else Color.Black,
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                        .testTag(TestTags.Schedules.day(day))
                                 ) {
                                     Column(Modifier.padding(12.dp)) {
                                         Row(
@@ -933,6 +944,7 @@ fun ScheduleEditorDialog(
                                             )
                                             if (selectedDays.contains(day)) {
                                                 TextButton(
+                                                    modifier = Modifier.testTag(TestTags.Schedules.startTime(day)),
                                                     onClick = { showTimePickerForDay = day },
                                                     colors = ButtonDefaults.textButtonColors(
                                                         contentColor = GuardianTheme.ButtonPrimaryText
@@ -969,6 +981,7 @@ fun ScheduleEditorDialog(
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 TextButton(
+                                                    modifier = Modifier.testTag(TestTags.Schedules.endTime(day)),
                                                     onClick = { showEndTimePickerForDay = day },
                                                     colors = ButtonDefaults.textButtonColors(
                                                         contentColor = if (endBeforeStart && endTimeError) GuardianTheme.ErrorTextEmphasized else GuardianTheme.ButtonPrimaryText
@@ -1012,6 +1025,7 @@ fun ScheduleEditorDialog(
                                 modifier = Modifier.weight(1f)
                             )
                             Switch(
+                                modifier = Modifier.testTag(TestTags.Schedules.EDITOR_CUSTOM_END_TIMES),
                                 checked = hasEndTime,
                                 onCheckedChange = {
                                     hasEndTime = it
@@ -1123,6 +1137,7 @@ fun ScheduleEditorDialog(
                                         shape = RoundedCornerShape(0.dp),
                                         color = if (selectedModeIds.contains(mode.id)) Color.White else Color.Black,
                                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                            .testTag(TestTags.Schedules.linkedMode(mode.id))
                                     ) {
                                         Row(
                                             modifier = Modifier.padding(12.dp),
@@ -1210,12 +1225,16 @@ fun ModernTimePickerDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = { onConfirm(hour, minute) }) {
+            TextButton(
+                onClick = { onConfirm(hour, minute) },
+                modifier = Modifier.testTag(TestTags.TimePicker.SET)
+            ) {
                 Text("SET", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                modifier = Modifier.testTag(TestTags.TimePicker.CANCEL),onClick = onDismiss) {
                 Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },

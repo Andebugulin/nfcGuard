@@ -9,6 +9,7 @@ import com.andebugulin.nfcguard.ui.GuardianTheme
 import com.andebugulin.nfcguard.ui.GuardianViewModel
 import com.andebugulin.nfcguard.ui.safety.SafeRegimeChallengeDialog
 import com.andebugulin.nfcguard.ui.Screen
+import com.andebugulin.nfcguard.ui.TestTags
 import com.andebugulin.nfcguard.ui.onboarding.FeatureShowcaseDialog
 import com.andebugulin.nfcguard.ui.onboarding.isShowcaseSeen
 import com.andebugulin.nfcguard.ui.onboarding.markShowcaseSeen
@@ -28,6 +29,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -229,6 +231,7 @@ fun HomeScreen(
                     contentDescription = "Emergency Reset",
                     tint = GuardianTheme.IconPrimary,
                     modifier = Modifier
+                        .testTag(TestTags.Home.EMERGENCY_RESET)
                         .size(20.dp)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -243,6 +246,7 @@ fun HomeScreen(
                     contentDescription = "Settings & Permissions",
                     tint = if (permissionsGranted) GuardianTheme.IconPrimary else GuardianTheme.Error,
                     modifier = Modifier
+                        .testTag(TestTags.Home.SETTINGS)
                         .size(20.dp)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -278,6 +282,7 @@ fun HomeScreen(
             title = "MODES",
             subtitle = "${appState.modes.size} CREATED",
             icon = Icons.Default.Block,
+            testTag = TestTags.Home.NAV_MODES,
             onClick = { openSection(Screen.MODES) }
         )
 
@@ -285,6 +290,7 @@ fun HomeScreen(
             title = "SCHEDULES",
             subtitle = "${appState.schedules.size} CONFIGURED",
             icon = Icons.Default.Schedule,
+            testTag = TestTags.Home.NAV_SCHEDULES,
             onClick = { openSection(Screen.SCHEDULES) }
         )
 
@@ -292,6 +298,7 @@ fun HomeScreen(
             title = "NFC TAGS",
             subtitle = "${appState.nfcTags.size} REGISTERED",
             icon = Icons.Default.Nfc,
+            testTag = TestTags.Home.NAV_NFC_TAGS,
             onClick = { openSection(Screen.NFC_TAGS) }
         )
 
@@ -546,10 +553,11 @@ fun NavigationCard(
     title: String,
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    testTag: String,
     onClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag(testTag),
         shape = RoundedCornerShape(0.dp),
         color = GuardianTheme.BackgroundSurface,
         onClick = onClick
@@ -664,6 +672,7 @@ fun EmergencyWarningDialog(
         },
         confirmButton = {
             TextButton(
+                modifier = Modifier.testTag(TestTags.Emergency.WARNING_CONTINUE),
                 onClick = onConfirm,
                 colors = ButtonDefaults.textButtonColors(
                     contentColor = GuardianTheme.Error
@@ -674,6 +683,7 @@ fun EmergencyWarningDialog(
         },
         dismissButton = {
             TextButton(
+                modifier = Modifier.testTag(TestTags.Emergency.WARNING_CANCEL),
                 onClick = onDismiss,
                 colors = ButtonDefaults.textButtonColors(
                     contentColor = GuardianTheme.TextSecondary
@@ -739,6 +749,7 @@ fun TagSelectionDialog(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         nfcTags.forEach { tag ->
                             Surface(
+                                modifier = Modifier.testTag(TestTags.Emergency.lostTag(tag.id)),
                                 onClick = { onTagToggle(tag.id) },
                                 shape = RoundedCornerShape(0.dp),
                                 color = if (selectedTags.contains(tag.id)) Color.White else GuardianTheme.BackgroundSurface
@@ -788,6 +799,7 @@ fun TagSelectionDialog(
         },
         confirmButton = {
             TextButton(
+                modifier = Modifier.testTag(TestTags.Emergency.TAG_SELECTION_CONFIRM),
                 onClick = onConfirm,
                 colors = ButtonDefaults.textButtonColors(
                     contentColor = GuardianTheme.Error
@@ -798,6 +810,7 @@ fun TagSelectionDialog(
         },
         dismissButton = {
             TextButton(
+                modifier = Modifier.testTag(TestTags.Emergency.TAG_SELECTION_CANCEL),
                 onClick = onDismiss,
                 colors = ButtonDefaults.textButtonColors(
                     contentColor = GuardianTheme.TextSecondary
@@ -1117,6 +1130,7 @@ fun SettingsDialog(
                         }
                         Spacer(Modifier.width(8.dp))
                         Switch(
+                            modifier = Modifier.testTag(TestTags.Settings.SAFE_REGIME_TOGGLE),
                             checked = safeRegimeEnabled,
                             onCheckedChange = { newValue ->
                                 if (newValue) {
@@ -1165,7 +1179,7 @@ fun SettingsDialog(
 
                 // Challenge duration — configurable, but never below 1:30
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag(TestTags.Settings.CHALLENGE_DURATION_ROW),
                     shape = RoundedCornerShape(0.dp),
                     color = GuardianTheme.BackgroundSurface,
                     onClick = { showDurationPicker = true }
@@ -1326,7 +1340,7 @@ fun SettingsDialog(
                         contentColor = GuardianTheme.TextPrimary
                     ),
                     shape = RoundedCornerShape(0.dp),
-                    modifier = Modifier.fillMaxWidth().height(40.dp)
+                    modifier = Modifier.fillMaxWidth().height(40.dp).testTag(TestTags.Settings.EXPORT)
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -1351,7 +1365,7 @@ fun SettingsDialog(
                         contentColor = GuardianTheme.TextPrimary
                     ),
                     shape = RoundedCornerShape(0.dp),
-                    modifier = Modifier.fillMaxWidth().height(40.dp)
+                    modifier = Modifier.fillMaxWidth().height(40.dp).testTag(TestTags.Settings.IMPORT)
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -1381,7 +1395,7 @@ fun SettingsDialog(
                 // Status message
                 importMessage?.let { msg ->
                     Surface(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testTag(TestTags.Settings.STATUS_MESSAGE),
                         shape = RoundedCornerShape(0.dp),
                         color = if (msg.contains("success", ignoreCase = true)) GuardianTheme.SuccessBackground else GuardianTheme.ErrorDark
                     ) {
@@ -1400,6 +1414,7 @@ fun SettingsDialog(
         confirmButton = {
             TextButton(
                 onClick = onDismiss,
+                modifier = Modifier.testTag(TestTags.Settings.DONE),
                 colors = ButtonDefaults.textButtonColors(contentColor = GuardianTheme.TextPrimary)
             ) {
                 Text("DONE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
@@ -1425,7 +1440,7 @@ fun SettingsDialog(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testTag(TestTags.Settings.EXPORT_JSON),
                         shape = RoundedCornerShape(0.dp),
                         color = GuardianTheme.BackgroundSurface,
                         onClick = {
@@ -1450,7 +1465,7 @@ fun SettingsDialog(
                         }
                     }
                     Surface(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testTag(TestTags.Settings.EXPORT_YAML),
                         shape = RoundedCornerShape(0.dp),
                         color = GuardianTheme.BackgroundSurface,
                         onClick = {
@@ -1577,6 +1592,7 @@ fun SettingsDialog(
                             showImportConfirm = false
                             pendingImportData = null
                         },
+                        modifier = Modifier.testTag(TestTags.Settings.IMPORT_MERGE),
                         colors = ButtonDefaults.textButtonColors(contentColor = GuardianTheme.TextPrimary)
                     ) {
                         Text("MERGE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
@@ -1588,6 +1604,7 @@ fun SettingsDialog(
                             showImportConfirm = false
                             pendingImportData = null
                         },
+                        modifier = Modifier.testTag(TestTags.Settings.IMPORT_REPLACE),
                         colors = ButtonDefaults.textButtonColors(contentColor = GuardianTheme.Error)
                     ) {
                         Text("REPLACE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
@@ -1723,7 +1740,7 @@ private fun ChallengeDurationDialog(
                         onValueChange = { mins = it.filter { c -> c.isDigit() }.take(2) },
                         label = { Text("MIN", fontSize = 9.sp, letterSpacing = 1.sp) },
                         singleLine = true,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).testTag(TestTags.Settings.DURATION_MINUTES),
                         colors = fieldColors,
                         shape = RoundedCornerShape(0.dp)
                     )
@@ -1733,7 +1750,7 @@ private fun ChallengeDurationDialog(
                         onValueChange = { secs = it.filter { c -> c.isDigit() }.take(2) },
                         label = { Text("SEC", fontSize = 9.sp, letterSpacing = 1.sp) },
                         singleLine = true,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).testTag(TestTags.Settings.DURATION_SECONDS),
                         colors = fieldColors,
                         shape = RoundedCornerShape(0.dp)
                     )
@@ -1749,7 +1766,11 @@ private fun ChallengeDurationDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(total) }, enabled = !belowMin) {
+            TextButton(
+                onClick = { onConfirm(total) },
+                enabled = !belowMin,
+                modifier = Modifier.testTag(TestTags.Settings.DURATION_APPLY)
+            ) {
                 Text("APPLY", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         },

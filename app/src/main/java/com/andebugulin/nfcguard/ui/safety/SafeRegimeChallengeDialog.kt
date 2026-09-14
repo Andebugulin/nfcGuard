@@ -1,6 +1,7 @@
 package com.andebugulin.nfcguard.ui.safety
 
 import com.andebugulin.nfcguard.ui.GuardianTheme
+import com.andebugulin.nfcguard.ui.TestTags
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -160,6 +162,7 @@ fun SafeRegimeChallengeDialog(
                             )
                             Text(
                                 "CHALLENGE FAILED",
+                                modifier = Modifier.testTag(TestTags.Challenge.FAILED),
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Black,
                                 color = GuardianTheme.ErrorText,
@@ -262,6 +265,7 @@ fun SafeRegimeChallengeDialog(
                                     ),
                                     shape = RoundedCornerShape(0.dp),
                                     modifier = Modifier.fillMaxWidth().height(56.dp)
+                                        .testTag(TestTags.Challenge.PRESS)
                                 ) {
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -309,6 +313,7 @@ fun SafeRegimeChallengeDialog(
                     // Cancel button
                     TextButton(
                         onClick = onCancel,
+                        modifier = Modifier.testTag(TestTags.Challenge.GIVE_UP),
                         colors = ButtonDefaults.textButtonColors(
                             contentColor = GuardianTheme.TextSecondary
                         )
