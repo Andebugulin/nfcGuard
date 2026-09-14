@@ -1,12 +1,12 @@
 # Testing
 
-429 tests, 0 failures — 334 on the JVM, 95 on a real device.
+442 tests, 0 failures — 347 on the JVM, 95 on a real device.
 
 ```bash
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # AGP needs JDK 17+
 
 ./gradlew :domain:test              # 78 tests, pure Kotlin, ~3s
-./gradlew :app:testDebugUnitTest    # 256 tests, Robolectric, ~30s
+./gradlew :app:testDebugUnitTest    # 269 tests, Robolectric, ~30s
 ./gradlew test                      # both of the above
 ```
 
@@ -59,7 +59,7 @@ HTML reports: `domain/build/reports/tests/test/index.html`,
 | `:app` data | 971 | Robolectric | **covered** (41 tests) |
 | `:app` sync | 243 | Robolectric | **covered** (10 tests) |
 | `:app` receiver | 474 | Robolectric | **covered** (10 tests) |
-| `:app` service | 1,244 | Robolectric | **covered** (34 tests) |
+| `:app` service | 1,244 | Robolectric | **covered** (47 tests) |
 | `:app` viewmodel | 473 | Robolectric | **covered** (18 tests) |
 | `:app` Compose screens | 7,699 | Robolectric + Compose | **covered** (116 tests) |
 | `:app` widget | 308 | Robolectric | **covered** (16 tests) |
@@ -109,6 +109,7 @@ self-chaining, boot restore, service-restart re-sync.
 |---|---|---|
 | `ForegroundAppDetectorTest` | 8 | all three strategies, priority order, and the "load-bearing" resume-after-pause timestamp comparison |
 | `ForceCloseEnforcerTest` | 8 | the 3-second cooldown and exactly what resets it |
+| `BlockerServiceTickTest` | 13 | one tick: which enforcer acts, the allow path, and the gates before it |
 | `BlockerServiceLifecycleTest` | 11 | onCreate/onStartCommand/onDestroy, the notification, and the restart guard |
 | `BlockerServiceScreenGateTest` | 4 | enforcement gated on interactive + unlocked |
 | `ForegroundDetectorServiceTest` | 3 | accessibility reconnect restores blocking |
@@ -127,6 +128,30 @@ off), that `START_STICKY` is returned so the system recreates the service, and
 the restart-on-death guard in both directions: swiping the task away with a
 mode active schedules the service back, and with nothing active it does not
 resurrect itself.
+
+`BlockerServiceTickTest` covers one tick of the monitoring loop — the wiring
+between detector, decider and enforcers. The decision is `BlockDecider`'s and
+each enforcer is covered alone; what only lives here is the branch CLAUDE.md
+calls out: which enforcer acts is chosen per tick from
+`ForegroundDetectorService.isRunning`, exactly one of them may act (overlay and
+accessibility race badly — on Samsung the overlay's appearance kills the
+accessibility service), and on the allow path *both* `onAllowed` hooks fire so
+whichever enforcer is not in charge can still clean up after itself.
+
+Two mechanics it needs, both worth knowing before writing anything similar:
+
+- **Do not go through `onStartCommand`.** It starts the real 500ms loop, whose
+  ticks race the ones a test drives — and the loop never ends, so it keeps the
+  test JVM alive after the suite finishes. Create the service and set its
+  config fields directly; the extras parsing is `BlockerServiceLifecycleTest`'s
+  job.
+- **Raising the overlay deadlocks under Robolectric.** `showSafe` dispatches to
+  `Dispatchers.Main`, which a paused looper cannot drain while the test thread
+  is blocked — the same hazard as the instrumented overlay tests. The tick
+  helper therefore runs on a worker with a five-second deadline, so a
+  regression is a named failure rather than a hung build, and the overlay is
+  marked already-showing before the overlay-branch test so `showSafe` takes its
+  early return. The overlay actually appearing stays covered on device.
 
 `ForceCloseEnforcer` was previously listed as device-only ("needs a device test
 that can observe the launcher coming forward"). Observing the launcher is not
@@ -533,9 +558,9 @@ Not covered, in rough priority order:
    is per-OEM and still a manual check.
 2. **The system share sheet.** `FileProvider` hand-off for bug reports and
    config export — the app's side is covered, the chooser itself is not.
-3. **`BlockerService`'s per-tick enforcer selection.** The lifecycle and the
-   decision inputs are now covered; which enforcer a given tick picks, and the
-   monitoring loop's timing, are not.
+3. **The monitoring loop's timing.** One tick is covered; the 500ms cadence and
+   the mutex that stops two loops running at once are not — both are about
+   scheduling rather than logic, and testing them means testing `delay`.
 4. **The NFC radio and `enableForegroundDispatch`.** Everything downstream of
    the intent is covered; the radio is the platform's.
 
