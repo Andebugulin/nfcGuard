@@ -7,6 +7,7 @@ import com.andebugulin.nfcguard.testing.mode
 import com.andebugulin.nfcguard.testing.schedule
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -260,5 +261,96 @@ class ScheduleEditorEndToEndTest {
             .assertChallengeSkipped()
 
         assertEquals("Evening Hours", schedules().single().name)
+    }
+
+    // ---------------- per-day times ----------------
+    //
+    // The clock picker's own behaviour is covered on the JVM; what only a real
+    // run can show is that a time chosen in it survives into the saved schedule.
+
+    private fun newSchedule() = HomeRobot(compose).openSchedules()
+        .openEditor()
+        .typeName("Work Hours")
+        .toggleDay("MONDAY")
+        .toggleMode("Deep Work")
+
+    @Test fun aSelectedDayStartsAtNineByDefault() {
+        seedMode()
+        harness.launch()
+
+        newSchedule().assertTimeShown("09:00").create()
+
+        val day = schedules().single().timeSlot.dayTimes.single()
+        assertEquals(9, day.startHour)
+        assertEquals(0, day.startMinute)
+    }
+
+    @Test fun aStartTimeChosenOnTheClockIsSaved() {
+        seedMode()
+        harness.launch()
+
+        val editor = newSchedule()
+        editor.openTime("09:00").assertSelectingHour().pick("7").set()
+        editor.assertTimeShown("07:00").create()
+
+        assertEquals(7, schedules().single().timeSlot.dayTimes.single().startHour)
+    }
+
+    @Test fun cancellingTheClockLeavesTheTimeAlone() {
+        seedMode()
+        harness.launch()
+
+        val editor = newSchedule()
+        editor.openTime("09:00").pick("7").cancel()
+
+        editor.assertTimeShown("09:00")
+    }
+
+    /** Without the toggle a schedule runs to the end of the day. */
+    @Test fun aScheduleWithoutCustomEndTimesRunsToMidnight() {
+        seedMode()
+        harness.launch()
+
+        newSchedule().create()
+
+        val saved = schedules().single()
+        assertFalse("hasEndTime should stay off", saved.hasEndTime)
+        val day = saved.timeSlot.dayTimes.single()
+        assertEquals(23, day.endHour)
+        assertEquals(59, day.endMinute)
+    }
+
+    @Test fun customEndTimesRevealAnEndTimePerDay() {
+        seedMode()
+        harness.launch()
+
+        newSchedule().enableCustomEndTimes().assertTimeShown("UNTIL")
+    }
+
+    @Test fun anEndTimeChosenOnTheClockIsSaved() {
+        seedMode()
+        harness.launch()
+
+        val editor = newSchedule().enableCustomEndTimes()
+        // The end time defaults to 23:59; move it to 17:00.
+        editor.openTime("23:59").pick("17").set()
+        editor.create()
+
+        val saved = schedules().single()
+        assertTrue("the toggle should be recorded", saved.hasEndTime)
+        assertEquals(17, saved.timeSlot.dayTimes.single().endHour)
+    }
+
+    /** An end before the start would describe a window that never opens. */
+    @Test fun anEndTimeBeforeTheStartIsRejected() {
+        seedMode()
+        harness.launch()
+
+        val editor = newSchedule().enableCustomEndTimes()
+        editor.openTime("23:59").pick("7").set()   // 07:00, before the 09:00 start
+
+        editor.create()
+        editor.assertEndTimeRejected()
+        assertTrue("nothing may be saved while the window is impossible", schedules().isEmpty())
     }
 }

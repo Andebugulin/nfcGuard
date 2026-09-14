@@ -13,6 +13,7 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -441,6 +442,49 @@ class SchedulesRobot(compose: ComposeTestRule) : Robot(compose) {
     fun assertChallengeRequired() = apply { assertVisible("SAFE REGIME") }
     fun assertChallengeSkipped() = apply { assertAbsent("SAFE REGIME") }
     fun giveUpChallenge() = apply { tap("GIVE UP") }
+
+    // ---- per-day times ----
+
+    /** The only switch in the editor; reveals a second time per selected day. */
+    fun enableCustomEndTimes() = apply {
+        scrollTo("CUSTOM END TIMES")
+        compose.onAllNodes(isToggleable() and hasAnyAncestor(isDialog())).onFirst().performClick()
+        compose.waitForIdle()
+    }
+
+    /** Times render as HH:MM; tapping one opens the clock picker. */
+    fun openTime(shown: String) = TimePickerRobot(compose).also { tap(shown) }
+
+    fun assertTimeShown(shown: String) = apply { assertVisible(shown) }
+    fun assertEndTimeRejected() = apply { assertVisible("End time must be after start time") }
+}
+
+/**
+ * The clock picker, reached from a day's start or end time.
+ *
+ * Its own logic — the angle maths, the hour/minute switch — is covered far more
+ * cheaply on the JVM by `ModernTimePickerDialogTest`. What is only provable
+ * here is that a time chosen in it survives into the saved schedule.
+ */
+class TimePickerRobot(compose: ComposeTestRule) : Robot(compose) {
+    fun assertSelectingHour() = apply { assertVisible("SELECT HOUR") }
+    fun assertSelectingMinute() = apply { assertVisible("SELECT MINUTE") }
+
+    /** Taps a mark on the face. Works since ClockFace started accepting taps. */
+    fun pick(value: String) = apply { tap(value) }
+
+    fun set() = apply { tapInDialog("SET") }
+
+    /**
+     * The editor underneath has its own CANCEL, and both are inside a dialog,
+     * so `isDialog()` cannot separate them — dismissing the wrong one closes the
+     * whole editor. The picker's CANCEL is the one sitting next to SET.
+     */
+    fun cancel() = apply {
+        compose.onAllNodes(hasText("CANCEL") and hasAnySibling(hasText("SET")))
+            .onFirst().performClick()
+        compose.waitForIdle()
+    }
 }
 
 class NfcTagsRobot(compose: ComposeTestRule) : Robot(compose) {
