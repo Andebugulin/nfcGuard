@@ -169,6 +169,32 @@ unlock round-trip.
 | `SafeRegimeChallengeDialogTest` | 4 | never completes early, giving up cancels rather than satisfies |
 | `HomeScreenTest` | 3 | renders empty, with modes, with an active mode |
 
+### Selecting nodes: tags for identity, text for wording
+
+`TestTags` (in `app/src/main/.../ui/TestTags.kt`) gives the nodes tests drive a
+stable handle, shared by production and both test source sets so a rename fails
+to compile rather than at runtime.
+
+It exists because this UI is unusually hostile to text selectors: names,
+permission titles and status messages all render `.uppercase()`; several actions
+carry two labels depending on state ("CREATE MODE" empty vs "+ NEW MODE" in a
+list); and a dialog's button label usually also exists on the screen behind it.
+That last one does not fail loudly — picking the wrong CANCEL dismisses the
+wrong dialog and the test fails somewhere else entirely.
+
+Tags are applied to **identity and interaction targets only**. Wording stays on
+text, because that is what those assertions are actually about:
+
+```kotlin
+compose.onNodeWithTag(TestTags.Modes.delete("m1")).performClick()   // which button
+assertVisible("A mode with this name already exists")               // what it says
+```
+
+Adopting them immediately exposed two latent bugs in tests that had been
+passing: one navigated to Modes while already on Modes (the old selector tapped
+the screen's own "MODES" heading, which did nothing), and one picked an app by
+label while tapping by package. Both had been green.
+
 Four Compose gotchas this codebase hits, all encoded in the suites:
 
 - **Names render `.uppercase()`.** Assert `"DEEP WORK"`, not `"Deep Work"`.
@@ -425,10 +451,10 @@ Four things learned the hard way here, all encoded in the harness:
 - **Assert on displayed, with a wait.** A dialog animates in, so its buttons are
   composed a frame or two before they are on screen, and `waitForIdle` can
   return inside that window. `Robot.assertVisible` waits for display.
-- **Identify a row by a sibling, not by order.** Every tag row shows
-  "PERMANENT" until a cap is set, so the label alone is ambiguous;
-  `hasAnySibling(hasText(name))` picks the right row's button without depending
-  on the order rows happen to render in.
+- **Rebuild *both* APKs.** `assembleDebugAndroidTest` does not rebuild
+  `app-debug.apk`, so installing only the test APK runs new tests against the
+  old app — which looks like a mass of mysterious failures. Always
+  `./gradlew :app:assembleDebug :app:assembleDebugAndroidTest`.
 
 State is seeded through `AppStateRepository.update`, not by nulling the
 singleton as the Robolectric fixtures do: instrumentation shares a process with
