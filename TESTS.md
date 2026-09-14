@@ -1,12 +1,12 @@
 # Testing
 
-382 tests, 0 failures — 294 on the JVM, 88 on a real device.
+418 tests, 0 failures — 323 on the JVM, 95 on a real device.
 
 ```bash
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # AGP needs JDK 17+
 
 ./gradlew :domain:test              # 78 tests, pure Kotlin, ~3s
-./gradlew :app:testDebugUnitTest    # 216 tests, Robolectric, ~30s
+./gradlew :app:testDebugUnitTest    # 245 tests, Robolectric, ~30s
 ./gradlew test                      # both of the above
 ```
 
@@ -61,7 +61,7 @@ HTML reports: `domain/build/reports/tests/test/index.html`,
 | `:app` receiver | 474 | Robolectric | **covered** (10 tests) |
 | `:app` service | 1,244 | Robolectric | **covered** (23 tests) |
 | `:app` viewmodel | 473 | Robolectric | **covered** (18 tests) |
-| `:app` Compose screens | 7,699 | Robolectric + Compose | **covered** (87 tests) |
+| `:app` Compose screens | 7,699 | Robolectric + Compose | **covered** (116 tests) |
 | `:app` widget | 308 | Robolectric | **covered** (16 tests) |
 | `:app` first-run showcase | 226 | Robolectric | **covered** (8 tests) |
 | app end-to-end (nav, NFC, dialogs, emergency reset, tag caps, schedules) | — | instrumented | **covered** (64 tests) |
@@ -162,8 +162,10 @@ unlock round-trip.
 | `FeatureShowcaseTest` | 8 | per-screen content, the lost-tag recovery tip, sticky per-screen "seen" |
 | `OnboardingScreenTest` | 6 | the carousel and the "GET STARTED" handoff that #12 crashed on |
 | `SchedulesScreenTest` | 5 | "create modes first" gate, creation once a mode exists, listing |
-| `InfoScreenTest` | 4 | renders offline, both enforcement explanations, bug-report entry |
-| `ModeEditorScreenTest` | 4 | both polarities, NFC tag lock section |
+| `ConfigFileTransferTest` | 10 | export/import file I/O and the YAML-vs-JSON heuristic |
+| `LogViewerDialogTest` | 6 | the event log behind a bug report, and the share hand-off |
+| `InfoScreenTest` | 5 | renders offline, both enforcement explanations, bug-report entry |
+| `ModeEditorScreenTest` | 16 | the app picker — search, selection, critical-app filtering — and both polarities |
 | `SafeRegimeChallengeDialogTest` | 4 | never completes early, giving up cancels rather than satisfies |
 | `HomeScreenTest` | 3 | renders empty, with modes, with an active mode |
 
@@ -210,7 +212,7 @@ loop on `viewModelScope`. `runTest` hangs on it, because its cleanup runs
 `@Test` with `UnconfinedTestDispatcher`, and cancel the ViewModel in
 `@After`.
 
-## Instrumented suite (88 tests)
+## Instrumented suite (95 tests)
 
 Split in two: the end-to-end suites that drive the real app through its own
 entry point, and the device-behaviour suites that answer what the JVM cannot.
@@ -219,7 +221,7 @@ entry point, and the device-behaviour suites that answer what the JVM cannot.
 |---|---|---|
 | `DialogFlowsEndToEndTest` | 19 | every dialog branch that needs typing — unlock caps, tag naming, the challenge-duration floor |
 | `EmergencyResetEndToEndTest` | 10 | the lost-tag escape hatch and the challenge that gates it |
-| `ScheduleEditorEndToEndTest` | 15 | building and editing a schedule, and the gate on active edits |
+| `ScheduleEditorEndToEndTest` | 22 | building and editing a schedule, per-day times, and the gate on active edits |
 | `TagLimitEndToEndTest` | 11 | where per-tag unlock caps are *set*, and that they bind at unlock |
 | `DeviceBehaviourTest` | 8 | live `UsageStatsManager` detection, real accessibility binding, the #13 gate against real `PowerManager`/`KeyguardManager`, real SharedPreferences persistence |
 | `EnvironmentTest` | 7 | preflight — every grant the suite needs, each failure naming its own `adb` fix |
@@ -228,7 +230,7 @@ entry point, and the device-behaviour suites that answer what the JVM cannot.
 | `OverlayEnforcerInstrumentedTest` | 4 | a real `TYPE_APPLICATION_OVERLAY` window: show, hide, double-block idempotence, teardown |
 | `MockNfcTagProbeTest` | 3 | that a `Tag` really can be fabricated on this device |
 
-The whole run takes around 100 seconds. Keep it that way: no test should sit
+The whole run takes around 170 seconds. Keep it that way: no test should sit
 through wall-clock waits. See the note on the attention challenge below for the
 one case where that was tempting.
 
@@ -270,6 +272,24 @@ wildcard storing under its literal key, and the "NO PERMANENT UNLOCK" guard that
 fires when *every* selected tag is capped — including that backing out of that
 warning writes nothing. The last test joins both ends: a cap typed into the
 editor is the cap the unlock dialog honours after a tag tap.
+
+### Config export and import
+
+`ConfigFileTransferTest` covers the file I/O above `ConfigManager`: writing the
+chosen document, reading one back, and the heuristic that decides whether a file
+is YAML or JSON — misroute that and a valid backup reports as corrupt. It also
+pins that a corrupt file costs the user nothing, and that neither format is
+applied until they pick MERGE or REPLACE.
+
+Reaching the launchers needs no production change:
+`rememberLauncherForActivityResult` resolves `LocalActivityResultRegistryOwner`,
+so the test supplies a registry that records the launch and hands back a URI on
+demand, with Robolectric's ContentResolver backing that URI with an in-memory
+stream. Two things are required to make it work, both easy to lose an afternoon
+to: the callbacks write Compose state from *outside* the composition, so
+`Snapshot.sendApplyNotifications()` is needed before advancing frames or nothing
+recomposes (the bytes land, but no dialog and no message ever appear); and the
+status message renders `.uppercase()` like everything else.
 
 ### The settings sheet and the permission flow
 
@@ -466,20 +486,16 @@ pins the default to 34. Tests that care declare their own range.
 
 Not covered, in rough priority order:
 
-1. **`ModeEditorScreen`'s app picker.** Per-tag limits are now covered; app
-   search, deselection and polarity switching are only touched through
-   `createMode`'s happy path.
-2. **`InfoScreen`'s `LogViewerDialog`** and the `FileProvider` share/open sheet
-   behind bug reports and config export.
-3. **`ForceCloseEnforcer`'s accessibility path.** The cooldown and the HOME
+1. **`ForceCloseEnforcer`'s accessibility path.** The cooldown and the HOME
    Intent fallback are covered; whether `goHome()` actually moves the launcher
    is per-OEM and still a manual check.
-4. **Per-day start/end times in a schedule.** The editor suite covers days and
-   links; `CUSTOM END TIMES` and per-day time adjustment still rely on the
-   picker being correct in isolation.
-5. **Export/import file I/O.** The format chooser and `ConfigManager`'s
-   round-trips are covered; the `FileProvider` share/open sheet is not.
-6. **The NFC radio and `enableForegroundDispatch`.** Everything downstream of
+2. **The system share sheet.** `FileProvider` hand-off for bug reports and
+   config export — the app's side is covered, the chooser itself is not.
+3. **`BlockerService`'s own lifecycle.** Its collaborators and the screen gate
+   are covered; `onStartCommand`, the notification and per-tick enforcer
+   selection are not, and starting the service under instrumentation kills the
+   process.
+4. **The NFC radio and `enableForegroundDispatch`.** Everything downstream of
    the intent is covered; the radio is the platform's.
 
 Manual device checks that no suite replaces: a real tag tap against a real
