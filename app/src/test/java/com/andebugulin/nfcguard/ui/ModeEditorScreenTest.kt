@@ -9,7 +9,8 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
@@ -20,6 +21,7 @@ import androidx.compose.ui.test.onNodeWithText
 import com.andebugulin.nfcguard.BlockMode
 import com.andebugulin.nfcguard.testing.mode
 import com.andebugulin.nfcguard.testing.tag
+import com.andebugulin.nfcguard.ui.TestTags
 import com.andebugulin.nfcguard.ui.modes.ModeEditorScreen
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -52,6 +54,10 @@ class ModeEditorScreenTest {
      * list has to be seeded. Robolectric's package manager reports none by
      * default, which would leave the picker legitimately empty.
      */
+    private val CHATTER = "com.example.chatter"
+    private val NOTES = "com.example.notes"
+    private val SETTINGS = "com.android.settings"
+
     @Before fun installApps() {
         installLauncherApp("com.example.chatter", "Chatter")
         installLauncherApp("com.example.notes", "Notes")
@@ -128,8 +134,14 @@ class ModeEditorScreenTest {
 
     private fun awaitPicker() {
         compose.waitUntil(5_000) {
-            compose.onAllNodesWithText("CHATTER").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodes(hasTestTag(TestTags.ModeEditor.appRow(CHATTER)))
+                .fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    private fun tapTag(tag: String) {
+        compose.onAllNodes(hasTestTag(tag)).onFirst().performClick()
+        compose.waitForIdle()
     }
 
     private fun tap(text: String) {
@@ -138,7 +150,7 @@ class ModeEditorScreenTest {
     }
 
     private fun search(query: String) {
-        compose.onNode(hasSetTextAction()).performTextInput(query)
+        compose.onNodeWithTag(TestTags.ModeEditor.SEARCH).performTextInput(query)
         compose.waitForIdle()
     }
 
@@ -146,8 +158,8 @@ class ModeEditorScreenTest {
         show()
         awaitPicker()
 
-        compose.onAllNodesWithText("CHATTER").onFirst().assertIsDisplayed()
-        compose.onAllNodesWithText("NOTES").onFirst().assertIsDisplayed()
+        compose.onNodeWithTag(TestTags.ModeEditor.appRow(CHATTER)).assertIsDisplayed()
+        compose.onNodeWithTag(TestTags.ModeEditor.appRow(NOTES)).assertIsDisplayed()
     }
 
     /** Blocking Settings would trap the user out of the system UI they need. */
@@ -155,7 +167,7 @@ class ModeEditorScreenTest {
         show()
         awaitPicker()
 
-        compose.onAllNodesWithText("SETTINGS").assertCountEquals(0)
+        compose.onAllNodes(hasTestTag(TestTags.ModeEditor.appRow(SETTINGS))).assertCountEquals(0)
     }
 
     @Test fun `search narrows the list`() {
@@ -164,8 +176,8 @@ class ModeEditorScreenTest {
 
         search("Notes")
 
-        compose.onAllNodesWithText("NOTES").onFirst().assertIsDisplayed()
-        compose.onAllNodesWithText("CHATTER").assertCountEquals(0)
+        compose.onNodeWithTag(TestTags.ModeEditor.appRow(NOTES)).assertIsDisplayed()
+        compose.onAllNodes(hasTestTag(TestTags.ModeEditor.appRow(CHATTER))).assertCountEquals(0)
     }
 
     @Test fun `search ignores case`() {
@@ -174,7 +186,7 @@ class ModeEditorScreenTest {
 
         search("cHaT")
 
-        compose.onAllNodesWithText("CHATTER").onFirst().assertIsDisplayed()
+        compose.onNodeWithTag(TestTags.ModeEditor.appRow(CHATTER)).assertIsDisplayed()
     }
 
     @Test fun `a mode with no apps cannot be saved`() {
@@ -182,37 +194,37 @@ class ModeEditorScreenTest {
         awaitPicker()
 
         compose.onNodeWithText("Select at least one app to save this mode").assertIsDisplayed()
-        compose.onNodeWithText("SAVE").assertIsNotEnabled()
+        compose.onNodeWithTag(TestTags.ModeEditor.SAVE).assertIsNotEnabled()
     }
 
     @Test fun `choosing an app enables saving and lists it as selected`() {
         show()
         awaitPicker()
 
-        tap("CHATTER")
+        tapTag(TestTags.ModeEditor.appRow(CHATTER))
 
         compose.onNodeWithText("SELECTED (1)").assertIsDisplayed()
-        compose.onNodeWithText("SAVE").assertIsEnabled()
+        compose.onNodeWithTag(TestTags.ModeEditor.SAVE).assertIsEnabled()
     }
 
     @Test fun `an app can be deselected again`() {
         show()
         awaitPicker()
-        tap("CHATTER")
+        tapTag(TestTags.ModeEditor.appRow(CHATTER))
         compose.onNodeWithText("SELECTED (1)").assertIsDisplayed()
 
-        tap("CHATTER")
+        tapTag(TestTags.ModeEditor.appRow(CHATTER))
 
         compose.onAllNodesWithText("SELECTED (1)").assertCountEquals(0)
-        compose.onNodeWithText("SAVE").assertIsNotEnabled()
+        compose.onNodeWithTag(TestTags.ModeEditor.SAVE).assertIsNotEnabled()
     }
 
     @Test fun `saving reports the chosen apps by package name`() {
         show()
         awaitPicker()
-        tap("CHATTER")
+        tapTag(TestTags.ModeEditor.appRow(CHATTER))
 
-        tap("SAVE")
+        tapTag(TestTags.ModeEditor.SAVE)
 
         assertEquals(listOf("com.example.chatter"), savedApps)
     }
@@ -221,9 +233,9 @@ class ModeEditorScreenTest {
         show()
         awaitPicker()
 
-        tap("CHATTER")
-        tap("NOTES")
-        tap("SAVE")
+        tapTag(TestTags.ModeEditor.appRow(CHATTER))
+        tapTag(TestTags.ModeEditor.appRow(NOTES))
+        tapTag(TestTags.ModeEditor.SAVE)
 
         assertEquals(
             listOf("com.example.chatter", "com.example.notes"),
@@ -234,9 +246,9 @@ class ModeEditorScreenTest {
     @Test fun `a mode saves as a blocklist by default`() {
         show()
         awaitPicker()
-        tap("CHATTER")
+        tapTag(TestTags.ModeEditor.appRow(CHATTER))
 
-        tap("SAVE")
+        tapTag(TestTags.ModeEditor.SAVE)
 
         assertEquals(BlockMode.BLOCK_SELECTED, savedBlockMode)
     }
@@ -245,10 +257,10 @@ class ModeEditorScreenTest {
     @Test fun `switching to ALLOW ONLY saves the opposite polarity`() {
         show()
         awaitPicker()
-        tap("CHATTER")
+        tapTag(TestTags.ModeEditor.appRow(CHATTER))
 
         tap("ALLOW ONLY")
-        tap("SAVE")
+        tapTag(TestTags.ModeEditor.SAVE)
 
         assertEquals(BlockMode.ALLOW_SELECTED, savedBlockMode)
     }
@@ -258,6 +270,6 @@ class ModeEditorScreenTest {
         awaitPicker()
 
         compose.onNodeWithText("SELECTED (1)").assertIsDisplayed()
-        compose.onNodeWithText("SAVE").assertIsEnabled()
+        compose.onNodeWithTag(TestTags.ModeEditor.SAVE).assertIsEnabled()
     }
 }

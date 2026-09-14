@@ -85,7 +85,7 @@ class NfcTapEndToEndTest {
         )
         harness.launch()
 
-        HomeRobot(compose).openModes().activate("Deep Work").back()
+        HomeRobot(compose).openModes().activate("m1").back()
         assertTrue("mode should be active before the tap", "m1" in harness.state.activeModes)
 
         harness.tapNfcTag(rightTag)
@@ -101,7 +101,7 @@ class NfcTapEndToEndTest {
             tags = listOf(tag(id = rightTag, name = "Desk key", modeIds = listOf("m1")))
         )
         harness.launch()
-        HomeRobot(compose).openModes().activate("Deep Work").back()
+        HomeRobot(compose).openModes().activate("m1").back()
 
         harness.tapNfcTag(rightTag)
         UnlockDialogRobot(compose).assertShown().cancel()
@@ -115,7 +115,7 @@ class NfcTapEndToEndTest {
             tags = listOf(tag(id = rightTag, name = "Desk key", modeIds = listOf("m1")))
         )
         harness.launch()
-        HomeRobot(compose).openModes().activate("Deep Work").back()
+        HomeRobot(compose).openModes().activate("m1").back()
 
         harness.tapNfcTag(wrongTag)
 
@@ -136,7 +136,7 @@ class NfcTapEndToEndTest {
             tags = listOf(tag(id = rightTag, name = "Desk key", modeIds = listOf("m1")))
         )
         harness.launch()
-        HomeRobot(compose).openModes().activate("Deep Work")
+        HomeRobot(compose).openModes().activate("m1")
         assertTrue("m1" in harness.state.activeModes)
 
         harness.tapNfcTagFromColdStart(rightTag)

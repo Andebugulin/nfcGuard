@@ -4,144 +4,134 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.performTextClearance
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
-import androidx.compose.ui.test.hasAnySibling
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
-import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.test.espresso.Espresso
+import com.andebugulin.nfcguard.ui.TestTags
+import com.andebugulin.nfcguard.ui.modes.AppInfo
 
 /**
- * Text-driven page objects over the real app's screens.
+ * Page objects over the real app's screens.
  *
- * The app sets no `testTag`s, so — like the Robolectric screen suites — these
- * key off visible text. Three app-wide conventions they encode once, so the
- * tests themselves stay readable:
+ * Interaction targets are selected by `testTag` (see [TestTags]); text is kept
+ * only for assertions genuinely *about* wording — headings, explanatory copy,
+ * validation messages. That split matters here because the UI renders names,
+ * titles and status messages `.uppercase()`, gives several actions two labels
+ * depending on state, and stacks dialogs whose buttons share labels with the
+ * screen behind them.
  *
- *  - **Names render `.uppercase()`.** Callers pass "Deep Work"; robots uppercase.
- *  - **Lists are `LazyColumn`s**, so off-screen rows are never composed.
- *    [scrollTo] brings one into composition before asserting or clicking.
- *  - **A dialog's button label often also exists on the screen behind it**
- *    (the mode card's ACTIVATE under the activate dialog's ACTIVATE). Anything
- *    aimed at a dialog goes through [tapInDialog], which scopes the match with
- *    `isDialog()` instead of gambling on node order.
+ * Two conventions the tag-based selectors make unnecessary, kept in the base
+ * for the text assertions that remain:
+ *
+ *  - **Lists are `LazyColumn`s and sheets are `verticalScroll` columns**, so a
+ *    node may exist without being on screen. [scrollTo] checks *displayed*,
+ *    never mere presence — a presence check never scrolls a `verticalScroll`
+ *    column, and a tap aimed below the fold then lands off-screen silently.
+ *  - **Dialogs animate in**, so a button is composed a frame or two before it
+ *    is visible. [assertVisible] waits for display.
  */
 abstract class Robot(protected val compose: ComposeTestRule) {
 
-    /**
-     * Waits for [text] to exist in the tree.
-     *
-     * `waitForIdle` is not enough on its own: screens that load from disk or
-     * PackageManager do so on a background dispatcher Compose knows nothing
-     * about (the mode editor's app picker is the case that matters), so the
-     * tree is briefly settled *and* empty.
-     */
+    // ---- tag-based interaction (preferred) ----
+
+    protected fun tapTag(tag: String) {
+        scrollToTag(tag)
+        compose.onAllNodes(hasTestTag(tag)).onFirst().performClick()
+        compose.waitForIdle()
+    }
+
+    protected fun typeInTag(tag: String, value: String) {
+        scrollToTag(tag)
+        compose.onAllNodes(hasTestTag(tag)).onFirst().performTextInput(value)
+        compose.waitForIdle()
+    }
+
+    protected fun replaceInTag(tag: String, value: String) {
+        scrollToTag(tag)
+        val field = compose.onAllNodes(hasTestTag(tag)).onFirst()
+        field.performTextClearance()
+        field.performTextInput(value)
+        compose.waitForIdle()
+    }
+
+    protected fun assertTagEnabled(tag: String) {
+        scrollToTag(tag)
+        compose.onAllNodes(hasTestTag(tag)).onFirst().assertIsEnabled()
+    }
+
+    protected fun assertTagDisabled(tag: String) {
+        scrollToTag(tag)
+        compose.onAllNodes(hasTestTag(tag)).onFirst().assertIsNotEnabled()
+    }
+
+    protected fun tagExists(tag: String) =
+        compose.onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isNotEmpty()
+
+    fun assertTagPresent(tag: String) = apply {
+        compose.onAllNodes(hasTestTag(tag)).onFirst().assertExists()
+    }
+
+    fun assertTagAbsent(tag: String) = apply {
+        compose.onAllNodes(hasTestTag(tag)).assertCountEquals(0)
+    }
+
+    private fun scrollToTag(tag: String) {
+        if (runCatching {
+                compose.onAllNodes(hasTestTag(tag)).onFirst().assertIsDisplayed()
+            }.isSuccess
+        ) return
+        scrollWith(hasTestTag(tag))
+    }
+
+    // ---- text-based assertions (for wording, not identity) ----
+
+    protected fun isDisplayed(text: String) = runCatching {
+        compose.onAllNodesWithText(text).onFirst().assertIsDisplayed()
+    }.isSuccess
+
+    protected fun scrollTo(text: String) {
+        if (isDisplayed(text)) return
+        scrollWith(hasText(text))
+    }
+
+    private fun scrollWith(matcher: SemanticsMatcher) {
+        runCatching {
+            val inDialog = compose.onAllNodes(hasScrollAction() and hasAnyAncestor(isDialog()))
+            val scroller =
+                if (inDialog.fetchSemanticsNodes().isNotEmpty()) inDialog.onFirst()
+                else compose.onNode(hasScrollAction())
+            scroller.performScrollToNode(matcher)
+            compose.waitForIdle()
+        }
+    }
+
     protected fun waitFor(text: String, timeoutMs: Long = 10_000) {
         compose.waitUntil(timeoutMs) {
             compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
-    protected fun tap(text: String) {
-        scrollTo(text)
-        click(hasText(text))
-    }
-
-    protected fun tapInDialog(text: String) {
-        click(hasAnyAncestor(isDialog()) and hasText(text))
-    }
-
-    /**
-     * Clicks the node that actually carries the click action.
-     *
-     * A label usually matches *two* nodes: the clickable container (whose merged
-     * semantics include the label) and the inner `Text`. Taking `onFirst()`
-     * blindly can land on the `Text`, and the tap is then silently swallowed —
-     * the unlock dialog's mode rows behaved exactly that way, reporting success
-     * while nothing toggled. So prefer a node with a click action, and fall
-     * back to plain text only for labels that are genuinely not interactive.
-     */
-    private fun click(matcher: SemanticsMatcher) {
-        val clickable = compose.onAllNodes(matcher and hasClickAction())
-        if (clickable.fetchSemanticsNodes().isNotEmpty()) {
-            clickable.onFirst().performClick()
-        } else {
-            compose.onAllNodes(matcher).onFirst().performClick()
-        }
-        compose.waitForIdle()
-    }
-
-    protected fun typeInDialog(value: String) {
-        compose.onNode(hasAnyAncestor(isDialog()) and hasSetTextAction()).performTextInput(value)
-        compose.waitForIdle()
-    }
-
-    /**
-     * No-op when the screen does not scroll, or the node is already composed.
-     *
-     * Prefers a scrollable *inside* an open dialog: a tall dialog (the schedule
-     * editor) sits over a scrollable screen, and scrolling the screen behind it
-     * would never bring the dialog's own content into view.
-     */
-    protected fun isDisplayed(text: String) = runCatching {
-        compose.onAllNodesWithText(text).onFirst().assertIsDisplayed()
-    }.isSuccess
-
-    protected fun scrollTo(text: String) {
-        // Checks *displayed*, not merely present. A `verticalScroll` column
-        // composes all its children, so a presence check never scrolls — the
-        // settings sheet's rows exist from the start and a tap aimed at one
-        // below the fold lands off-screen and silently does nothing. (A
-        // LazyColumn hides the bug because its off-screen rows really are absent.)
-        if (isDisplayed(text)) return
-        runCatching {
-            val inDialog = compose.onAllNodes(hasScrollAction() and hasAnyAncestor(isDialog()))
-            val scroller =
-                if (inDialog.fetchSemanticsNodes().isNotEmpty()) inDialog.onFirst()
-                else compose.onNode(hasScrollAction())
-            scroller.performScrollToNode(hasText(text))
-            compose.waitForIdle()
-        }
-    }
-
-    /**
-     * Waits for the node to actually be on screen, not merely composed.
-     *
-     * A dialog animates in, so its buttons exist a frame or two before they are
-     * displayed — `waitForIdle` can return in that window and the assertion
-     * then fails on a dialog that is plainly open.
-     */
     fun assertVisible(text: String) = apply {
         scrollTo(text)
         runCatching {
-            compose.waitUntil(5_000) {
-                runCatching {
-                    compose.onAllNodesWithText(text).onFirst().assertIsDisplayed()
-                }.isSuccess
-            }
+            compose.waitUntil(5_000) { isDisplayed(text) }
         }
         compose.onAllNodesWithText(text).onFirst().assertIsDisplayed()
     }
 
-    /**
-     * Asserts the node is in the tree without requiring it on screen. The
-     * unlock dialog with several modes listed overflows the viewport, so an
-     * option can be present-and-clipped — and presence is what the behaviour
-     * under test is about. Pairs with [assertAbsent], which is also
-     * existence-based, so the two are symmetric.
-     */
     fun assertPresent(text: String) = apply {
         compose.onAllNodesWithText(text).onFirst().assertExists()
     }
@@ -150,24 +140,11 @@ abstract class Robot(protected val compose: ComposeTestRule) {
         compose.onAllNodesWithText(text).assertCountEquals(0)
     }
 
-    protected fun assertDialogButtonDisabled(text: String) {
-        compose.onAllNodes(hasAnyAncestor(isDialog()) and hasText(text)).onFirst().assertIsNotEnabled()
-    }
-
-    protected fun assertDialogButtonEnabled(text: String) {
-        compose.onAllNodes(hasAnyAncestor(isDialog()) and hasText(text)).onFirst().assertIsEnabled()
-    }
-
-    protected fun clearDialogText() {
-        compose.onNode(hasAnyAncestor(isDialog()) and hasSetTextAction()).performTextClearance()
-        compose.waitForIdle()
-    }
-
-    /** Dialogs with more than one field (the unlock dialog's HOURS/MINUTES). */
-    protected fun setDurationField(index: Int, value: String) {
-        val field = compose.onAllNodes(hasAnyAncestor(isDialog()) and hasSetTextAction())[index]
-        field.performTextClearance()
-        field.performTextInput(value)
+    protected fun tap(text: String) {
+        scrollTo(text)
+        val clickable = compose.onAllNodes(hasText(text) and hasClickAction())
+        if (clickable.fetchSemanticsNodes().isNotEmpty()) clickable.onFirst().performClick()
+        else compose.onAllNodesWithText(text).onFirst().performClick()
         compose.waitForIdle()
     }
 
@@ -180,280 +157,211 @@ abstract class Robot(protected val compose: ComposeTestRule) {
 
 class HomeRobot(compose: ComposeTestRule) : Robot(compose) {
     fun assertOnHome() = apply { assertVisible("GUARDIAN") }
-
-    /** The trash icon in the header; the only node carrying this description. */
-    fun openEmergencyReset() = EmergencyResetRobot(compose).also {
-        compose.onNodeWithContentDescription("Emergency Reset").performClick()
-        compose.waitForIdle()
-    }
-
-    fun openSettings() = SettingsRobot(compose).also {
-        compose.onNodeWithContentDescription("Settings & Permissions").performClick()
-        compose.waitForIdle()
-    }
-    fun openModes() = ModesRobot(compose).also { tap("MODES") }
-    fun openSchedules() = SchedulesRobot(compose).also { tap("SCHEDULES") }
-    fun openNfcTags() = NfcTagsRobot(compose).also { tap("NFC TAGS") }
+    fun openModes() = ModesRobot(compose).also { tapTag(TestTags.Home.NAV_MODES) }
+    fun openSchedules() = SchedulesRobot(compose).also { tapTag(TestTags.Home.NAV_SCHEDULES) }
+    fun openNfcTags() = NfcTagsRobot(compose).also { tapTag(TestTags.Home.NAV_NFC_TAGS) }
+    fun openEmergencyReset() = EmergencyResetRobot(compose).also { tapTag(TestTags.Home.EMERGENCY_RESET) }
+    fun openSettings() = SettingsRobot(compose).also { tapTag(TestTags.Home.SETTINGS) }
 }
 
 class ModesRobot(compose: ComposeTestRule) : Robot(compose) {
     fun assertOnModes() = apply { assertVisible("MODES") }
     fun assertModeListed(name: String) = apply { assertVisible(name.uppercase()) }
 
-    /**
-     * The add-mode button has two forms: "CREATE MODE" in the empty state,
-     * "+ NEW MODE" at the foot of the list once modes exist.
-     */
-    fun openAddDialog() = apply {
-        if (compose.onAllNodesWithText("CREATE MODE").fetchSemanticsNodes().isNotEmpty()) {
-            tap("CREATE MODE")
-        } else {
-            tap("+ NEW MODE")
-        }
-    }
+    /** One handle covers both the empty-state and in-list add buttons. */
+    fun openAddDialog() = apply { tapTag(TestTags.Modes.ADD) }
 
-    fun typeModeName(name: String) = apply { typeInDialog(name) }
-    fun assertCannotCreate() = apply { assertDialogButtonDisabled("CREATE") }
-    fun assertCanCreate() = apply { assertDialogButtonEnabled("CREATE") }
+    fun typeModeName(name: String) = apply { typeInTag(TestTags.Modes.NAME_INPUT, name) }
+    fun assertCannotCreate() = apply { assertTagDisabled(TestTags.Modes.NAME_CONFIRM) }
+    fun assertCanCreate() = apply { assertTagEnabled(TestTags.Modes.NAME_CONFIRM) }
+    fun confirmCreate() = apply { tapTag(TestTags.Modes.NAME_CONFIRM) }
     fun assertDuplicateNameRejected() = apply {
         assertVisible("A mode with this name already exists")
         assertCannotCreate()
     }
-    fun confirmCreate() = apply { tapInDialog("CREATE") }
 
-    fun openEditor(name: String) = ModeEditorRobot(compose).also {
-        scrollTo(name.uppercase()); tap("EDIT")
+    fun openEditor(modeId: String) = ModeEditorRobot(compose).also {
+        tapTag(TestTags.Modes.edit(modeId))
     }
 
-    fun deleteMode() = apply { tap("DELETE"); tapInDialog("DELETE") }
+    fun deleteMode(modeId: String) = apply {
+        tapTag(TestTags.Modes.delete(modeId))
+        tapTag(TestTags.Modes.DELETE_CONFIRM)
+    }
 
     /**
-     * Naming a mode does not persist it: the name dialog hands off to
-     * [ModeEditorScreen], and only its SAVE writes through the ViewModel.
-     * SAVE also stays disabled until at least one app is picked, so the caller
-     * must supply an app label the picker will list — see
-     * [GuardianHarness.aBlockableApp].
+     * Naming a mode does not persist it: the name dialog hands off to the
+     * editor, and only its SAVE writes through the ViewModel. SAVE also stays
+     * disabled until at least one app is picked.
      */
-    fun createMode(name: String, withApp: String): ModesRobot {
-        tap("CREATE MODE")
-        typeInDialog(name)
-        tapInDialog("CREATE")
+    fun createMode(name: String, withApp: AppInfo): ModesRobot {
+        openAddDialog()
+        typeModeName(name)
+        confirmCreate()
         ModeEditorRobot(compose).pickApp(withApp).save()
         return this
     }
 
     /**
      * The card's ACTIVATE opens a duration dialog; the dialog's own ACTIVATE
-     * commits. The default option is "until NFC tag", which is the state the
-     * unlock flow needs.
+     * commits. The default option is "until NFC tag".
      */
-    fun activate(name: String) = apply {
-        scrollTo(name.uppercase())
-        tap("ACTIVATE")
-        tapInDialog("ACTIVATE")
+    fun activate(modeId: String) = apply {
+        tapTag(TestTags.Modes.activate(modeId))
+        tapTag(TestTags.Modes.ACTIVATE_CONFIRM)
     }
 
     fun assertActive() = apply { assertVisible("ACTIVE") }
 }
 
+/** The app-picking editor a mode is created or edited through. */
+class ModeEditorRobot(compose: ComposeTestRule) : Robot(compose) {
+
+    fun assertOnEditor() = apply { assertVisible("NFC TAG LOCK") }
+
+    /**
+     * Narrows the list, then picks the row by package.
+     *
+     * Takes the whole [AppInfo] because the two halves are not interchangeable:
+     * the search field filters on the app's *label*, while the row's tag is its
+     * *package*. Searching is not optional — the picker lists every launchable
+     * app on the device, and in a `LazyColumn` a row far down the list does not
+     * exist to be scrolled to until the list is short enough to compose it.
+     */
+    fun pickApp(app: AppInfo) = apply {
+        typeInTag(TestTags.ModeEditor.SEARCH, app.appName)
+        compose.waitUntil(10_000) { tagExists(TestTags.ModeEditor.appRow(app.packageName)) }
+        tapTag(TestTags.ModeEditor.appRow(app.packageName))
+    }
+
+    fun save() = apply { tapTag(TestTags.ModeEditor.SAVE) }
+
+    fun assertTagLimit(tagId: String, shown: String) = apply {
+        assertTagPresent(TestTags.ModeEditor.tagLimit(tagId))
+        assertPresent(shown)
+    }
+
+    fun toggleTag(tagId: String) = apply { tapTag(TestTags.ModeEditor.tagRow(tagId)) }
+    fun openLimitFor(tagId: String) = apply { tapTag(TestTags.ModeEditor.tagLimit(tagId)) }
+
+    fun choosePermanent() = apply { tapTag(TestTags.ModeEditor.LIMIT_PERMANENT) }
+    fun chooseLimited() = apply { tapTag(TestTags.ModeEditor.LIMIT_TIMED) }
+    fun setLimitHours(value: String) = apply { replaceInTag(TestTags.ModeEditor.LIMIT_HOURS, value) }
+    fun setLimitMinutes(value: String) = apply { replaceInTag(TestTags.ModeEditor.LIMIT_MINUTES, value) }
+    fun assertLimitFields(hours: String, minutes: String) = apply {
+        assertPresent(hours); assertPresent(minutes)
+    }
+    fun applyLimit() = apply { tapTag(TestTags.ModeEditor.LIMIT_APPLY) }
+    fun cancelLimit() = apply { tapTag(TestTags.ModeEditor.LIMIT_CANCEL) }
+
+    /** SAVE warns first when every selected tag is capped. */
+    fun assertNoPermanentUnlockWarning() = apply { assertVisible("NO PERMANENT UNLOCK") }
+    fun saveAnyway() = apply { tapTag(TestTags.ModeEditor.NO_PERMANENT_SAVE_ANYWAY) }
+    fun dismissWarning() = apply { tap("CANCEL") }
+}
+
 /**
- * The five-page intro carousel shown on a genuinely first-run device. Its last
- * page hands off to [com.andebugulin.nfcguard.ui.onboarding.PermissionOnboarding]
- * — the handoff that crashed in issue #12.
+ * The lost-tag escape hatch: warning → (attention challenge, only when modes
+ * are active) → tag selection → deactivate every mode and delete the chosen
+ * tags. The only flow in the app that can legitimately switch blocking off.
  */
+class EmergencyResetRobot(compose: ComposeTestRule) : Robot(compose) {
+
+    fun assertWarningShown() = apply { assertVisible("LOST NFC TAG?") }
+    fun continueFromWarning() = apply { tapTag(TestTags.Emergency.WARNING_CONTINUE) }
+    fun cancelWarning() = apply { tapTag(TestTags.Emergency.WARNING_CANCEL) }
+
+    fun assertChallengeRequired() = apply { assertTagPresent(TestTags.Challenge.GIVE_UP) }
+    fun assertChallengeSkipped() = apply { assertTagAbsent(TestTags.Challenge.GIVE_UP) }
+    fun giveUpChallenge() = apply { tapTag(TestTags.Challenge.GIVE_UP) }
+
+    fun assertTagSelectionShown() = apply { assertVisible("SELECT LOST TAGS") }
+    fun assertTagSelectionNotShown() = apply { assertAbsent("SELECT LOST TAGS") }
+    fun selectLostTag(tagId: String) = apply { tapTag(TestTags.Emergency.lostTag(tagId)) }
+    fun confirmReset() = apply { tapTag(TestTags.Emergency.TAG_SELECTION_CONFIRM) }
+    fun cancelTagSelection() = apply { tapTag(TestTags.Emergency.TAG_SELECTION_CANCEL) }
+}
+
+/**
+ * The settings sheet. Only the challenge-duration dialog is driven here — it
+ * holds the MIN/SEC fields, so it cannot run under Robolectric; the rest of the
+ * sheet is covered far more cheaply by `SettingsDialogTest`.
+ */
+class SettingsRobot(compose: ComposeTestRule) : Robot(compose) {
+    fun assertOnSettings() = apply { assertVisible("SETTINGS") }
+
+    fun openChallengeDuration() = apply {
+        tapTag(TestTags.Settings.CHALLENGE_DURATION_ROW)
+        assertTagPresent(TestTags.Settings.DURATION_APPLY)
+    }
+
+    fun setMinutes(value: String) = apply { replaceInTag(TestTags.Settings.DURATION_MINUTES, value) }
+    fun setSeconds(value: String) = apply { replaceInTag(TestTags.Settings.DURATION_SECONDS, value) }
+    fun assertCannotApply() = apply { assertTagDisabled(TestTags.Settings.DURATION_APPLY) }
+    fun assertCanApply() = apply { assertTagEnabled(TestTags.Settings.DURATION_APPLY) }
+    fun assertBelowMinimumWarned() = apply { assertVisible("Minimum is 1:30") }
+    fun applyDuration() = apply { tapTag(TestTags.Settings.DURATION_APPLY) }
+    fun done() = apply { tapTag(TestTags.Settings.DONE) }
+}
+
+/** The five-page intro carousel shown on a genuinely first-run device. */
 class OnboardingRobot(compose: ComposeTestRule) : Robot(compose) {
     fun assertOnFirstPage() = apply { assertVisible("DIGITAL WELLBEING") }
     fun next() = apply { tap("NEXT") }
     fun getStarted() = apply { tap("GET STARTED") }
 }
 
-/**
- * The app-picking editor a mode is created or edited through. It is a full
- * screen composed *over* ModesScreen rather than a dialog, so its controls are
- * matched unscoped.
- */
-class ModeEditorRobot(compose: ComposeTestRule) : Robot(compose) {
-
-    /**
-     * Narrows the list with the search field first — the picker lists every
-     * launchable app on the device, and the target may be far below the fold.
-     *
-     * The list is loaded off the main thread, so wait for it before typing:
-     * filtering an empty list matches nothing.
-     */
-    fun pickApp(label: String) = apply {
-        waitFor("SEARCH APPS...")
-        compose.onNode(hasSetTextAction()).performTextInput(label)
-        compose.waitForIdle()
-        waitFor(label.uppercase())
-        tap(label.uppercase())
-    }
-
-    fun save() = apply { tap("SAVE") }
-
-    fun assertOnEditor() = apply { assertVisible("NFC TAG LOCK") }
-
-    /** Tag rows sit below the app picker, so they need scrolling into view. */
-    fun assertTagLimit(tagName: String, shown: String) = apply {
-        scrollTo(tagName.uppercase())
-        assertPresent(shown)
-    }
-
-    fun toggleTag(tagName: String) = apply { tap(tagName.uppercase()) }
-
-    /**
-     * Opens the limit dialog for one tag's row.
-     *
-     * Every row shows "PERMANENT" until a limit is set, so the label alone is
-     * ambiguous. The limit button and the name+checkbox block are siblings
-     * inside the row, so "the clickable whose sibling carries this name"
-     * identifies it without depending on row order.
-     */
-    fun openLimitFor(tagName: String) = apply {
-        scrollTo(tagName.uppercase())
-        compose.onAllNodes(hasClickAction() and hasAnySibling(hasText(tagName.uppercase())))
-            .onFirst().performClick()
-        compose.waitForIdle()
-    }
-
-    fun choosePermanent() = apply { tapInDialog("PERMANENT UNLOCK") }
-    fun chooseLimited() = apply { tapInDialog("MAX DURATION LIMIT") }
-    fun setLimitHours(value: String) = apply { setDurationField(0, value) }
-    fun setLimitMinutes(value: String) = apply { setDurationField(1, value) }
-    fun assertLimitFields(hours: String, minutes: String) = apply {
-        assertPresent(hours); assertPresent(minutes)
-    }
-    fun applyLimit() = apply { tapInDialog("APPLY") }
-    fun cancelLimit() = apply { tapInDialog("CANCEL") }
-
-    /** SAVE refuses silently when every selected tag is capped; it warns first. */
-    fun assertNoPermanentUnlockWarning() = apply { assertVisible("NO PERMANENT UNLOCK") }
-    fun saveAnyway() = apply { tapInDialog("SAVE ANYWAY") }
-    fun dismissWarning() = apply { tapInDialog("CANCEL") }
-}
-
-/**
- * The lost-tag escape hatch: warning → (attention challenge, only when modes are
- * active) → tag selection → deactivate every mode and delete the chosen tags.
- *
- * This is the one flow in the app that can legitimately switch blocking off, so
- * the branch deciding whether the challenge is required is the highest-value
- * assertion here.
- */
-class EmergencyResetRobot(compose: ComposeTestRule) : Robot(compose) {
-
-    fun assertWarningShown() = apply { assertVisible("LOST NFC TAG?") }
-    fun continueFromWarning() = apply { tapInDialog("CONTINUE") }
-    fun cancelWarning() = apply { tapInDialog("CANCEL") }
-
-    fun assertChallengeRequired() = apply { assertVisible("SAFE REGIME") }
-    fun assertChallengeSkipped() = apply { assertAbsent("SAFE REGIME") }
-    fun giveUpChallenge() = apply { tap("GIVE UP") }
-
-    fun assertTagSelectionShown() = apply { assertVisible("SELECT LOST TAGS") }
-    fun assertTagSelectionNotShown() = apply { assertAbsent("SELECT LOST TAGS") }
-    fun selectLostTag(name: String) = apply { tap(name.uppercase()) }
-    fun confirmReset() = apply { tapInDialog("CONFIRM") }
-    fun cancelTagSelection() = apply { tapInDialog("CANCEL") }
-
-}
-
-/**
- * The settings sheet. Only the challenge-duration dialog lives here — it holds
- * the MIN/SEC fields, so it cannot run under Robolectric; everything else on
- * the sheet is covered far more cheaply by `SettingsDialogTest`.
- */
-class SettingsRobot(compose: ComposeTestRule) : Robot(compose) {
-    fun assertOnSettings() = apply { assertVisible("SETTINGS") }
-
-    /**
-     * "Minimum is 1:30" is the *violation* hint, shown only below the floor, so
-     * it cannot mark the dialog as open. APPLY is unique to it here.
-     */
-    fun openChallengeDuration() = apply {
-        tap("CHALLENGE DURATION")
-        assertVisible("APPLY")
-    }
-
-    fun assertBelowMinimumWarned() = apply { assertVisible("Minimum is 1:30") }
-
-    fun setMinutes(value: String) = apply { setDurationField(0, value) }
-    fun setSeconds(value: String) = apply { setDurationField(1, value) }
-    fun assertCannotApply() = apply { assertDialogButtonDisabled("APPLY") }
-    fun assertCanApply() = apply { assertDialogButtonEnabled("APPLY") }
-    fun applyDuration() = apply { tapInDialog("APPLY") }
-    fun done() = apply { tap("DONE") }
-}
-
 class SchedulesRobot(compose: ComposeTestRule) : Robot(compose) {
     fun assertOnSchedules() = apply { assertVisible("SCHEDULES") }
     fun assertScheduleListed(name: String) = apply { assertVisible(name.uppercase()) }
 
-    /** "CREATE SCHEDULE" in the empty state, "+ NEW SCHEDULE" once one exists. */
+    /** One handle covers both the empty-state and in-list create buttons. */
     fun openEditor() = apply {
-        if (compose.onAllNodesWithText("CREATE SCHEDULE").fetchSemanticsNodes().isNotEmpty()) {
-            tap("CREATE SCHEDULE")
-        } else {
-            tap("+ NEW SCHEDULE")
-        }
+        tapTag(TestTags.Schedules.ADD)
         assertVisible("NEW SCHEDULE")
     }
 
-    fun openEditorFor(name: String) = apply {
-        scrollTo(name.uppercase())
-        tap("EDIT")
+    fun openEditorFor(scheduleId: String) = apply {
+        tapTag(TestTags.Schedules.edit(scheduleId))
         assertVisible("EDIT SCHEDULE")
     }
 
-    fun typeName(name: String) = apply { typeInDialog(name) }
+    fun typeName(name: String) = apply { typeInTag(TestTags.Schedules.EDITOR_NAME, name) }
+    fun renameTo(name: String) = apply { replaceInTag(TestTags.Schedules.EDITOR_NAME, name) }
+    fun toggleDay(day: Int) = apply { tapTag(TestTags.Schedules.day(day)) }
+    fun toggleMode(modeId: String) = apply { tapTag(TestTags.Schedules.linkedMode(modeId)) }
 
-    /**
-     * Replaces an existing name. `performTextInput` inserts at the cursor,
-     * which sits at offset 0 in a prefilled field, so typing alone would
-     * prepend rather than append.
-     */
-    fun renameTo(name: String) = apply {
-        clearDialogText()
-        typeInDialog(name)
-    }
-
-    fun toggleDay(day: String) = apply { tap(day.uppercase()) }
-    fun toggleMode(name: String) = apply { tap(name.uppercase()) }
-
-    fun assertCannotSubmit() = apply { assertDialogButtonDisabled("CREATE") }
-    fun assertCanSubmit() = apply { assertDialogButtonEnabled("CREATE") }
+    fun assertCannotSubmit() = apply { assertTagDisabled(TestTags.Schedules.EDITOR_CONFIRM) }
+    fun assertCanSubmit() = apply { assertTagEnabled(TestTags.Schedules.EDITOR_CONFIRM) }
     fun assertDuplicateNameRejected() = apply {
         assertVisible("A schedule with this name already exists")
         assertCannotSubmit()
     }
 
-    fun create() = apply { tapInDialog("CREATE") }
-    fun saveEdit() = apply { tapInDialog("SAVE") }
-    fun cancelEditor() = apply { tapInDialog("CANCEL") }
+    fun create() = apply { tapTag(TestTags.Schedules.EDITOR_CONFIRM) }
+    fun saveEdit() = apply { tapTag(TestTags.Schedules.EDITOR_CONFIRM) }
+    fun cancelEditor() = apply { tap("CANCEL") }
 
-    fun deleteSchedule(name: String) = apply {
-        scrollTo(name.uppercase())
-        tap("DELETE")
-    }
+    fun deleteSchedule(scheduleId: String) = apply { tapTag(TestTags.Schedules.delete(scheduleId)) }
     fun assertDeleteConfirmShown() = apply { assertVisible("DELETE SCHEDULE?") }
-    fun confirmDelete() = apply { tapInDialog("DELETE") }
-    fun cancelDelete() = apply { tapInDialog("CANCEL") }
+    fun confirmDelete() = apply { tapTag(TestTags.Schedules.DELETE_CONFIRM) }
+    fun cancelDelete() = apply { tap("CANCEL") }
 
-    fun assertChallengeRequired() = apply { assertVisible("SAFE REGIME") }
-    fun assertChallengeSkipped() = apply { assertAbsent("SAFE REGIME") }
-    fun giveUpChallenge() = apply { tap("GIVE UP") }
+    fun assertChallengeRequired() = apply { assertTagPresent(TestTags.Challenge.GIVE_UP) }
+    fun assertChallengeSkipped() = apply { assertTagAbsent(TestTags.Challenge.GIVE_UP) }
+    fun giveUpChallenge() = apply { tapTag(TestTags.Challenge.GIVE_UP) }
 
     // ---- per-day times ----
 
-    /** The only switch in the editor; reveals a second time per selected day. */
-    fun enableCustomEndTimes() = apply {
-        scrollTo("CUSTOM END TIMES")
-        compose.onAllNodes(isToggleable() and hasAnyAncestor(isDialog())).onFirst().performClick()
-        compose.waitForIdle()
+    fun enableCustomEndTimes() = apply { tapTag(TestTags.Schedules.EDITOR_CUSTOM_END_TIMES) }
+
+    fun openStartTime(day: Int) = TimePickerRobot(compose).also {
+        tapTag(TestTags.Schedules.startTime(day))
     }
 
-    /** Times render as HH:MM; tapping one opens the clock picker. */
-    fun openTime(shown: String) = TimePickerRobot(compose).also { tap(shown) }
+    fun openEndTime(day: Int) = TimePickerRobot(compose).also {
+        tapTag(TestTags.Schedules.endTime(day))
+    }
 
     fun assertTimeShown(shown: String) = apply { assertVisible(shown) }
     fun assertEndTimeRejected() = apply { assertVisible("End time must be after start time") }
@@ -462,80 +370,62 @@ class SchedulesRobot(compose: ComposeTestRule) : Robot(compose) {
 /**
  * The clock picker, reached from a day's start or end time.
  *
- * Its own logic — the angle maths, the hour/minute switch — is covered far more
- * cheaply on the JVM by `ModernTimePickerDialogTest`. What is only provable
- * here is that a time chosen in it survives into the saved schedule.
+ * Its own maths is covered far more cheaply on the JVM by
+ * `ModernTimePickerDialogTest`. What only a device run shows is that a time
+ * chosen here survives into the saved schedule.
+ *
+ * SET and CANCEL are tagged because the schedule editor underneath has its own
+ * CANCEL, and both sit inside a dialog — `isDialog()` cannot separate them, and
+ * dismissing the wrong one closes the whole editor.
  */
 class TimePickerRobot(compose: ComposeTestRule) : Robot(compose) {
     fun assertSelectingHour() = apply { assertVisible("SELECT HOUR") }
     fun assertSelectingMinute() = apply { assertVisible("SELECT MINUTE") }
 
-    /** Taps a mark on the face. Works since ClockFace started accepting taps. */
+    /** Taps a mark on the face; the numerals are not text-transformed. */
     fun pick(value: String) = apply { tap(value) }
 
-    fun set() = apply { tapInDialog("SET") }
-
-    /**
-     * The editor underneath has its own CANCEL, and both are inside a dialog,
-     * so `isDialog()` cannot separate them — dismissing the wrong one closes the
-     * whole editor. The picker's CANCEL is the one sitting next to SET.
-     */
-    fun cancel() = apply {
-        compose.onAllNodes(hasText("CANCEL") and hasAnySibling(hasText("SET")))
-            .onFirst().performClick()
-        compose.waitForIdle()
-    }
+    fun set() = apply { tapTag(TestTags.TimePicker.SET) }
+    fun cancel() = apply { tapTag(TestTags.TimePicker.CANCEL) }
 }
 
 class NfcTagsRobot(compose: ComposeTestRule) : Robot(compose) {
     fun assertOnNfcTags() = apply { assertVisible("NFC TAGS") }
 
-    /**
-     * Opening the register dialog is what arms `nfcRegistrationMode`.
-     *
-     * Like the add-mode button, this one has two forms: "REGISTER TAG" in the
-     * empty state and "+ REGISTER TAG" at the foot of the list once tags exist.
-     * Exact text matching keeps them distinct, so try the empty-state one first.
-     */
+    /** One handle covers both the empty-state and in-list register buttons. */
     fun beginRegistration() = apply {
-        if (compose.onAllNodesWithText("REGISTER TAG").fetchSemanticsNodes().isNotEmpty()) {
-            tap("REGISTER TAG")
-        } else {
-            tap("+ REGISTER TAG")
-        }
+        tapTag(TestTags.NfcTags.REGISTER)
         assertVisible("TAP NFC TAG")
     }
 
     fun assertTagDetected() = apply { assertVisible("TAG DETECTED") }
     fun assertAlreadyRegistered() = apply { assertVisible("TAG ALREADY REGISTERED") }
-    fun assertCannotRegister() = apply { assertDialogButtonDisabled("REGISTER") }
+    fun assertCannotRegister() = apply { assertTagDisabled(TestTags.NfcTags.REGISTER_CONFIRM) }
     fun assertDuplicateNameRejected() = apply {
         assertVisible("A tag with this name already exists")
         assertCannotRegister()
     }
-    fun cancelDialog() = apply { tapInDialog("CANCEL") }
 
-    fun renameTag(to: String) = apply {
-        tap("RENAME")
-        clearDialogText()
-        typeInDialog(to)
-        tapInDialog("SAVE")
-    }
-
-    /** The dialog holds one text field: the tag's name. REGISTER stays disabled until it is set. */
-    fun nameTag(name: String) = apply { typeInDialog(name) }
-    fun confirmRegistration() = apply { tapInDialog("REGISTER") }
+    fun nameTag(name: String) = apply { typeInTag(TestTags.NfcTags.REGISTER_NAME_INPUT, name) }
+    fun confirmRegistration() = apply { tapTag(TestTags.NfcTags.REGISTER_CONFIRM) }
+    fun cancelDialog() = apply { tap("CANCEL") }
     fun assertTagListed(name: String) = apply { assertVisible(name.uppercase()) }
+
+    fun renameTag(tagId: String, to: String) = apply {
+        tapTag(TestTags.NfcTags.rename(tagId))
+        replaceInTag(TestTags.NfcTags.RENAME_INPUT, to)
+        tapTag(TestTags.NfcTags.RENAME_SAVE)
+    }
 }
 
 class UnlockDialogRobot(compose: ComposeTestRule) : Robot(compose) {
     fun assertShown() = apply { assertVisible("HOW LONG SHOULD IT STAY UNLOCKED?") }
-    fun assertPermanentOffered() = apply { assertPresent("PERMANENTLY") }
-    fun assertPermanentNotOffered() = apply { assertAbsent("PERMANENTLY") }
-    fun assertTimedOnly() = apply { assertVisible("TEMPORARY BREAK"); assertPermanentNotOffered() }
-    fun deselectMode(name: String) = apply { tap(name.uppercase()) }
-    fun setHours(value: String) = apply { setDurationField(0, value) }
     fun assertNotShown() = apply { assertAbsent("HOW LONG SHOULD IT STAY UNLOCKED?") }
-    fun confirmUnlock() = apply { tapInDialog("UNLOCK") }
-    fun cancel() = apply { tapInDialog("CANCEL") }
+    fun assertPermanentOffered() = apply { assertTagPresent(TestTags.Unlock.PERMANENT_OPTION) }
+    fun assertPermanentNotOffered() = apply { assertTagAbsent(TestTags.Unlock.PERMANENT_OPTION) }
+    fun assertTimedOnly() = apply { assertVisible("TEMPORARY BREAK"); assertPermanentNotOffered() }
+    fun deselectMode(modeId: String) = apply { tapTag(TestTags.Unlock.modeRow(modeId)) }
+    fun setHours(value: String) = apply { replaceInTag(TestTags.Unlock.HOURS, value) }
+    fun confirmUnlock() = apply { tapTag(TestTags.Unlock.CONFIRM) }
+    fun cancel() = apply { tap("CANCEL") }
 }

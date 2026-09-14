@@ -100,7 +100,7 @@ class EmergencyResetEndToEndTest {
     @Test fun withAModeActiveTheChallengeIsRequiredBeforeAnyTagCanBeChosen() {
         seedTwoTags()
         harness.launch()
-        HomeRobot(compose).openModes().activate("Deep Work").back()
+        HomeRobot(compose).openModes().activate("m1").back()
         assertTrue("m1" in harness.state.activeModes)
 
         HomeRobot(compose).openEmergencyReset()
@@ -121,7 +121,7 @@ class EmergencyResetEndToEndTest {
         seedTwoTags()
         harness.disableSafeRegime()
         harness.launch()
-        HomeRobot(compose).openModes().activate("Deep Work").back()
+        HomeRobot(compose).openModes().activate("m1").back()
 
         HomeRobot(compose).openEmergencyReset()
             .continueFromWarning()
@@ -132,7 +132,7 @@ class EmergencyResetEndToEndTest {
     @Test fun givingUpTheChallengeLeavesEveryModeAndTagUntouched() {
         seedTwoTags()
         harness.launch()
-        HomeRobot(compose).openModes().activate("Deep Work").back()
+        HomeRobot(compose).openModes().activate("m1").back()
 
         HomeRobot(compose).openEmergencyReset()
             .continueFromWarning()
@@ -153,7 +153,7 @@ class EmergencyResetEndToEndTest {
         HomeRobot(compose).openEmergencyReset()
             .continueFromWarning()
             .assertTagSelectionShown()
-            .selectLostTag("Kitchen key")
+            .selectLostTag("t2")
             .confirmReset()
 
         assertEquals(
@@ -181,7 +181,7 @@ class EmergencyResetEndToEndTest {
         HomeRobot(compose).openEmergencyReset()
             .continueFromWarning()
             .assertTagSelectionShown()
-            .selectLostTag("Kitchen key")
+            .selectLostTag("t2")
             .cancelTagSelection()
 
         assertEquals(listOf("t1", "t2"), harness.state.nfcTags.map { it.id })
@@ -194,8 +194,8 @@ class EmergencyResetEndToEndTest {
         HomeRobot(compose).openEmergencyReset()
             .continueFromWarning()
             .assertTagSelectionShown()
-            .selectLostTag("Kitchen key")
-            .selectLostTag("Kitchen key")   // toggled back off
+            .selectLostTag("t2")
+            .selectLostTag("t2")   // toggled back off
             .confirmReset()
 
         assertEquals(listOf("t1", "t2"), harness.state.nfcTags.map { it.id })

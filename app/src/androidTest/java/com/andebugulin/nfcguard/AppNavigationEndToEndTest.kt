@@ -63,7 +63,7 @@ class AppNavigationEndToEndTest {
 
         HomeRobot(compose)
             .openModes()
-            .createMode("Deep Work", withApp = harness.aBlockableApp().appName)
+            .createMode("Deep Work", withApp = harness.aBlockableApp())
             .assertModeListed("Deep Work")
 
         assertTrue(
@@ -76,7 +76,7 @@ class AppNavigationEndToEndTest {
         harness.seedConfig(modes = listOf(mode(id = "m1", name = "Deep Work")))
         harness.launch()
 
-        HomeRobot(compose).openModes().activate("Deep Work")
+        HomeRobot(compose).openModes().activate("m1")
 
         assertTrue("m1" in harness.state.activeModes)
         assertTrue(

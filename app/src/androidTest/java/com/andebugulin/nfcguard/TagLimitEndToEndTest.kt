@@ -3,6 +3,7 @@ package com.andebugulin.nfcguard
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import com.andebugulin.nfcguard.harness.GuardianHarness
 import com.andebugulin.nfcguard.harness.HomeRobot
+import com.andebugulin.nfcguard.harness.ModesRobot
 import com.andebugulin.nfcguard.harness.UnlockDialogRobot
 import com.andebugulin.nfcguard.nfc.MockNfcTag
 import com.andebugulin.nfcguard.testing.mode
@@ -63,7 +64,7 @@ class TagLimitEndToEndTest {
     )
 
     private fun openEditor() =
-        HomeRobot(compose).openModes().openEditor("Deep Work").assertOnEditor()
+        HomeRobot(compose).openModes().openEditor("m1").assertOnEditor()
 
     private fun storedLimit() = harness.state.modes.first { it.id == "m1" }.tagUnlockLimits
 
@@ -71,7 +72,7 @@ class TagLimitEndToEndTest {
         seedLinkedMode()
         harness.launch()
 
-        openEditor().assertTagLimit("Desk key", "PERMANENT")
+        openEditor().assertTagLimit(tagId, "PERMANENT")
     }
 
     /**
@@ -85,8 +86,8 @@ class TagLimitEndToEndTest {
         harness.launch()
 
         openEditor()
-            .toggleTag("ANY OTHER NFC TAG")
-            .openLimitFor("Desk key")
+            .toggleTag("ANY")
+            .openLimitFor(tagId)
             .chooseLimited()
             .setLimitHours("0")
             .setLimitMinutes("30")
@@ -101,14 +102,14 @@ class TagLimitEndToEndTest {
         seedLinkedMode(limits = mapOf(tagId to 90L))
         harness.launch()
 
-        openEditor().assertTagLimit("Desk key", "1H 30M")
+        openEditor().assertTagLimit(tagId, "1H 30M")
     }
 
     @Test fun reopeningTheDialogPrefillsTheStoredLimit() {
         seedLinkedMode(limits = mapOf(tagId to 90L))
         harness.launch()
 
-        openEditor().openLimitFor("Desk key").assertLimitFields(hours = "1", minutes = "30")
+        openEditor().openLimitFor(tagId).assertLimitFields(hours = "1", minutes = "30")
     }
 
     @Test fun switchingBackToPermanentClearsTheLimit() {
@@ -116,7 +117,7 @@ class TagLimitEndToEndTest {
         harness.launch()
 
         openEditor()
-            .openLimitFor("Desk key")
+            .openLimitFor(tagId)
             .choosePermanent()
             .applyLimit()
             .save()
@@ -129,7 +130,7 @@ class TagLimitEndToEndTest {
         harness.launch()
 
         openEditor()
-            .openLimitFor("Desk key")
+            .openLimitFor(tagId)
             .choosePermanent()
             .cancelLimit()
             .save()
@@ -142,8 +143,8 @@ class TagLimitEndToEndTest {
         harness.launch()
 
         openEditor()
-            .toggleTag("ANY OTHER NFC TAG")
-            .openLimitFor("ANY OTHER NFC TAG")
+            .toggleTag("ANY")
+            .openLimitFor("ANY")
             .chooseLimited()
             .setLimitHours("0")
             .setLimitMinutes("45")
@@ -166,7 +167,7 @@ class TagLimitEndToEndTest {
         harness.launch()
 
         openEditor()
-            .openLimitFor("Desk key")
+            .openLimitFor(tagId)
             .chooseLimited()
             .setLimitHours("0")
             .setLimitMinutes("30")
@@ -180,7 +181,7 @@ class TagLimitEndToEndTest {
         harness.launch()
 
         openEditor()
-            .openLimitFor("Desk key")
+            .openLimitFor(tagId)
             .chooseLimited()
             .setLimitHours("0")
             .setLimitMinutes("30")
@@ -197,7 +198,7 @@ class TagLimitEndToEndTest {
         harness.launch()
 
         openEditor()
-            .openLimitFor("Desk key")
+            .openLimitFor(tagId)
             .chooseLimited()
             .setLimitHours("0")
             .setLimitMinutes("30")
@@ -223,7 +224,7 @@ class TagLimitEndToEndTest {
         harness.launch()
 
         openEditor()
-            .openLimitFor("Desk key")
+            .openLimitFor(tagId)
             .chooseLimited()
             .setLimitHours("0")
             .setLimitMinutes("30")
@@ -231,7 +232,10 @@ class TagLimitEndToEndTest {
             .save()
             .saveAnyway()
 
-        HomeRobot(compose).openModes().activate("Deep Work").back()
+        // Saving the editor lands back on ModesScreen, not Home — the old
+        // text selector tapped the screen's own "MODES" heading and did
+        // nothing, which happened to look like success.
+        ModesRobot(compose).activate("m1").back()
         harness.tapNfcTag(tagId)
 
         val before = System.currentTimeMillis()

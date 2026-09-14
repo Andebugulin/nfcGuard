@@ -133,7 +133,7 @@ class DialogFlowsEndToEndTest {
         harness.seedConfig(tags = listOf(tag(id = tagId, name = "Old name")))
         harness.launch()
 
-        HomeRobot(compose).openNfcTags().renameTag("New name")
+        HomeRobot(compose).openNfcTags().renameTag(tagId, "New name")
 
         assertEquals(listOf("New name"), harness.state.nfcTags.map { it.name })
     }
@@ -152,7 +152,7 @@ class DialogFlowsEndToEndTest {
             tags = listOf(tag(id = tagId, name = "Desk key", modeIds = listOf("m1")))
         )
         harness.launch()
-        HomeRobot(compose).openModes().activate("Deep Work").back()
+        HomeRobot(compose).openModes().activate("m1").back()
         harness.tapNfcTag(tagId)
     }
 
@@ -201,7 +201,7 @@ class DialogFlowsEndToEndTest {
             tags = listOf(tag(id = tagId, name = "Desk key", modeIds = listOf("m1")))
         )
         harness.launch()
-        HomeRobot(compose).openModes().activate("Deep Work").back()
+        HomeRobot(compose).openModes().activate("m1").back()
         harness.tapNfcTag(tagId)
 
         UnlockDialogRobot(compose).assertShown().assertPermanentOffered().confirmUnlock()
@@ -230,8 +230,8 @@ class DialogFlowsEndToEndTest {
         )
         harness.launch()
         val modes = HomeRobot(compose).openModes()
-        modes.activate("Deep Work")
-        modes.activate("Sleep")
+        modes.activate("m1")
+        modes.activate("m2")
         modes.back()
         harness.tapNfcTag(tagId)
     }
@@ -263,7 +263,7 @@ class DialogFlowsEndToEndTest {
 
         UnlockDialogRobot(compose).assertShown()
             .assertPermanentNotOffered()
-            .deselectMode("Sleep")
+            .deselectMode("m2")
             .assertPermanentOffered()
     }
 

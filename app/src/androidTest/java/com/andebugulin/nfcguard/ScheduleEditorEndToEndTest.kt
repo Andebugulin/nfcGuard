@@ -28,6 +28,11 @@ import org.junit.Test
  */
 class ScheduleEditorEndToEndTest {
 
+    /** `getDayName` maps 1..7 to MONDAY..SUNDAY. */
+    private val MONDAY = 1
+    private val TUESDAY = 2
+
+
     @get:Rule val compose = createEmptyComposeRule()
 
     private lateinit var harness: GuardianHarness
@@ -61,8 +66,8 @@ class ScheduleEditorEndToEndTest {
         HomeRobot(compose).openSchedules()
             .openEditor()
             .typeName("Work Hours")
-            .toggleDay("MONDAY")
-            .toggleMode("Deep Work")
+            .toggleDay(MONDAY)
+            .toggleMode("m1")
             .create()
 
         val saved = schedules().single()
@@ -77,8 +82,8 @@ class ScheduleEditorEndToEndTest {
 
         HomeRobot(compose).openSchedules()
             .openEditor()
-            .toggleDay("MONDAY")
-            .toggleMode("Deep Work")
+            .toggleDay(MONDAY)
+            .toggleMode("m1")
             .assertCannotSubmit()
     }
 
@@ -89,7 +94,7 @@ class ScheduleEditorEndToEndTest {
         HomeRobot(compose).openSchedules()
             .openEditor()
             .typeName("Work Hours")
-            .toggleMode("Deep Work")
+            .toggleMode("m1")
             .assertCannotSubmit()
     }
 
@@ -101,7 +106,7 @@ class ScheduleEditorEndToEndTest {
         HomeRobot(compose).openSchedules()
             .openEditor()
             .typeName("Work Hours")
-            .toggleDay("MONDAY")
+            .toggleDay(MONDAY)
             .assertCannotSubmit()
     }
 
@@ -112,8 +117,8 @@ class ScheduleEditorEndToEndTest {
         HomeRobot(compose).openSchedules()
             .openEditor()
             .typeName("Work Hours")
-            .toggleDay("MONDAY")
-            .toggleMode("Deep Work")
+            .toggleDay(MONDAY)
+            .toggleMode("m1")
             .assertCanSubmit()
     }
 
@@ -134,8 +139,8 @@ class ScheduleEditorEndToEndTest {
         HomeRobot(compose).openSchedules()
             .openEditor()
             .typeName("Work Hours")
-            .toggleDay("MONDAY")
-            .toggleMode("Deep Work")
+            .toggleDay(MONDAY)
+            .toggleMode("m1")
             .cancelEditor()
 
         assertTrue(schedules().isEmpty())
@@ -148,9 +153,9 @@ class ScheduleEditorEndToEndTest {
         HomeRobot(compose).openSchedules()
             .openEditor()
             .typeName("Weekdays")
-            .toggleDay("MONDAY")
-            .toggleDay("TUESDAY")
-            .toggleMode("Deep Work")
+            .toggleDay(MONDAY)
+            .toggleDay(TUESDAY)
+            .toggleMode("m1")
             .create()
 
         assertEquals(listOf(1, 2), schedules().single().timeSlot.days.sorted())
@@ -163,10 +168,10 @@ class ScheduleEditorEndToEndTest {
         HomeRobot(compose).openSchedules()
             .openEditor()
             .typeName("Tuesdays")
-            .toggleDay("MONDAY")
-            .toggleDay("TUESDAY")
-            .toggleDay("MONDAY")   // toggled back off
-            .toggleMode("Deep Work")
+            .toggleDay(MONDAY)
+            .toggleDay(TUESDAY)
+            .toggleDay(MONDAY)   // toggled back off
+            .toggleMode("m1")
             .create()
 
         assertEquals(listOf(2), schedules().single().timeSlot.days)
@@ -179,7 +184,7 @@ class ScheduleEditorEndToEndTest {
         harness.launch()
 
         val screen = HomeRobot(compose).openSchedules()
-        screen.deleteSchedule("Work Hours").assertDeleteConfirmShown().confirmDelete()
+        screen.deleteSchedule("s1").assertDeleteConfirmShown().confirmDelete()
 
         assertTrue("the schedule should be gone", schedules().isEmpty())
     }
@@ -189,7 +194,7 @@ class ScheduleEditorEndToEndTest {
         harness.launch()
 
         val screen = HomeRobot(compose).openSchedules()
-        screen.deleteSchedule("Work Hours").assertDeleteConfirmShown().cancelDelete()
+        screen.deleteSchedule("s1").assertDeleteConfirmShown().cancelDelete()
 
         assertEquals(listOf("s1"), schedules().map { it.id })
     }
@@ -209,9 +214,9 @@ class ScheduleEditorEndToEndTest {
     @Test fun editingWhileAModeIsActiveRequiresTheChallenge() {
         seedModeAndSchedule()
         harness.launch()
-        HomeRobot(compose).openModes().activate("Deep Work").back()
+        HomeRobot(compose).openModes().activate("m1").back()
 
-        HomeRobot(compose).openSchedules().openEditorFor("Work Hours")
+        HomeRobot(compose).openSchedules().openEditorFor("s1")
             .renameTo("Evening Hours")
             .saveEdit()
             .assertChallengeRequired()
@@ -225,9 +230,9 @@ class ScheduleEditorEndToEndTest {
     @Test fun givingUpThatChallengeLeavesTheScheduleUnchanged() {
         seedModeAndSchedule()
         harness.launch()
-        HomeRobot(compose).openModes().activate("Deep Work").back()
+        HomeRobot(compose).openModes().activate("m1").back()
 
-        HomeRobot(compose).openSchedules().openEditorFor("Work Hours")
+        HomeRobot(compose).openSchedules().openEditorFor("s1")
             .renameTo("Evening Hours")
             .saveEdit()
             .assertChallengeRequired()
@@ -240,7 +245,7 @@ class ScheduleEditorEndToEndTest {
         seedModeAndSchedule()
         harness.launch()
 
-        HomeRobot(compose).openSchedules().openEditorFor("Work Hours")
+        HomeRobot(compose).openSchedules().openEditorFor("s1")
             .renameTo("Evening Hours")
             .saveEdit()
             .assertChallengeSkipped()
@@ -253,9 +258,9 @@ class ScheduleEditorEndToEndTest {
         seedModeAndSchedule()
         harness.disableSafeRegime()
         harness.launch()
-        HomeRobot(compose).openModes().activate("Deep Work").back()
+        HomeRobot(compose).openModes().activate("m1").back()
 
-        HomeRobot(compose).openSchedules().openEditorFor("Work Hours")
+        HomeRobot(compose).openSchedules().openEditorFor("s1")
             .renameTo("Evening Hours")
             .saveEdit()
             .assertChallengeSkipped()
@@ -271,8 +276,8 @@ class ScheduleEditorEndToEndTest {
     private fun newSchedule() = HomeRobot(compose).openSchedules()
         .openEditor()
         .typeName("Work Hours")
-        .toggleDay("MONDAY")
-        .toggleMode("Deep Work")
+        .toggleDay(MONDAY)
+        .toggleMode("m1")
 
     @Test fun aSelectedDayStartsAtNineByDefault() {
         seedMode()
@@ -290,7 +295,7 @@ class ScheduleEditorEndToEndTest {
         harness.launch()
 
         val editor = newSchedule()
-        editor.openTime("09:00").assertSelectingHour().pick("7").set()
+        editor.openStartTime(MONDAY).assertSelectingHour().pick("7").set()
         editor.assertTimeShown("07:00").create()
 
         assertEquals(7, schedules().single().timeSlot.dayTimes.single().startHour)
@@ -301,7 +306,7 @@ class ScheduleEditorEndToEndTest {
         harness.launch()
 
         val editor = newSchedule()
-        editor.openTime("09:00").pick("7").cancel()
+        editor.openStartTime(MONDAY).pick("7").cancel()
 
         editor.assertTimeShown("09:00")
     }
@@ -333,7 +338,7 @@ class ScheduleEditorEndToEndTest {
 
         val editor = newSchedule().enableCustomEndTimes()
         // The end time defaults to 23:59; move it to 17:00.
-        editor.openTime("23:59").pick("17").set()
+        editor.openEndTime(MONDAY).pick("17").set()
         editor.create()
 
         val saved = schedules().single()
@@ -347,7 +352,7 @@ class ScheduleEditorEndToEndTest {
         harness.launch()
 
         val editor = newSchedule().enableCustomEndTimes()
-        editor.openTime("23:59").pick("7").set()   // 07:00, before the 09:00 start
+        editor.openEndTime(MONDAY).pick("7").set()   // 07:00, before the 09:00 start
 
         editor.create()
         editor.assertEndTimeRejected()

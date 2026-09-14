@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -26,6 +27,7 @@ import com.andebugulin.nfcguard.testing.resetAppStateRepository
 import com.andebugulin.nfcguard.testing.schedule
 import com.andebugulin.nfcguard.testing.setDetectorState
 import com.andebugulin.nfcguard.testing.tag
+import com.andebugulin.nfcguard.ui.TestTags
 import com.andebugulin.nfcguard.ui.home.SettingsDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -135,8 +137,7 @@ class SettingsDialogTest {
 
     /** The switch scrolls out of view once a later row has been scrolled to. */
     private fun toggle() {
-        scrollTo("ANTI-BYPASS PROTECTION")
-        compose.onAllNodes(isToggleable()).onFirst().performClick()
+        compose.onNodeWithTag(TestTags.Settings.SAFE_REGIME_TOGGLE).performClick()
         settle()
     }
 
@@ -169,7 +170,7 @@ class SettingsDialogTest {
     @Test fun `anti-bypass protection is on by default`() {
         show()
         assertVisible("ANTI-BYPASS PROTECTION")
-        compose.onAllNodes(isToggleable()).onFirst().assertIsOn()
+        compose.onNodeWithTag(TestTags.Settings.SAFE_REGIME_TOGGLE).assertIsOn()
     }
 
     @Test fun `with nothing active it can be switched off directly`() {
@@ -177,7 +178,7 @@ class SettingsDialogTest {
 
         toggle()
 
-        compose.onAllNodes(isToggleable()).onFirst().assertIsOff()
+        compose.onNodeWithTag(TestTags.Settings.SAFE_REGIME_TOGGLE).assertIsOff()
         assertEquals(false, vm.safeRegimeEnabled.value)
     }
 
@@ -209,7 +210,7 @@ class SettingsDialogTest {
         tap("GIVE UP")
 
         assertEquals(true, vm.safeRegimeEnabled.value)
-        compose.onAllNodes(isToggleable()).onFirst().assertIsOn()
+        compose.onNodeWithTag(TestTags.Settings.SAFE_REGIME_TOGGLE).assertIsOn()
     }
 
     @Test fun `switching it back on is immediate and never challenged`() {
@@ -279,7 +280,7 @@ class SettingsDialogTest {
     @Test fun `exporting asks which format first`() {
         show()
 
-        tap("EXPORT CONFIG")
+        compose.onNodeWithTag(TestTags.Settings.EXPORT).performClick().also { settle() }
 
         assertVisible("EXPORT FORMAT")
         assertVisible("JSON")
@@ -289,7 +290,7 @@ class SettingsDialogTest {
     @Test fun `DONE closes the sheet`() {
         show()
 
-        tap("DONE")
+        compose.onNodeWithTag(TestTags.Settings.DONE).performClick().also { settle() }
 
         assertEquals(1, dismissed)
     }

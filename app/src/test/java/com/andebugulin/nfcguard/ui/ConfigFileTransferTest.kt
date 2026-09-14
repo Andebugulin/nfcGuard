@@ -15,6 +15,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -30,6 +31,7 @@ import com.andebugulin.nfcguard.testing.grantOverlayPermission
 import com.andebugulin.nfcguard.testing.mode
 import com.andebugulin.nfcguard.testing.resetAppStateRepository
 import com.andebugulin.nfcguard.testing.tag
+import com.andebugulin.nfcguard.ui.TestTags
 import com.andebugulin.nfcguard.ui.home.SettingsDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -151,10 +153,19 @@ class ConfigFileTransferTest {
         }
     }
 
+    private fun tapTag(tag: String) {
+        compose.onAllNodes(hasTestTag(tag)).onFirst().performClick()
+        settle()
+    }
+
     private fun tap(text: String) {
         scrollTo(text)
         compose.onAllNodesWithText(text).onFirst().performClick()
         settle()
+    }
+
+    private fun assertTagPresent(tag: String) {
+        compose.onAllNodes(hasTestTag(tag)).onFirst().assertExists()
     }
 
     private fun assertVisible(text: String) {
@@ -191,8 +202,8 @@ class ConfigFileTransferTest {
         val sink = ByteArrayOutputStream()
         shadowOf(app.contentResolver).registerOutputStream(uri, sink)
 
-        tap("EXPORT CONFIG")
-        tap(format)
+        tapTag(TestTags.Settings.EXPORT)
+        tapTag(format)
         registry.deliver(uri)
         settle()
 
@@ -203,7 +214,7 @@ class ConfigFileTransferTest {
         seedConfig()
         show()
 
-        val written = exportTo("JSON")
+        val written = exportTo(TestTags.Settings.EXPORT_JSON)
 
         assertTrue("expected JSON, got: $written", written.trimStart().startsWith("{"))
         assertTrue("the mode should be in the file", written.contains("Deep Work"))
@@ -214,7 +225,7 @@ class ConfigFileTransferTest {
         seedConfig()
         show()
 
-        val written = exportTo("YAML")
+        val written = exportTo(TestTags.Settings.EXPORT_YAML)
 
         assertTrue("expected YAML, got: $written", written.contains("modes:"))
         assertTrue(written.contains("Deep Work"))
@@ -224,7 +235,7 @@ class ConfigFileTransferTest {
         seedConfig()
         show()
 
-        exportTo("JSON")
+        exportTo(TestTags.Settings.EXPORT_JSON)
 
         assertVisible("EXPORTED JSON SUCCESSFULLY")   // status messages render .uppercase()
     }
@@ -232,8 +243,8 @@ class ConfigFileTransferTest {
     @Test fun `cancelling the file chooser exports nothing and says nothing`() {
         seedConfig()
         show()
-        tap("EXPORT CONFIG")
-        tap("JSON")
+        tapTag(TestTags.Settings.EXPORT)
+        tapTag(TestTags.Settings.EXPORT_JSON)
 
         registry.deliver(null)
         settle()
@@ -248,7 +259,7 @@ class ConfigFileTransferTest {
         shadowOf(app.contentResolver)
             .registerInputStream(uri, ByteArrayInputStream(content.toByteArray()))
 
-        tap("IMPORT CONFIG")
+        tapTag(TestTags.Settings.IMPORT)
         registry.deliver(uri)
         settle()
     }
@@ -277,8 +288,8 @@ class ConfigFileTransferTest {
 
         importFrom("config.json", exportedJson())
 
-        assertVisible("MERGE")
-        assertVisible("REPLACE")
+        assertTagPresent(TestTags.Settings.IMPORT_MERGE)
+        assertTagPresent(TestTags.Settings.IMPORT_REPLACE)
         assertEquals("nothing may be applied before the user chooses", 0, vm.appState.value.modes.size)
     }
 
@@ -289,7 +300,7 @@ class ConfigFileTransferTest {
         importFrom("config.yaml", exportedYaml())
 
         assertImportSucceeded()
-        assertVisible("MERGE")
+        assertTagPresent(TestTags.Settings.IMPORT_MERGE)
     }
 
     /** Its fallback: sniff the content, for files saved without a useful name. */
@@ -299,7 +310,7 @@ class ConfigFileTransferTest {
         importFrom("download", exportedYaml())
 
         assertImportSucceeded()
-        assertVisible("MERGE")
+        assertTagPresent(TestTags.Settings.IMPORT_MERGE)
     }
 
     @Test fun `MERGE adds the imported config to what is already there`() {
@@ -307,7 +318,7 @@ class ConfigFileTransferTest {
         show()
         importFrom("config.json", exportedJson())
 
-        tap("MERGE")
+        tapTag(TestTags.Settings.IMPORT_MERGE)
 
         val names = vm.appState.value.modes.map { it.name }
         assertTrue("the existing mode should survive a merge", names.contains("Deep Work"))
@@ -319,7 +330,7 @@ class ConfigFileTransferTest {
         show()
         importFrom("config.json", exportedJson())
 
-        tap("REPLACE")
+        tapTag(TestTags.Settings.IMPORT_REPLACE)
 
         assertEquals(listOf("Imported"), vm.appState.value.modes.map { it.name })
     }
