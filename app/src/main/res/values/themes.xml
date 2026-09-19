@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!--
+      No android:statusBarColor / android:navigationBarColor here: both are
+      deprecated in API 35 and ignored once edge-to-edge is enforced (API 36
+      has no opt-out). Bar scrims are set in MainActivity via enableEdgeToEdge.
+    -->
     <style name="Theme.NFCGuard" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

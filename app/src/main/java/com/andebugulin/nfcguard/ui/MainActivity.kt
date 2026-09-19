@@ -23,6 +23,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -71,7 +72,14 @@ class MainActivity : ComponentActivity() {
         // Initialize logger first
         AppLogger.init(this)
 
-        enableEdgeToEdge()
+        // MinimalistTheme is always dark (darkColorScheme, no system-theme branch),
+        // so pin the bar styles to dark instead of the default auto(): auto() would
+        // pick dark icons on a light-mode device and make them invisible on our
+        // dark background.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
         pendingIntent = PendingIntent.getActivity(
