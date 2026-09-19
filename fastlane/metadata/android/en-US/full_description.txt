@@ -1,11 +1,22 @@
-nfcGuard blocks distracting apps using NFC tags as physical keys.
-Place a tag somewhere inconvenient and think twice before scrolling.
+Place an NFC tag somewhere inconvenient — another room, a drawer, the far end
+of the house — and make yourself walk to it before you can scroll.
+
+Most app blockers are one tap away from being switched off. This one isn't.
+Unlocking means getting up.
+
+Fully offline: no ads, no tracking, no accounts, no sign-up. Open source under
+the MIT license.
 
 Features:
-* Block mode - block specific distracting apps
-* Allow mode - block everything except essentials
-* Per-day schedules with auto-activate/deactivate
-* Multiple modes with different NFC tags
-* Emergency reset with 60-second cooldown
-* Config export/import in JSON or YAML
-* Fully offline - no ads, no tracking, no accounts
+* Block mode — block the specific apps that distract you
+* Allow mode — block everything except the essentials
+* Per-day schedules that activate and deactivate on their own
+* Multiple modes, each with its own NFC tag
+* Timed unlocks, capped by a limit you set in advance
+* Home screen widget for switching modes without opening the app
+* Emergency reset with a 60-second cooldown
+* Config export and import in JSON or YAML
+
+Requires a phone with NFC and any inexpensive NTAG sticker or card.
+
+Source code: https://github.com/Andebugulin/nfcGuard

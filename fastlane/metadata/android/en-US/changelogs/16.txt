@@ -1,0 +1,6 @@
+* Fixed system bar icons being invisible on devices set to light mode.
+* Updated for Android 16's enforced edge-to-edge display.
+* The schedule clock face now responds to a tap.
+* Blocking resumes correctly when the accessibility service reconnects.
+* Enforcement no longer runs while the screen is off or locked.
+* Expanded the test suite to 347 tests.
