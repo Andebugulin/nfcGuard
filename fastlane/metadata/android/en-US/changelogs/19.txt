@@ -1,0 +1,3 @@
+* New app icon.
+* The app is listed as nfcGuard again in your app drawer and settings;
+  the interface still styles the name NFCGUARD.
