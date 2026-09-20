@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
- * Guardian App Theme - Centralized color definitions
+ * nfcGuard App Theme - Centralized color definitions
  * Pure black & white minimalist design
  *
  * IMPORTANT: For pure black dialogs, always add:

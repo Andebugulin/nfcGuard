@@ -80,7 +80,7 @@ class AppLoggerTest {
         AppLogger.log("TEST", "context line")
         val report = AppLogger.buildFullReport(context)
 
-        assertTrue(report.contains("GUARDIAN BUG REPORT"))
+        assertTrue(report.contains("nfcGuard BUG REPORT"))
         assertTrue(report.contains("Usage Access:"))
         assertTrue(report.contains("Android:"))
     }

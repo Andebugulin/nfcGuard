@@ -285,9 +285,9 @@ fun OnboardingScreen(onComplete: () -> Unit) {
     var currentPage by remember { mutableStateOf(0) }
     val pages = listOf(
         OnboardingPage(
-            title = "GUARDIAN",
+            title = "nfcGuard",
             subtitle = "DIGITAL WELLBEING",
-            description = "Break free from mindless scrolling. Guardian blocks distracting apps until you physically unlock them with NFC tags.",
+            description = "Break free from mindless scrolling. nfcGuard blocks distracting apps until you physically unlock them with NFC tags.",
             icon = "shield"
         ),
         OnboardingPage(
@@ -318,12 +318,12 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         OnboardingPage(
             title = "READY",
             subtitle = "LET'S GET STARTED",
-            description = "Guardian needs a few permissions to do its job. We'll walk through each one and explain why:\n\n" +
+            description = "nfcGuard needs a few permissions to do its job. We'll walk through each one and explain why:\n\n" +
                     "•  Notifications (optional) — show which modes are active\n" +
                     "•  Usage access — see which app is open\n" +
                     "•  Display over apps — show the block screen\n" +
                     "•  Battery optimization — keep running reliably\n" +
-                    "•  Pause app activity — must be turned off for Guardian\n" +
+                    "•  Pause app activity — must be turned off for nfcGuard\n" +
                     "•  Accessibility — more reliable, instant blocking\n\n" +
                     "Let's set them up.",
             icon = "ready"

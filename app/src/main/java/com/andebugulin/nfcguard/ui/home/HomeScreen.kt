@@ -141,7 +141,7 @@ fun HomeScreen(
         ) {
             Column {
                 Text(
-                    "GUARDIAN",
+                    "nfcGuard",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Black,
                     color = GuardianTheme.TextPrimary,
@@ -1080,7 +1080,7 @@ fun SettingsDialog(
                             )
                         }
                         Text(
-                            "Recommended -” prevents Android from hibernating Guardian in background",
+                            "Recommended -” prevents Android from hibernating nfcGuard in background",
                             fontSize = 9.sp,
                             color = GuardianTheme.WarningTextMuted,
                             letterSpacing = 0.3.sp
@@ -1521,7 +1521,7 @@ fun SettingsDialog(
     // Let users feel the anti-bypass challenge without an active mode
     if (showTestChallenge) {
         SafeRegimeChallengeDialog(
-            actionDescription = "This is a practice run of the anti-bypass challenge. It's how Guardian protects sensitive actions while modes are active.",
+            actionDescription = "This is a practice run of the anti-bypass challenge. It's how nfcGuard protects sensitive actions while modes are active.",
             totalDurationSeconds = challengeDuration,
             onComplete = { showTestChallenge = false },
             onCancel = { showTestChallenge = false }

@@ -33,7 +33,7 @@ class InfoScreenTest {
 
     @Test fun `renders without a network connection`() {
         show()
-        compose.onNodeWithText("GUARDIAN").assertIsDisplayed()
+        compose.onNodeWithText("nfcGuard").assertIsDisplayed()
     }
 
     // The page is a LazyColumn, so anything below the fold is not composed

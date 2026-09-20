@@ -21,7 +21,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 
 /**
- * Handles export/import of Guardian configuration in JSON and YAML formats.
+ * Handles export/import of nfcGuard configuration in JSON and YAML formats.
  *
  * Exports only user-configured data (modes, schedules, nfcTags).
  * Runtime state (activeModes, activeSchedules, deactivatedSchedules) is NOT exported.
@@ -145,7 +145,7 @@ object ConfigManager {
 
     fun exportToYaml(appState: AppState): String {
         val sb = StringBuilder()
-        sb.appendLine("# Guardian Configuration Export")
+        sb.appendLine("# nfcGuard Configuration Export")
         sb.appendLine()
         sb.appendLine("version: 1")
         sb.appendLine()

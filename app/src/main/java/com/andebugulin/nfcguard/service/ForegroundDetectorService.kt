@@ -70,7 +70,7 @@ class ForegroundDetectorService : AccessibilityService() {
             // NOTE: We intentionally do NOT filter our own package here.
             // BlockerService.checkCurrentApp() already has `currentApp == packageName → ALLOW`.
             // Filtering here would cause lastDetectedPackage to go stale when the user
-            // is inside Guardian, eventually falling through to UsageStatsManager which
+            // is inside nfcGuard, eventually falling through to UsageStatsManager which
             // can return a previously-blocked app → spurious force-close.
             // The old overlay concern (overlay window triggering TYPE_WINDOW_STATE_CHANGED)
             // is moot: when accessibility is ON, we use force-close mode (no overlay).

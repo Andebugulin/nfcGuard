@@ -96,7 +96,7 @@ class PermissionOnboardingTest {
 
     @Test fun `the flow opens on the welcome step`() {
         show()
-        compose.onNodeWithText("WELCOME TO GUARDIAN").assertIsDisplayed()
+        compose.onNodeWithText("WELCOME TO nfcGuard").assertIsDisplayed()
         compose.onNodeWithText("CONTINUE").assertIsDisplayed()
         compose.onNodeWithText("SKIP").assertIsDisplayed()
     }

@@ -146,7 +146,7 @@ class BlockDeciderTest {
 
     @Test
     fun criticalSystemApps_includesOurOwnPackage() {
-        // Required so checkCurrentApp doesn't loop-block Guardian itself.
+        // Required so checkCurrentApp doesn't loop-block nfcGuard itself.
         assertEquals(true, "com.andebugulin.nfcguard" in BlockDecider.CRITICAL_SYSTEM_APPS)
     }
 

@@ -337,7 +337,7 @@ class OverlayEnforcer(
         })
 
         addView(Button(context).apply {
-            text = "GUARDIAN"
+            text = "nfcGuard"
             textSize = 16f
             setTextColor(0xFF000000.toInt())
             setBackgroundColor(0xFFFFFFFF.toInt())
@@ -350,7 +350,7 @@ class OverlayEnforcer(
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
             setOnClickListener {
-                android.util.Log.d(TAG, "GUARDIAN button clicked")
+                android.util.Log.d(TAG, "nfcGuard button clicked")
                 val intent = Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
