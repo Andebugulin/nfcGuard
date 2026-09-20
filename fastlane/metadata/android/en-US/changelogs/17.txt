@@ -1,0 +1,8 @@
+The app is now called nfcGuard everywhere. It previously called itself
+"Guardian" on screen while the store listing said nfcGuard — same app,
+one name now.
+
+* New app icon.
+* Renamed every on-screen reference from Guardian to nfcGuard.
+
+Your modes, schedules and registered tags are unaffected.
