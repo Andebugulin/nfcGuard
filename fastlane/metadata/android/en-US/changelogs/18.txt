@@ -1,0 +1,3 @@
+* The app name is now styled NFCGUARD on screen, matching the uppercase
+  used everywhere else in the interface.
+* Removed the app icon from the first welcome page.
