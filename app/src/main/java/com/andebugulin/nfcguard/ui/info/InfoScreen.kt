@@ -115,7 +115,7 @@ fun InfoScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
-                                "nfcGuard",
+                                "NFCGUARD",
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Black,
                                 color = GuardianTheme.TextPrimary,
@@ -378,8 +378,8 @@ fun InfoScreen(
 
                 item {
                     InfoSection(
-                        title = "WHAT IS nfcGuard?",
-                        content = "nfcGuard helps you maintain focus by blocking distracting apps. Use NFC tags as physical keys to unlock \u2014 making it harder to mindlessly open blocked apps."
+                        title = "WHAT IS NFCGUARD?",
+                        content = "NFCGUARD helps you maintain focus by blocking distracting apps. Use NFC tags as physical keys to unlock \u2014 making it harder to mindlessly open blocked apps."
                     )
                 }
 
@@ -413,7 +413,7 @@ fun InfoScreen(
                             )
 
                             Text(
-                                "nfcGuard has two blocking methods that switch automatically based on your setup:",
+                                "NFCGUARD has two blocking methods that switch automatically based on your setup:",
                                 fontSize = 12.sp,
                                 color = GuardianTheme.TextPrimary,
                                 letterSpacing = 0.5.sp,
@@ -449,7 +449,7 @@ fun InfoScreen(
                                         )
                                     }
                                     Text(
-                                        "When you open a blocked app, nfcGuard immediately closes it and sends you home. You'll see a quick notification. This is the most reliable method \u2014 it works consistently on all devices including Samsung and Pixel.",
+                                        "When you open a blocked app, NFCGUARD immediately closes it and sends you home. You'll see a quick notification. This is the most reliable method \u2014 it works consistently on all devices including Samsung and Pixel.",
                                         fontSize = 11.sp,
                                         color = GuardianTheme.TextSecondary,
                                         letterSpacing = 0.3.sp,
@@ -538,7 +538,7 @@ fun InfoScreen(
                             }
 
                             Text(
-                                "nfcGuard picks the right method automatically \u2014 you can see which one is active in Settings under \"Blocking Method\".",
+                                "NFCGUARD picks the right method automatically \u2014 you can see which one is active in Settings under \"Blocking Method\".",
                                 fontSize = 11.sp,
                                 color = GuardianTheme.TextTertiary,
                                 letterSpacing = 0.3.sp,
@@ -594,7 +594,7 @@ fun InfoScreen(
                                 letterSpacing = 1.sp
                             )
                             Text(
-                                "nfcGuard is free and open source software. Contributions welcome!",
+                                "NFCGUARD is free and open source software. Contributions welcome!",
                                 fontSize = 12.sp,
                                 color = GuardianTheme.TextPrimary,
                                 letterSpacing = 0.5.sp

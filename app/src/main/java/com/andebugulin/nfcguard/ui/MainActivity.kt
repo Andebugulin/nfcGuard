@@ -27,7 +27,6 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -41,7 +40,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,10 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.net.Uri
-import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
-import androidx.compose.ui.graphics.FilterQuality
 
 enum class Screen {
     HOME, MODES, SCHEDULES, NFC_TAGS, INFO
@@ -285,10 +281,10 @@ fun OnboardingScreen(onComplete: () -> Unit) {
     var currentPage by remember { mutableStateOf(0) }
     val pages = listOf(
         OnboardingPage(
-            title = "nfcGuard",
+            title = "NFCGUARD",
             subtitle = "DIGITAL WELLBEING",
-            description = "Break free from mindless scrolling. nfcGuard blocks distracting apps until you physically unlock them with NFC tags.",
-            icon = "shield"
+            description = "Break free from mindless scrolling. NFCGUARD blocks distracting apps until you physically unlock them with NFC tags.",
+            icon = "none"
         ),
         OnboardingPage(
             title = "MODES",
@@ -318,12 +314,12 @@ fun OnboardingScreen(onComplete: () -> Unit) {
         OnboardingPage(
             title = "READY",
             subtitle = "LET'S GET STARTED",
-            description = "nfcGuard needs a few permissions to do its job. We'll walk through each one and explain why:\n\n" +
+            description = "NFCGUARD needs a few permissions to do its job. We'll walk through each one and explain why:\n\n" +
                     "•  Notifications (optional) — show which modes are active\n" +
                     "•  Usage access — see which app is open\n" +
                     "•  Display over apps — show the block screen\n" +
                     "•  Battery optimization — keep running reliably\n" +
-                    "•  Pause app activity — must be turned off for nfcGuard\n" +
+                    "•  Pause app activity — must be turned off for NFCGUARD\n" +
                     "•  Accessibility — more reliable, instant blocking\n\n" +
                     "Let's set them up.",
             icon = "ready"
@@ -443,20 +439,6 @@ fun OnboardingPageContent(page: OnboardingPage) {
     ) {
         // Icon
         when (page.icon) {
-            "shield" -> {
-                // Use actual app icon
-                val context = LocalContext.current
-                val appIcon = remember {
-                    context.packageManager.getApplicationIcon(context.applicationInfo)
-                }
-                // AFTER
-                Image(
-                    bitmap = appIcon.toBitmap(512, 512).asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.size(80.dp),
-                    filterQuality = FilterQuality.High
-                )
-            }
             "modes" -> Icon(
                 Icons.Default.DarkMode,
                 contentDescription = null,

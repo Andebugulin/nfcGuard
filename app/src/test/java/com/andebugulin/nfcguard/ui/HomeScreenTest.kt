@@ -61,7 +61,7 @@ class HomeScreenTest {
 
     @Test fun `renders the home screen`() {
         show()
-        compose.onAllNodesWithText("nfcGuard", substring = true).onFirst().assertIsDisplayed()
+        compose.onAllNodesWithText("NFCGUARD", substring = true).onFirst().assertIsDisplayed()
     }
 
     @Test fun `renders with modes present`() {
@@ -69,7 +69,7 @@ class HomeScreenTest {
             1, listOf(mode(id = "m1", name = "Focus")), emptyList(), emptyList()
         ))
         show()
-        compose.onAllNodesWithText("nfcGuard", substring = true).onFirst().assertIsDisplayed()
+        compose.onAllNodesWithText("NFCGUARD", substring = true).onFirst().assertIsDisplayed()
     }
 
     @Test fun `renders with an active mode`() {

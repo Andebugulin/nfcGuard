@@ -156,7 +156,7 @@ abstract class Robot(protected val compose: ComposeTestRule) {
 }
 
 class HomeRobot(compose: ComposeTestRule) : Robot(compose) {
-    fun assertOnHome() = apply { assertVisible("nfcGuard") }
+    fun assertOnHome() = apply { assertVisible("NFCGUARD") }
     fun openModes() = ModesRobot(compose).also { tapTag(TestTags.Home.NAV_MODES) }
     fun openSchedules() = SchedulesRobot(compose).also { tapTag(TestTags.Home.NAV_SCHEDULES) }
     fun openNfcTags() = NfcTagsRobot(compose).also { tapTag(TestTags.Home.NAV_NFC_TAGS) }

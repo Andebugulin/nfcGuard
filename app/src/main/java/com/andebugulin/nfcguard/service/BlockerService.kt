@@ -292,9 +292,9 @@ class BlockerService : Service() {
         val timedReactivationCount = timedModeReactivations.size
 
         val titleText = when {
-            activeModeIds.isNotEmpty() -> "nfcGuard ACTIVE"
-            timedReactivationCount > 0 -> "nfcGuard PAUSED"
-            else -> "nfcGuard MONITORING"
+            activeModeIds.isNotEmpty() -> "NFCGUARD ACTIVE"
+            timedReactivationCount > 0 -> "NFCGUARD PAUSED"
+            else -> "NFCGUARD MONITORING"
         }
 
         val contentText = if (activeModeIds.isEmpty() && timedReactivationCount == 0) {
@@ -407,10 +407,10 @@ class BlockerService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "nfcGuard Service",
+                "NFCGUARD Service",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Keeps nfcGuard running"
+                description = "Keeps NFCGUARD running"
             }
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)

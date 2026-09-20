@@ -124,7 +124,7 @@ object AppLogger {
         val sb = StringBuilder()
 
         sb.appendLine("═══════════════════════════════════════")
-        sb.appendLine("  nfcGuard BUG REPORT")
+        sb.appendLine("  NFCGUARD BUG REPORT")
         sb.appendLine("  Generated: ${dateFormat.format(Date())}")
         sb.appendLine("═══════════════════════════════════════")
         sb.appendLine()
@@ -238,7 +238,7 @@ object AppLogger {
 
                 if (logsTruncated) {
                     appendLine()
-                    appendLine("> \u26A0\uFE0F **Logs were truncated.** Use the \"SAVE LOG FILE\" button in nfcGuard's About screen and attach the file to this issue.")
+                    appendLine("> \u26A0\uFE0F **Logs were truncated.** Use the \"SAVE LOG FILE\" button in NFCGUARD's About screen and attach the file to this issue.")
                 }
             }
 
@@ -277,7 +277,7 @@ object AppLogger {
 
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
-                putExtra(Intent.EXTRA_SUBJECT, "nfcGuard Bug Report - $timestamp")
+                putExtra(Intent.EXTRA_SUBJECT, "NFCGUARD Bug Report - $timestamp")
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

@@ -98,6 +98,6 @@ class AppNavigationEndToEndTest {
         repeat(4) { onboarding.next() }
         onboarding.getStarted()
 
-        onboarding.assertVisible("WELCOME TO nfcGuard")
+        onboarding.assertVisible("WELCOME TO NFCGUARD")
     }
 }

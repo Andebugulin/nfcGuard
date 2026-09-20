@@ -133,13 +133,13 @@ class BlockerServiceLifecycleTest {
     @Test fun `with a mode active the notification says so`() {
         start()
 
-        assertEquals("nfcGuard ACTIVE", title())
+        assertEquals("NFCGUARD ACTIVE", title())
     }
 
     @Test fun `with nothing active it reports that it is only watching`() {
         start(intentFor(activeModeIds = emptySet(), manuallyActivated = emptySet()))
 
-        assertEquals("nfcGuard MONITORING", title())
+        assertEquals("NFCGUARD MONITORING", title())
         assertEquals("Waiting for scheduled modes", text())
     }
 
@@ -153,7 +153,7 @@ class BlockerServiceLifecycleTest {
             )
         )
 
-        assertEquals("nfcGuard PAUSED", title())
+        assertEquals("NFCGUARD PAUSED", title())
     }
 
     @Test fun `the notification counts manual and scheduled modes separately`() {

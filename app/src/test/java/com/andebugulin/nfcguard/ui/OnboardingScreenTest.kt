@@ -33,7 +33,7 @@ class OnboardingScreenTest {
 
     @Test fun `opens on the welcome page`() {
         start()
-        compose.onNodeWithText("nfcGuard").assertIsDisplayed()
+        compose.onNodeWithText("NFCGUARD").assertIsDisplayed()
         compose.onNodeWithText("DIGITAL WELLBEING").assertIsDisplayed()
     }
 
@@ -83,6 +83,6 @@ class OnboardingScreenTest {
         compose.onNodeWithText("MODES").assertIsDisplayed()
 
         compose.onNodeWithText("BACK").performClick()
-        compose.onNodeWithText("nfcGuard").assertIsDisplayed()
+        compose.onNodeWithText("NFCGUARD").assertIsDisplayed()
     }
 }

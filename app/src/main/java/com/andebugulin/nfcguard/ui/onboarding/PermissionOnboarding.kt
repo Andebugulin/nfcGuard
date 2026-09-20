@@ -218,12 +218,12 @@ private fun nextAfterPauseReminder(context: Context): OnboardingStep? {
     }
     val message = if (isRequired) {
         "Your device has a known issue where app detection can fail during certain transitions.\n\n" +
-            "To ensure nfcGuard blocks apps reliably, please enable the Accessibility Service permission.\n\n" +
-            "nfcGuard only reads which app is in the foreground — it does NOT read any screen content or personal data."
+            "To ensure NFCGUARD blocks apps reliably, please enable the Accessibility Service permission.\n\n" +
+            "NFCGUARD only reads which app is in the foreground — it does NOT read any screen content or personal data."
     } else {
         "Enabling the Accessibility Service makes app detection faster and more reliable.\n\n" +
             "This is optional but recommended for the best experience.\n\n" +
-            "nfcGuard only reads which app is in the foreground — it does NOT read any screen content or personal data."
+            "NFCGUARD only reads which app is in the foreground — it does NOT read any screen content or personal data."
     }
     return OnboardingStep.AccessibilityRec(
         title = title,
@@ -254,7 +254,7 @@ private fun computeNeededPermissions(context: Context): List<PermissionRequest> 
     if (!granted) {
         needed += PermissionRequest(
             "Usage Access",
-            "Lets nfcGuard see which app is currently open so it can block the right ones. It can't see anything inside your apps.",
+            "Lets NFCGUARD see which app is currently open so it can block the right ones. It can't see anything inside your apps.",
             Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
         )
     }
@@ -263,7 +263,7 @@ private fun computeNeededPermissions(context: Context): List<PermissionRequest> 
     if (!Settings.canDrawOverlays(context)) {
         needed += PermissionRequest(
             "Display Over Apps",
-            "Lets nfcGuard show the block screen on top of an app you've chosen to block.",
+            "Lets NFCGUARD show the block screen on top of an app you've chosen to block.",
             Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:${context.packageName}")
@@ -276,7 +276,7 @@ private fun computeNeededPermissions(context: Context): List<PermissionRequest> 
     if (!powerManager.isIgnoringBatteryOptimizations(context.packageName)) {
         needed += PermissionRequest(
             "Battery Optimization",
-            "Stops Android from shutting nfcGuard down in the background, so blocking keeps working even after a while.",
+            "Stops Android from shutting NFCGUARD down in the background, so blocking keeps working even after a while.",
             Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
                 .setData(Uri.parse("package:${context.packageName}"))
         )
@@ -293,14 +293,14 @@ private fun WelcomeDialog(
     onSkip: () -> Unit
 ) {
     StyledDialog(
-        title = "WELCOME TO nfcGuard",
-        message = "To protect your focus, nfcGuard needs a few permissions. " +
+        title = "WELCOME TO NFCGUARD",
+        message = "To protect your focus, NFCGUARD needs a few permissions. " +
             "We'll go through them one at a time and explain each:\n\n" +
             "• Notifications (optional) — show which modes are active\n" +
             "• Usage access — see which app is open\n" +
             "• Display over apps — show the block screen\n" +
             "• Battery optimization — keep running reliably\n" +
-            "• Pause app activity — must be turned off for nfcGuard\n" +
+            "• Pause app activity — must be turned off for NFCGUARD\n" +
             "• Accessibility — more reliable, instant blocking\n\n" +
             "Let's set these up now.",
         confirmLabel = "CONTINUE",
@@ -317,7 +317,7 @@ private fun NotificationPermissionDialog(
 ) {
     StyledDialog(
         title = "NOTIFICATIONS (OPTIONAL)",
-        message = "nfcGuard can show a quiet notification with which modes are " +
+        message = "NFCGUARD can show a quiet notification with which modes are " +
             "active and when a temporary unlock ends.\n\n" +
             "This is optional — blocking works fine without it, and you can " +
             "change it anytime in system settings.",
@@ -355,11 +355,11 @@ private fun PauseAppReminderDialog(
 ) {
     StyledDialog(
         title = "IMPORTANT: DISABLE 'PAUSE APP IF UNUSED'",
-        message = "To ensure nfcGuard works reliably:\n\n" +
-            "1. Go to Settings → Apps → nfcGuard\n" +
+        message = "To ensure NFCGUARD works reliably:\n\n" +
+            "1. Go to Settings → Apps → NFCGUARD\n" +
             "2. Find 'Pause app activity if unused'\n" +
             "3. Turn it OFF\n\n" +
-            "This prevents Android from pausing nfcGuard in the background.",
+            "This prevents Android from pausing NFCGUARD in the background.",
         confirmLabel = "OPEN APP SETTINGS",
         onConfirm = onOpenSettings,
         dismissLabel = "OK",

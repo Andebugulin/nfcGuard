@@ -145,7 +145,7 @@ object ConfigManager {
 
     fun exportToYaml(appState: AppState): String {
         val sb = StringBuilder()
-        sb.appendLine("# nfcGuard Configuration Export")
+        sb.appendLine("# NFCGUARD Configuration Export")
         sb.appendLine()
         sb.appendLine("version: 1")
         sb.appendLine()

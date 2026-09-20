@@ -337,7 +337,7 @@ class OverlayEnforcer(
         })
 
         addView(Button(context).apply {
-            text = "nfcGuard"
+            text = "NFCGUARD"
             textSize = 16f
             setTextColor(0xFF000000.toInt())
             setBackgroundColor(0xFFFFFFFF.toInt())

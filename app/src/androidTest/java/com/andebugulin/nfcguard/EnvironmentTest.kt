@@ -53,7 +53,7 @@ class EnvironmentTest {
 
     @Test fun accessibilityServiceIsEnabled() {
         assertTrue(
-            "enable nfcGuard in Settings > Accessibility",
+            "enable NFCGUARD in Settings > Accessibility",
             ForegroundDetectorService.isEnabled(context)
         )
     }

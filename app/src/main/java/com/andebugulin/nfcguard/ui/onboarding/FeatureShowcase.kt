@@ -92,7 +92,7 @@ fun FeatureShowcaseDialog(screen: Screen, onContinue: () -> Unit) {
             "SCHEDULES",
             Icons.Default.Schedule,
             "Schedules turn your modes on and off automatically. Pick the days and times, link one " +
-                "or more modes, and nfcGuard handles the rest — for example, work hours on weekdays " +
+                "or more modes, and NFCGUARD handles the rest — for example, work hours on weekdays " +
                 "or a sleep schedule overnight."
         )
         Screen.NFC_TAGS -> ShowcaseContent(

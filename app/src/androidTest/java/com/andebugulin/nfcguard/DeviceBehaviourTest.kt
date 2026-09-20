@@ -57,7 +57,7 @@ class DeviceBehaviourTest {
 
     @Test fun accessibilityServiceIsEnabledInSettings() {
         assertTrue(
-            "enable nfcGuard under Settings > Accessibility",
+            "enable NFCGUARD under Settings > Accessibility",
             ForegroundDetectorService.isEnabled(context)
         )
     }
