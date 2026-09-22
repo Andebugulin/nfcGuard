@@ -17,6 +17,23 @@ Features:
 * Emergency reset with a 60-second cooldown
 * Config export and import in JSON or YAML
 
+Accessibility Service disclosure:
+
+nfcGuard uses the Android AccessibilityService API for a single purpose: to
+detect which app is currently in the foreground, so that an app you have
+chosen to block can be closed when you open it. This is required because
+some devices — Pixel in particular — do not reliably report the foreground
+app by any other means.
+
+The service is declared so that it cannot retrieve window content, and it
+listens only for window-state-change events. It is technically incapable of
+reading what is on your screen, and it never does. nfcGuard collects, stores
+and transmits no personal or sensitive user data of any kind, and works
+entirely offline.
+
+Enabling the service is optional. With it off, nfcGuard instead shows a
+block screen on top of the blocked app.
+
 Requires a phone with NFC and any inexpensive NTAG sticker or card.
 
 Source code: https://github.com/Andebugulin/nfcGuard
