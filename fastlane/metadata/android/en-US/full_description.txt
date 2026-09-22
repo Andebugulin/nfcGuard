@@ -1,11 +1,18 @@
-Place an NFC tag somewhere inconvenient — another room, a drawer, the far end
-of the house — and make yourself walk to it before you can scroll.
+Place an NFC tag somewhere inconvenient — another room, a drawer, the far end of the house — and make yourself walk to it before you can scroll.
 
-Most app blockers are one tap away from being switched off. This one isn't.
-Unlocking means getting up.
+Most app blockers are one tap away from being switched off. This one isn't. Unlocking means getting up.
 
-Fully offline: no ads, no tracking, no accounts, no sign-up. Open source under
-the MIT license.
+Accessibility Service disclosure:
+
+nfcGuard uses the Android AccessibilityService API for a single purpose: to detect which app is currently in the foreground, so that an app you have chosen to block can be closed when you open it. This is required because some devices — Pixel in particular — do not reliably report the foreground app by any other means.
+
+The service is declared so that it cannot retrieve window content, and it listens only for window-state-change events. It is technically incapable of reading what is on your screen, and it never does.
+
+nfcGuard collects, stores and transmits no personal or sensitive user data of any kind, and works entirely offline.
+
+Enabling the service is optional. With it off, nfcGuard instead shows a block screen on top of the blocked app.
+
+Fully offline: no ads, no tracking, no accounts, no sign-up. Open source under the MIT license.
 
 Features:
 * Block mode — block the specific apps that distract you
@@ -16,23 +23,6 @@ Features:
 * Home screen widget for switching modes without opening the app
 * Emergency reset with a 60-second cooldown
 * Config export and import in JSON or YAML
-
-Accessibility Service disclosure:
-
-nfcGuard uses the Android AccessibilityService API for a single purpose: to
-detect which app is currently in the foreground, so that an app you have
-chosen to block can be closed when you open it. This is required because
-some devices — Pixel in particular — do not reliably report the foreground
-app by any other means.
-
-The service is declared so that it cannot retrieve window content, and it
-listens only for window-state-change events. It is technically incapable of
-reading what is on your screen, and it never does. nfcGuard collects, stores
-and transmits no personal or sensitive user data of any kind, and works
-entirely offline.
-
-Enabling the service is optional. With it off, nfcGuard instead shows a
-block screen on top of the blocked app.
 
 Requires a phone with NFC and any inexpensive NTAG sticker or card.
 
