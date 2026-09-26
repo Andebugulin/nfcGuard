@@ -67,11 +67,19 @@ data class Schedule(
     val hasEndTime: Boolean = false
 )
 
+/**
+ * A registered physical tag.
+ *
+ * Which modes a tag unlocks lives on [Mode.nfcTagIds], never here. This class
+ * once carried its own `linkedModeIds`, written but never read; with the tag
+ * screen now able to author links too, keeping it would have made a second
+ * source of truth for the same relationship. Older exports may still contain
+ * the key — `ignoreUnknownKeys` drops it on import.
+ */
 @Serializable
 data class NfcTag(
     val id: String,
-    val name: String,
-    val linkedModeIds: List<String> = emptyList()
+    val name: String
 )
 
 @Serializable

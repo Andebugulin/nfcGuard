@@ -100,7 +100,7 @@ class NfcTagsScreenTest {
             1, emptyList(), emptyList(), listOf(tag(id = "t1", name = "Kitchen Tag"))
         ))
         show()
-        compose.onNodeWithText("NOT LINKED TO ANY MODES").assertIsDisplayed()
+        compose.onNodeWithText("UNLOCKS NOTHING YET").assertIsDisplayed()
     }
 
     @Test fun `leaves registration mode off until asked`() {

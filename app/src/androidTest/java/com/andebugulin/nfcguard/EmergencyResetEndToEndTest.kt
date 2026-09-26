@@ -17,8 +17,8 @@ import org.junit.Test
  * switch blocking off, and therefore the only one whose failure mode is "the
  * blocker was bypassed" rather than "a screen looked wrong".
  *
- * It had no coverage at all: the sole mention of "Emergency Reset" anywhere in
- * the suites was `FeatureShowcaseTest` asserting that a *tip* about it renders.
+ * It had no coverage at all when these tests were written; the sole mention of
+ * it anywhere in the suites was a first-run tip (since removed).
  *
  * The branch that matters is `HomeScreen.kt`'s decision on CONTINUE:
  *
@@ -55,30 +55,33 @@ class EmergencyResetEndToEndTest {
     private fun seedTwoTags() = harness.seedConfig(
         modes = listOf(mode(id = "m1", name = "Deep Work")),
         tags = listOf(
-            tag(id = "t1", name = "Desk key", modeIds = listOf("m1")),
+            tag(id = "t1", name = "Desk key"),
             tag(id = "t2", name = "Kitchen key")
         )
     )
 
     // ---------------- reaching it ----------------
 
-    @Test fun theResetIsReachableFromHomeAndExplainsItselfBeforeDoingAnything() {
+    @Test fun recoveryIsReachableFromHomeAndStatesItsOutcomeUpFront() {
         seedTwoTags()
         harness.launch()
 
         HomeRobot(compose).openEmergencyReset()
-            .assertWarningShown()
-            .assertTagSelectionNotShown()
+            .assertRecoveryShown()
+            .assertChallengeSkipped()
+            // The outcome is on the screen before anything is committed — the
+            // old flow never said plainly that modes were about to switch off.
+            .assertVisible("No modes are active.")
     }
 
-    @Test fun cancellingTheWarningChangesNothing() {
+    @Test fun cancellingChangesNothing() {
         seedTwoTags()
         harness.launch()
 
         HomeRobot(compose).openEmergencyReset()
-            .assertWarningShown()
-            .cancelWarning()
-            .assertTagSelectionNotShown()
+            .assertRecoveryShown()
+            .cancelRecovery()
+            .assertRecoveryNotShown()
 
         assertEquals(listOf("t1", "t2"), harness.state.nfcTags.map { it.id })
     }
@@ -90,29 +93,40 @@ class EmergencyResetEndToEndTest {
         harness.launch()
 
         HomeRobot(compose).openEmergencyReset()
-            .continueFromWarning()
+            .selectLostTag("t2")
             // Nothing is being bypassed when no mode is on, so making the user
             // sit through 90 seconds would be friction for its own sake.
+            .confirmReset()
             .assertChallengeSkipped()
-            .assertTagSelectionShown()
+
+        assertEquals(listOf("t1"), harness.state.nfcTags.map { it.id })
     }
 
-    @Test fun withAModeActiveTheChallengeIsRequiredBeforeAnyTagCanBeChosen() {
+    /**
+     * The challenge now runs *after* the user has chosen and confirmed, so it
+     * gates the commit rather than the question. Nothing may change until it
+     * completes.
+     */
+    @Test fun withAModeActiveTheChallengeGatesTheCommit() {
         seedTwoTags()
         harness.launch()
         HomeRobot(compose).openModes().activate("m1").back()
         assertTrue("m1" in harness.state.activeModes)
 
         HomeRobot(compose).openEmergencyReset()
-            .continueFromWarning()
+            .selectLostTag("t2")
+            .confirmReset()
             .assertChallengeRequired()
-            .assertTagSelectionNotShown()
 
         assertTrue("nothing may be released before the challenge", "m1" in harness.state.activeModes)
+        assertEquals(
+            "no tag may be forgotten before the challenge",
+            listOf("t1", "t2"), harness.state.nfcTags.map { it.id }
+        )
     }
 
     /**
-     * The strict property: the emergency gate is unconditional, and does *not*
+     * The strict property: the recovery gate is unconditional, and does *not*
      * read `safe_regime_enabled`. That setting lives outside `AppState`
      * precisely so an imported config cannot weaken the safety challenge — a
      * gate that a toggle could switch off would undo that.
@@ -124,9 +138,10 @@ class EmergencyResetEndToEndTest {
         HomeRobot(compose).openModes().activate("m1").back()
 
         HomeRobot(compose).openEmergencyReset()
-            .continueFromWarning()
+            .confirmReset()
             .assertChallengeRequired()
-            .assertTagSelectionNotShown()
+
+        assertTrue("m1" in harness.state.activeModes)
     }
 
     @Test fun givingUpTheChallengeLeavesEveryModeAndTagUntouched() {
@@ -135,24 +150,22 @@ class EmergencyResetEndToEndTest {
         HomeRobot(compose).openModes().activate("m1").back()
 
         HomeRobot(compose).openEmergencyReset()
-            .continueFromWarning()
+            .selectLostTag("t2")
+            .confirmReset()
             .assertChallengeRequired()
             .giveUpChallenge()
-            .assertTagSelectionNotShown()
 
         assertTrue("giving up must not release the mode", "m1" in harness.state.activeModes)
         assertEquals(listOf("t1", "t2"), harness.state.nfcTags.map { it.id })
     }
 
-    // ---------------- tag selection ----------------
+    // ---------------- choosing what was lost ----------------
 
-    @Test fun onlyTheTagsMarkedAsLostAreDeleted() {
+    @Test fun onlyTheTagsMarkedAsLostAreForgotten() {
         seedTwoTags()
         harness.launch()
 
         HomeRobot(compose).openEmergencyReset()
-            .continueFromWarning()
-            .assertTagSelectionShown()
             .selectLostTag("t2")
             .confirmReset()
 
@@ -162,27 +175,23 @@ class EmergencyResetEndToEndTest {
         )
     }
 
-    @Test fun confirmingWithNothingSelectedDeletesNothing() {
+    @Test fun confirmingWithNothingSelectedForgetsNothing() {
         seedTwoTags()
         harness.launch()
 
         HomeRobot(compose).openEmergencyReset()
-            .continueFromWarning()
-            .assertTagSelectionShown()
             .confirmReset()
 
         assertEquals(listOf("t1", "t2"), harness.state.nfcTags.map { it.id })
     }
 
-    @Test fun cancellingTheTagSelectionDeletesNothing() {
+    @Test fun cancellingAfterSelectingForgetsNothing() {
         seedTwoTags()
         harness.launch()
 
         HomeRobot(compose).openEmergencyReset()
-            .continueFromWarning()
-            .assertTagSelectionShown()
             .selectLostTag("t2")
-            .cancelTagSelection()
+            .cancelRecovery()
 
         assertEquals(listOf("t1", "t2"), harness.state.nfcTags.map { it.id })
     }
@@ -192,8 +201,6 @@ class EmergencyResetEndToEndTest {
         harness.launch()
 
         HomeRobot(compose).openEmergencyReset()
-            .continueFromWarning()
-            .assertTagSelectionShown()
             .selectLostTag("t2")
             .selectLostTag("t2")   // toggled back off
             .confirmReset()

@@ -3,7 +3,6 @@ package com.andebugulin.nfcguard.ui.safety
 import com.andebugulin.nfcguard.ui.GuardianTheme
 import com.andebugulin.nfcguard.ui.TestTags
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,6 +33,10 @@ import kotlinx.coroutines.delay
  * Design rationale: an impulsive user (e.g. during an addiction craving)
  * is unlikely to stay focused for 1.5 solid minutes, making it very hard
  * to bypass the blocker in a moment of weakness.
+ *
+ * The timer lives here; everything visible lives in [SafeRegimeChallengeBody],
+ * which onboarding also renders so the user meets this exact screen before
+ * they ever need it.
  */
 @Composable
 fun SafeRegimeChallengeDialog(
@@ -89,228 +92,268 @@ fun SafeRegimeChallengeDialog(
             usePlatformDefaultWidth = false
         )
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .border(
-                    width = GuardianTheme.DialogBorderWidth,
-                    color = if (failed) GuardianTheme.Error else if (inCheckPhase) GuardianTheme.WarningAccent else GuardianTheme.DialogBorderWarning,
-                    shape = RoundedCornerShape(0.dp)
-                ),
-            shape = RoundedCornerShape(0.dp),
-            color = GuardianTheme.ButtonSecondary
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Header
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Shield,
-                        contentDescription = null,
-                        tint = GuardianTheme.Warning,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Text(
-                        "SAFE REGIME",
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp,
-                        fontSize = 18.sp,
-                        color = GuardianTheme.TextPrimary
-                    )
+        SafeRegimeChallengeBody(
+            actionDescription = actionDescription,
+            totalSecondsLeft = totalSecondsLeft,
+            totalDurationSeconds = totalDurationSeconds,
+            cycleSecondsLeft = cycleSecondsLeft,
+            inCheckPhase = inCheckPhase,
+            failed = failed,
+            checksPassed = checksCompleted,
+            onPress = {
+                if (inCheckPhase) {
+                    checksCompleted++
+                    inCheckPhase = false
+                    cycleSecondsLeft = waitPhaseSeconds
                 }
+            },
+            onFailedAction = onCancel,
+            onCancel = onCancel,
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
+        )
+    }
+}
 
-                // Action description
+/**
+ * Everything the challenge looks like, with none of its timing.
+ *
+ * Split out of [SafeRegimeChallengeDialog] so the onboarding safety page can
+ * show the genuine article — same header, countdown, progress, amber PRESS NOW
+ * panel and red failure state — driven by a faster demo clock. Earlier attempts
+ * rebuilt an approximation of this screen by hand, which meant onboarding
+ * taught something subtly different from what the user would later meet.
+ */
+@Composable
+fun SafeRegimeChallengeBody(
+    actionDescription: String,
+    totalSecondsLeft: Int,
+    totalDurationSeconds: Int,
+    cycleSecondsLeft: Int,
+    inCheckPhase: Boolean,
+    failed: Boolean,
+    checksPassed: Int,
+    onPress: () -> Unit,
+    onFailedAction: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+    failedActionLabel: String = "CLOSE",
+    /** Null hides the bail-out entirely — onboarding has nothing to abandon. */
+    cancelLabel: String? = "GIVE UP"
+) {
+    Surface(
+        modifier = modifier
+            .border(
+                width = GuardianTheme.DialogBorderWidth,
+                color = if (failed) GuardianTheme.Error else if (inCheckPhase) GuardianTheme.WarningAccent else GuardianTheme.DialogBorderWarning,
+                shape = RoundedCornerShape(0.dp)
+            ),
+        shape = RoundedCornerShape(0.dp),
+        color = GuardianTheme.ButtonSecondary
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Default.Shield,
+                    contentDescription = null,
+                    tint = GuardianTheme.Warning,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    "SAFE REGIME",
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp,
+                    fontSize = 18.sp,
+                    color = GuardianTheme.TextPrimary
+                )
+            }
+
+            // Action description
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(0.dp),
+                color = GuardianTheme.WarningBackground
+            ) {
+                Text(
+                    actionDescription,
+                    fontSize = 11.sp,
+                    color = GuardianTheme.Warning,
+                    letterSpacing = 0.5.sp,
+                    modifier = Modifier.padding(12.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            if (failed) {
+                // FAILED STATE
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(0.dp),
-                    color = GuardianTheme.WarningBackground
+                    color = GuardianTheme.ErrorDark
                 ) {
-                    Text(
-                        actionDescription,
-                        fontSize = 11.sp,
-                        color = GuardianTheme.Warning,
-                        letterSpacing = 0.5.sp,
-                        modifier = Modifier.padding(12.dp),
-                        textAlign = TextAlign.Center
-                    )
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = null,
+                            tint = GuardianTheme.ErrorText,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Text(
+                            "CHALLENGE FAILED",
+                            modifier = Modifier.testTag(TestTags.Challenge.FAILED),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            color = GuardianTheme.ErrorText,
+                            letterSpacing = 2.sp
+                        )
+                        Text(
+                            "You didn't press in time. Action cancelled.",
+                            fontSize = 11.sp,
+                            color = GuardianTheme.ErrorText,
+                            letterSpacing = 0.5.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
 
-                if (failed) {
-                    // FAILED STATE
+                Button(
+                    onClick = onFailedAction,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GuardianTheme.BackgroundSurface,
+                        contentColor = GuardianTheme.TextPrimary
+                    ),
+                    shape = RoundedCornerShape(0.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                ) {
+                    Text(failedActionLabel, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                }
+            } else {
+                // ACTIVE CHALLENGE STATE
+
+                // Big countdown
+                val minutes = totalSecondsLeft / 60
+                val seconds = totalSecondsLeft % 60
+                Text(
+                    String.format("%d:%02d", minutes, seconds),
+                    fontSize = 56.sp,
+                    fontWeight = FontWeight.Black,
+                    color = if (inCheckPhase) GuardianTheme.WarningAccent else GuardianTheme.TextPrimary
+                )
+
+                // Progress
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(0.dp),
+                    color = GuardianTheme.BackgroundSurface
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LinearProgressIndicator(
+                            progress = {
+                                1f - (totalSecondsLeft.toFloat() / totalDurationSeconds)
+                            },
+                            modifier = Modifier.fillMaxWidth().height(4.dp),
+                            color = Color.White,
+                            trackColor = GuardianTheme.ButtonDisabledContainer
+                        )
+                        Text(
+                            "CHECKS PASSED: $checksPassed",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = GuardianTheme.TextSecondary,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
+
+                // Check phase or wait phase
+                if (inCheckPhase) {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(0.dp),
-                        color = GuardianTheme.ErrorDark
+                        color = Color(0xFF332200)
                     ) {
                         Column(
-                            modifier = Modifier.padding(24.dp),
+                            modifier = Modifier.padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = null,
-                                tint = GuardianTheme.ErrorText,
-                                modifier = Modifier.size(48.dp)
-                            )
                             Text(
-                                "CHALLENGE FAILED",
-                                modifier = Modifier.testTag(TestTags.Challenge.FAILED),
-                                fontSize = 16.sp,
+                                "PRESS NOW — ${cycleSecondsLeft}s",
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Black,
-                                color = GuardianTheme.ErrorText,
+                                color = GuardianTheme.WarningAccent,
                                 letterSpacing = 2.sp
                             )
-                            Text(
-                                "You didn't press in time. Action cancelled.",
-                                fontSize = 11.sp,
-                                color = GuardianTheme.ErrorText,
-                                letterSpacing = 0.5.sp,
-                                textAlign = TextAlign.Center
-                            )
+
+                            Button(
+                                onClick = onPress,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = GuardianTheme.WarningAccent,
+                                    contentColor = Color.Black
+                                ),
+                                shape = RoundedCornerShape(0.dp),
+                                modifier = Modifier.fillMaxWidth().height(56.dp)
+                                    .testTag(TestTags.Challenge.PRESS)
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.TouchApp, null, modifier = Modifier.size(24.dp))
+                                    Text(
+                                        "I'M HERE",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = 2.sp
+                                    )
+                                }
+                            }
                         }
                     }
-
-                    Button(
-                        onClick = onCancel,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = GuardianTheme.BackgroundSurface,
-                            contentColor = GuardianTheme.TextPrimary
-                        ),
-                        shape = RoundedCornerShape(0.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
-                    ) {
-                        Text("CLOSE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    }
                 } else {
-                    // ACTIVE CHALLENGE STATE
-
-                    // Big countdown
-                    val minutes = totalSecondsLeft / 60
-                    val seconds = totalSecondsLeft % 60
-                    Text(
-                        String.format("%d:%02d", minutes, seconds),
-                        fontSize = 56.sp,
-                        fontWeight = FontWeight.Black,
-                        color = if (inCheckPhase) GuardianTheme.WarningAccent else GuardianTheme.TextPrimary
-                    )
-
-                    // Progress
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(0.dp),
                         color = GuardianTheme.BackgroundSurface
                     ) {
                         Column(
-                            modifier = Modifier.padding(12.dp),
+                            modifier = Modifier.padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            LinearProgressIndicator(
-                                progress = {
-                                    1f - (totalSecondsLeft.toFloat() / totalDurationSeconds)
-                                },
-                                modifier = Modifier.fillMaxWidth().height(4.dp),
-                                color = Color.White,
-                                trackColor = GuardianTheme.ButtonDisabledContainer
-                            )
                             Text(
-                                "CHECKS PASSED: $checksCompleted",
-                                fontSize = 10.sp,
+                                "WAITING...",
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = GuardianTheme.TextSecondary,
-                                letterSpacing = 1.sp
+                                letterSpacing = 2.sp
+                            )
+                            Text(
+                                "Next check in ${cycleSecondsLeft}s",
+                                fontSize = 10.sp,
+                                color = GuardianTheme.TextTertiary,
+                                letterSpacing = 0.5.sp
                             )
                         }
                     }
+                }
 
-                    // Check phase or wait phase
-                    if (inCheckPhase) {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(0.dp),
-                            color = Color(0xFF332200)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    "PRESS NOW — ${cycleSecondsLeft}s",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = GuardianTheme.WarningAccent,
-                                    letterSpacing = 2.sp
-                                )
-
-                                Button(
-                                    onClick = {
-                                        if (inCheckPhase) {
-                                            checksCompleted++
-                                            inCheckPhase = false
-                                            cycleSecondsLeft = waitPhaseSeconds
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = GuardianTheme.WarningAccent,
-                                        contentColor = Color.Black
-                                    ),
-                                    shape = RoundedCornerShape(0.dp),
-                                    modifier = Modifier.fillMaxWidth().height(56.dp)
-                                        .testTag(TestTags.Challenge.PRESS)
-                                ) {
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(Icons.Default.TouchApp, null, modifier = Modifier.size(24.dp))
-                                        Text(
-                                            "I'M HERE",
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Black,
-                                            letterSpacing = 2.sp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(0.dp),
-                            color = GuardianTheme.BackgroundSurface
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    "WAITING...",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = GuardianTheme.TextSecondary,
-                                    letterSpacing = 2.sp
-                                )
-                                Text(
-                                    "Next check in ${cycleSecondsLeft}s",
-                                    fontSize = 10.sp,
-                                    color = GuardianTheme.TextTertiary,
-                                    letterSpacing = 0.5.sp
-                                )
-                            }
-                        }
-                    }
-
-                    // Cancel button
+                if (cancelLabel != null) {
                     TextButton(
                         onClick = onCancel,
                         modifier = Modifier.testTag(TestTags.Challenge.GIVE_UP),
@@ -318,7 +361,7 @@ fun SafeRegimeChallengeDialog(
                             contentColor = GuardianTheme.TextSecondary
                         )
                     ) {
-                        Text("GIVE UP", letterSpacing = 1.sp, fontSize = 11.sp)
+                        Text(cancelLabel, letterSpacing = 1.sp, fontSize = 11.sp)
                     }
                 }
             }

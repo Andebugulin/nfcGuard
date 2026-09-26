@@ -30,7 +30,7 @@ class ConfigManagerTest {
                  blockMode = BlockMode.ALLOW_SELECTED, limits = mapOf("t1" to 30L, "ANY" to null))
         ),
         schedules = listOf(schedule(id = "s1", name = "Work", modeIds = listOf("m1"))),
-        nfcTags = listOf(tag(id = "t1", name = "Desk", modeIds = listOf("m1"))),
+        nfcTags = listOf(tag(id = "t1", name = "Desk")),
         // Runtime state — must NOT be exported.
         activeModes = setOf("m1"),
         activeSchedules = setOf("s1"),

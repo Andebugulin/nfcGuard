@@ -37,17 +37,34 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- NFC Intent Filters -->
+            <!--
+                NFC dispatch.
+
+                Foreground dispatch (enableForegroundDispatch, set up in
+                MainActivity.onResume) handles taps while nfcGuard is open, and
+                always outranks these filters. They cover the other case: a tap
+                while the app is closed launches MainActivity, whose onCreate
+                passes the intent to handleNfcIntent, so the unlock dialog is
+                what the user lands on.
+            -->
             <intent-filter>
-                <action android:name="android.nfc.action.TAG_DISCOVERED" />
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.nfc.action.TECH_DISCOVERED" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!--
+                REQUIRED for TECH_DISCOVERED to match at all. This filter sat
+                here for years without the meta-data child, so tech dispatch
+                never once fired and res/xml/nfc_tech_filter.xml went unused.
+            -->
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_filter" />
             <intent-filter>
-                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <action android:name="android.nfc.action.TAG_DISCOVERED" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

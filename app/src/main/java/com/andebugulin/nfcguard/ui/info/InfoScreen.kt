@@ -22,6 +22,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.font.FontFamily
 import kotlinx.coroutines.launch
+import com.andebugulin.nfcguard.ui.components.ScreenHeader
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.andebugulin.nfcguard.ui.components.InfoDisclosure
+import com.andebugulin.nfcguard.ui.components.GuardianType
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,21 +93,12 @@ fun InfoScreen(
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 item {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
-                        }
-                        Text(
-                            "ABOUT",
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 2.sp,
-                            fontSize = 24.sp,
-                            color = GuardianTheme.TextPrimary
-                        )
-                    }
+                    ScreenHeader(
+                        title = "ABOUT",
+                        onBack = onBack,
+                        fillTitleWidth = false,
+                        contentPadding = PaddingValues(0.dp)
+                    )
                 }
 
                 item {
@@ -354,21 +350,9 @@ fun InfoScreen(
                                     verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Text(
-                                        "HOW TO REPORT:",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = GuardianTheme.TextSecondary,
-                                        letterSpacing = 1.sp
-                                    )
-                                    Text(
-                                        "1. Reproduce the bug first\n" +
-                                                "2. Tap REPORT ON GITHUB \u2014 a pre-filled issue opens\n" +
-                                                "3. Describe what happened in the issue\n" +
-                                                "4. If logs are long, use SAVE LOG FILE and attach it",
-                                        fontSize = 10.sp,
-                                        color = GuardianTheme.TextTertiary,
-                                        letterSpacing = 0.3.sp,
-                                        lineHeight = 16.sp
+                                        "Reproduce the bug first, then tap REPORT ON GITHUB.",
+                                        style = GuardianType.EmptyHint,
+                                        color = GuardianTheme.TextTertiary
                                     )
                                 }
                             }
@@ -378,19 +362,12 @@ fun InfoScreen(
 
                 item {
                     InfoSection(
-                        title = "WHAT IS NFCGUARD?",
-                        content = "NFCGUARD helps you maintain focus by blocking distracting apps. Use NFC tags as physical keys to unlock \u2014 making it harder to mindlessly open blocked apps."
-                    )
-                }
-
-                item {
-                    InfoSection(
-                        title = "HOW TO USE",
+                        title = "HOW IT WORKS",
                         items = listOf(
-                            "1. CREATE MODES \u2014 Select apps to block or allow",
-                            "2. LINK NFC TAGS (optional) \u2014 Register physical tags as unlock keys",
-                            "3. SET SCHEDULES \u2014 Auto-activate modes at specific times",
-                            "4. TAP TO UNLOCK \u2014 Use NFC tags to disable blocking"
+                            "1. MODES \u2014 pick apps to block, or apps to allow",
+                            "2. TAGS \u2014 register an NFC tag as the key",
+                            "3. SCHEDULES \u2014 turn modes on automatically",
+                            "4. TAP \u2014 unlock with the tag when you need to"
                         )
                     )
                 }
@@ -406,143 +383,33 @@ fun InfoScreen(
                         ) {
                             Text(
                                 "HOW BLOCKING WORKS",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = GuardianTheme.TextSecondary,
-                                letterSpacing = 1.sp
+                                style = GuardianType.Label,
+                                color = GuardianTheme.TextSecondary
+                            )
+
+                            BlockingMethodRow(
+                                icon = Icons.Default.Shield,
+                                name = "FORCE-CLOSE MODE",
+                                summary = "Closes the app instantly. Needs Accessibility.",
+                                detail = "Opening a blocked app sends you straight home and kills " +
+                                    "it in the background. The most reliable method \u2014 it behaves " +
+                                    "consistently everywhere, including Samsung and Pixel, where the " +
+                                    "overlay can flicker or be dismissed."
+                            )
+
+                            BlockingMethodRow(
+                                icon = Icons.Default.Fullscreen,
+                                name = "OVERLAY MODE",
+                                summary = "Covers the screen. No extra permission.",
+                                detail = "A full-screen black panel covers the blocked app until you " +
+                                    "tap your tag. Used automatically whenever the Accessibility " +
+                                    "Service is off."
                             )
 
                             Text(
-                                "NFCGUARD has two blocking methods that switch automatically based on your setup:",
-                                fontSize = 12.sp,
-                                color = GuardianTheme.TextPrimary,
-                                letterSpacing = 0.5.sp,
-                                lineHeight = 18.sp
-                            )
-
-                            // Force-close section
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(0.dp),
-                                color = GuardianTheme.BackgroundPrimary
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Shield,
-                                            contentDescription = null,
-                                            tint = GuardianTheme.TextPrimary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Text(
-                                            "FORCE-CLOSE MODE",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = GuardianTheme.TextPrimary,
-                                            letterSpacing = 1.sp
-                                        )
-                                    }
-                                    Text(
-                                        "When you open a blocked app, NFCGUARD immediately closes it and sends you home. You'll see a quick notification. This is the most reliable method \u2014 it works consistently on all devices including Samsung and Pixel.",
-                                        fontSize = 11.sp,
-                                        color = GuardianTheme.TextSecondary,
-                                        letterSpacing = 0.3.sp,
-                                        lineHeight = 16.sp
-                                    )
-                                    Text(
-                                        "Requires: Accessibility Service enabled",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = GuardianTheme.TextTertiary,
-                                        letterSpacing = 0.5.sp
-                                    )
-                                }
-                            }
-
-                            // Overlay section
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(0.dp),
-                                color = GuardianTheme.BackgroundPrimary
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Fullscreen,
-                                            contentDescription = null,
-                                            tint = GuardianTheme.TextPrimary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Text(
-                                            "OVERLAY MODE",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = GuardianTheme.TextPrimary,
-                                            letterSpacing = 1.sp
-                                        )
-                                    }
-                                    Text(
-                                        "When you open a blocked app, a full-screen black overlay covers the screen with a message to tap NFC to unlock. This is the fallback method when the Accessibility Service is not enabled.",
-                                        fontSize = 11.sp,
-                                        color = GuardianTheme.TextSecondary,
-                                        letterSpacing = 0.3.sp,
-                                        lineHeight = 16.sp
-                                    )
-                                    Text(
-                                        "No extra permissions needed",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = GuardianTheme.TextTertiary,
-                                        letterSpacing = 0.5.sp
-                                    )
-                                }
-                            }
-
-                            // Recommendation
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(0.dp),
-                                color = GuardianTheme.WarningBackground
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Info,
-                                        contentDescription = null,
-                                        tint = GuardianTheme.Warning,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        "We recommend enabling the Accessibility Service for the best experience. Force-close mode is faster, more reliable, and works on devices where the overlay may flicker or disappear. You can enable it in Settings \u2192 Accessibility.",
-                                        fontSize = 10.sp,
-                                        color = GuardianTheme.WarningTextMuted,
-                                        letterSpacing = 0.3.sp,
-                                        lineHeight = 15.sp
-                                    )
-                                }
-                            }
-
-                            Text(
-                                "NFCGUARD picks the right method automatically \u2014 you can see which one is active in Settings under \"Blocking Method\".",
-                                fontSize = 11.sp,
-                                color = GuardianTheme.TextTertiary,
-                                letterSpacing = 0.3.sp,
-                                lineHeight = 16.sp
+                                "Picked automatically. Settings shows which one is active.",
+                                style = GuardianType.EmptyHint,
+                                color = GuardianTheme.TextTertiary
                             )
                         }
                     }
@@ -550,29 +417,11 @@ fun InfoScreen(
 
                 item {
                     InfoSection(
-                        title = "FEATURES",
+                        title = "NOT WORKING?",
                         items = listOf(
-                            "\u2022 BLOCK MODE \u2014 Block selected apps",
-                            "\u2022 ALLOW MODE \u2014 Block everything except selected apps",
-                            "\u2022 NFC LOCKS \u2014 Require specific tags to unlock modes",
-                            "\u2022 SCHEDULES \u2014 Auto-activate modes by day/time",
-                            "\u2022 FORCE-CLOSE \u2014 Instantly kills blocked apps (with Accessibility)",
-                            "\u2022 OVERLAY FALLBACK \u2014 Full-screen blocker when Accessibility is off",
-                            "\u2022 PERSISTENT \u2014 Survives reboots and app restarts"
-                        )
-                    )
-                }
-
-                item {
-                    InfoSection(
-                        title = "TIPS",
-                        items = listOf(
-                            "\u2022 Enable Accessibility Service for the most reliable blocking",
-                            "\u2022 Keep NFC tags in hard-to-reach places",
-                            "\u2022 Use schedules for work/sleep hours",
-                            "\u2022 Combine modes for maximum protection",
-                            "\u2022 Check Settings to disable 'Pause app if unused'",
-                            "\u2022 On Xiaomi/Samsung \u2014 enable Autostart and disable battery optimization"
+                            "\u2022 Enable Accessibility for the most reliable blocking",
+                            "\u2022 Turn off 'Pause app if unused' in app settings",
+                            "\u2022 Xiaomi/Samsung \u2014 enable Autostart, disable battery optimization"
                         )
                     )
                 }
@@ -594,7 +443,7 @@ fun InfoScreen(
                                 letterSpacing = 1.sp
                             )
                             Text(
-                                "NFCGUARD is free and open source software. Contributions welcome!",
+                                "Free and open source. Contributions welcome.",
                                 fontSize = 12.sp,
                                 color = GuardianTheme.TextPrimary,
                                 letterSpacing = 0.5.sp
@@ -693,6 +542,41 @@ fun LogViewerDialog(
             }
         }
     )
+}
+
+/**
+ * One enforcement strategy: its name, a one-line summary, and the paragraph of
+ * detail behind an (i). The two of these replace ~150 lines of stacked cards.
+ */
+@Composable
+private fun BlockingMethodRow(
+    icon: ImageVector,
+    name: String,
+    summary: String,
+    detail: String
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(0.dp),
+        color = GuardianTheme.BackgroundPrimary
+    ) {
+        InfoDisclosure(detail = detail, modifier = Modifier.padding(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = GuardianTheme.TextPrimary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(name, style = GuardianType.Label, color = GuardianTheme.TextPrimary)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(summary, style = GuardianType.EmptyHint, color = GuardianTheme.TextSecondary)
+        }
+    }
 }
 
 @Composable

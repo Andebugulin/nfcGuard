@@ -27,6 +27,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import com.andebugulin.nfcguard.ui.components.ScreenHeader
+import com.andebugulin.nfcguard.ui.components.EmptyState
+import com.andebugulin.nfcguard.ui.components.GuardianType
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.heightIn
+import com.andebugulin.nfcguard.ui.components.SelectableOption
+import com.andebugulin.nfcguard.ui.components.DialogKind
+import com.andebugulin.nfcguard.ui.components.GuardianDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +50,7 @@ fun NfcTagsScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var pendingTagId by remember { mutableStateOf<String?>(null) }
     var editingTag by remember { mutableStateOf<NfcTag?>(null) }
+    var linkingTag by remember { mutableStateOf<NfcTag?>(null) }
     var showDeleteDialog by remember { mutableStateOf<NfcTag?>(null) }
     var showDeleteChallenge by remember { mutableStateOf(false) }
     var pendingDeleteTag by remember { mutableStateOf<NfcTag?>(null) }
@@ -67,106 +77,31 @@ fun NfcTagsScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary).windowInsetsPadding(WindowInsets.systemBars)) {
         Column(Modifier.fillMaxSize()) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
-                }
-                Text(
-                    "NFC TAGS",
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp,
-                    fontSize = 24.sp,
-                    color = GuardianTheme.TextPrimary,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            // Info banner
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(0.dp),
-                color = GuardianTheme.BackgroundSurface
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Info,
-                        contentDescription = null,
-                        tint = GuardianTheme.IconSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        "Register NFC tags to lock specific modes",
-                        fontSize = 11.sp,
-                        color = GuardianTheme.TextSecondary,
-                        letterSpacing = 0.5.sp
-                    )
-                }
-            }
+            ScreenHeader(title = "NFC TAGS", onBack = onBack)
 
             Spacer(Modifier.height(8.dp))
 
             if (appState.nfcTags.isEmpty()) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(48.dp),
-                    contentAlignment = Alignment.Center
+                EmptyState(
+                    label = "NO NFC TAGS",
+                    icon = Icons.Default.Nfc,
+                    secondary = "Register tags to create secure locks"
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.Nfc,
-                            contentDescription = null,
-                            tint = GuardianTheme.IconDisabled,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            "NO NFC TAGS",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = GuardianTheme.TextDisabled,
-                            letterSpacing = 2.sp
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Register tags to create secure locks",
-                            fontSize = 11.sp,
-                            color = GuardianTheme.TextDisabled,
-                            letterSpacing = 0.5.sp
-                        )
-                        Spacer(Modifier.height(24.dp))
-                        Button(
-                            onClick = {
-                                pendingTagId = null
-                                showAddDialog = true
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = GuardianTheme.ButtonPrimary,
-                                contentColor = GuardianTheme.ButtonPrimaryText
-                            ),
-                            shape = RoundedCornerShape(0.dp),
-                            modifier = Modifier.height(48.dp).testTag(TestTags.NfcTags.REGISTER)
-                        ) {
-                            Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                "REGISTER TAG",
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-                        }
+                    Button(
+                        onClick = {
+                            pendingTagId = null
+                            showAddDialog = true
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = GuardianTheme.ButtonPrimary,
+                            contentColor = GuardianTheme.ButtonPrimaryText
+                        ),
+                        shape = RoundedCornerShape(0.dp),
+                        modifier = Modifier.height(48.dp).testTag(TestTags.NfcTags.REGISTER)
+                    ) {
+                        Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("REGISTER TAG", style = GuardianType.Label)
                     }
                 }
             } else {
@@ -181,7 +116,8 @@ fun NfcTagsScreen(
                             modes = appState.modes,
                             activeModes = appState.activeModes,
                             onEdit = { editingTag = appState.nfcTags[index] },
-                            onDelete = { showDeleteDialog = appState.nfcTags[index] }
+                            onDelete = { showDeleteDialog = appState.nfcTags[index] },
+                            onLinkModes = { linkingTag = appState.nfcTags[index] }
                         )
                     }
 
@@ -244,6 +180,18 @@ fun NfcTagsScreen(
             onSave = { name ->
                 viewModel.updateNfcTag(tag.id, name)
                 editingTag = null
+            }
+        )
+    }
+
+    linkingTag?.let { tag ->
+        LinkModesDialog(
+            tag = tag,
+            modes = appState.modes,
+            onDismiss = { linkingTag = null },
+            onConfirm = { modeIds ->
+                viewModel.setModesForTag(tag.id, modeIds)
+                linkingTag = null
             }
         )
     }
@@ -421,7 +369,8 @@ fun NfcTagCard(
     modes: List<Mode>,
     activeModes: Set<String>,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onLinkModes: () -> Unit
 ) {
     val linkedModes = modes.filter { it.nfcTagIds.contains(tag.id) }
     val hasActiveMode = linkedModes.any { activeModes.contains(it.id) }
@@ -532,16 +481,23 @@ fun NfcTagCard(
                 }
             } else {
                 Text(
-                    "NOT LINKED TO ANY MODES",
-                    fontSize = 10.sp,
-                    color = GuardianTheme.TextDisabled,
-                    letterSpacing = 1.sp
+                    "UNLOCKS NOTHING YET",
+                    style = GuardianType.Meta,
+                    color = GuardianTheme.TextDisabled
                 )
             }
 
             Spacer(Modifier.height(16.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Linking used to be authored only from inside the mode editor,
+                // so a tag card could show what it unlocks but never change it.
+                TextButton(
+                    onClick = onLinkModes,
+                    modifier = Modifier.testTag(TestTags.NfcTags.linkModes(tag.id))
+                ) {
+                    Text("LINK MODES", fontSize = 11.sp, color = textColor, letterSpacing = 1.sp)
+                }
                 TextButton(
                     onClick = onEdit,
                     modifier = Modifier.testTag(TestTags.NfcTags.rename(tag.id))
@@ -553,6 +509,60 @@ fun NfcTagCard(
                     modifier = Modifier.testTag(TestTags.NfcTags.delete(tag.id))
                 ) {
                     Text("DELETE", fontSize = 11.sp, color = if (hasActiveMode) GuardianTheme.TextSecondary else GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LinkModesDialog(
+    tag: NfcTag,
+    modes: List<Mode>,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<String>) -> Unit
+) {
+    var selected by remember(tag.id) {
+        mutableStateOf(modes.filter { it.nfcTagIds.contains(tag.id) }.map { it.id }.toSet())
+    }
+
+    GuardianDialog(
+        title = "UNLOCKS",
+        message = tag.name.uppercase(),
+        detail = "Tapping this tag will offer to unlock the modes you pick here. " +
+            "Unlocking is permanent unless you set a time limit on the tag from " +
+            "inside the mode.",
+        kind = DialogKind.Edit,
+        confirmLabel = "SAVE",
+        onConfirm = { onConfirm(selected) },
+        confirmModifier = Modifier.testTag(TestTags.NfcTags.LINK_SAVE),
+        dismissLabel = "CANCEL",
+        onDismiss = onDismiss,
+        dismissModifier = Modifier.testTag(TestTags.NfcTags.LINK_CANCEL)
+    ) {
+        if (modes.isEmpty()) {
+            Text(
+                "Create a mode first.",
+                style = GuardianType.Body,
+                color = GuardianTheme.TextSecondary
+            )
+        } else {
+            Column(
+                Modifier
+                    .heightIn(max = 260.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                modes.forEach { mode ->
+                    SelectableOption(
+                        label = mode.name.uppercase(),
+                        selected = mode.id in selected,
+                        onSelect = {
+                            selected = if (mode.id in selected) selected - mode.id
+                            else selected + mode.id
+                        },
+                        modifier = Modifier.testTag(TestTags.NfcTags.linkOption(mode.id))
+                    )
                 }
             }
         }

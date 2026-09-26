@@ -1,6 +1,6 @@
 # Testing
 
-442 tests, 0 failures — 347 on the JVM, 95 on a real device.
+441 tests, 0 failures — 333 on the JVM, 108 on a real device.
 
 ```bash
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # AGP needs JDK 17+
@@ -187,21 +187,19 @@ already-placed widgets would silently stop working.
 
 ## `:app` viewmodel and UI
 
-`GuardianViewModelTest` (18) covers what is not mere delegation: the
+`GuardianViewModelTest` (19) covers what is not mere delegation: the
 safe-regime flag and challenge duration that deliberately live outside
-`AppState` (so a config import cannot weaken the safety gate), the 90-second
-raise-only floor, import replace vs merge, orphan tag cleanup, and the NFC
-unlock round-trip.
+`AppState` (so a config import cannot weaken the safety gate), the raise-only
+floor and the separate (longer) starting default, import replace vs merge,
+orphan tag cleanup, tag↔mode linking, and the NFC unlock round-trip.
 
 | Suite | Tests | Covers |
 |---|---|---|
 | `SettingsDialogTest` | 15 | permission rows, the anti-bypass toggle and its gate, blocking method, data section |
-| `PermissionOnboardingTest` | 12 | the step machine past WELCOME: the permission queue, the pause reminder, OEM branching |
 | `ModesScreenTest` | 13 | empty state, listing, both polarities, active badge, delete dialog (incl. naming affected schedules), activation dialog |
 | `UnlockDurationDialogTest` | 7 | uncapped unlock paths, multi-mode selection, the last mode not being deselectable |
 | `NfcTagsScreenTest` | 8 | empty state, listing, unlinked-tag notice, delete dialog |
-| `FeatureShowcaseTest` | 8 | per-screen content, the lost-tag recovery tip, sticky per-screen "seen" |
-| `OnboardingScreenTest` | 6 | the carousel and the "GET STARTED" handoff that #12 crashed on |
+| `OnboardingFlowTest` | 11 | the tour, the safety page, and the permissions page — above all that a row reports the permission rather than the fact a button was pressed |
 | `SchedulesScreenTest` | 5 | "create modes first" gate, creation once a mode exists, listing |
 | `ConfigFileTransferTest` | 10 | export/import file I/O and the YAML-vs-JSON heuristic |
 | `LogViewerDialogTest` | 6 | the event log behind a bug report, and the share hand-off |
@@ -279,37 +277,42 @@ loop on `viewModelScope`. `runTest` hangs on it, because its cleanup runs
 `@Test` with `UnconfinedTestDispatcher`, and cancel the ViewModel in
 `@After`.
 
-## Instrumented suite (95 tests)
+## Instrumented suite (108 tests)
 
 Split in two: the end-to-end suites that drive the real app through its own
 entry point, and the device-behaviour suites that answer what the JVM cannot.
 
 | Suite | Tests | Covers |
 |---|---|---|
-| `DialogFlowsEndToEndTest` | 19 | every dialog branch that needs typing — unlock caps, tag naming, the challenge-duration floor |
+| `DialogFlowsEndToEndTest` | 20 | every dialog branch that needs typing — unlock caps, tag naming, the challenge-duration floor |
 | `EmergencyResetEndToEndTest` | 10 | the lost-tag escape hatch and the challenge that gates it |
 | `ScheduleEditorEndToEndTest` | 22 | building and editing a schedule, per-day times, and the gate on active edits |
 | `TagLimitEndToEndTest` | 11 | where per-tag unlock caps are *set*, and that they bind at unlock |
+| `TagLinkingEndToEndTest` | 8 | the three screens that write `Mode.nfcTagIds` — the mode editor, the tag card's LINK MODES, and a schedule's TAGS shortcut |
 | `DeviceBehaviourTest` | 8 | live `UsageStatsManager` detection, real accessibility binding, the #13 gate against real `PowerManager`/`KeyguardManager`, real SharedPreferences persistence |
 | `EnvironmentTest` | 7 | preflight — every grant the suite needs, each failure naming its own `adb` fix |
 | `NfcTapEndToEndTest` | 6 | simulated taps: register, unlock, wrong tag, cold start |
 | `AppNavigationEndToEndTest` | 5 | navigation, Back semantics, first-run onboarding, create/activate persistence |
+| `OnboardingEndToEndTest` | 4 | what Robolectric cannot see: permission rows against the real device, and swiping the pager |
 | `OverlayEnforcerInstrumentedTest` | 4 | a real `TYPE_APPLICATION_OVERLAY` window: show, hide, double-block idempotence, teardown |
 | `MockNfcTagProbeTest` | 3 | that a `Tag` really can be fabricated on this device |
 
-The whole run takes around 170 seconds. Keep it that way: no test should sit
+The whole run takes around 8 minutes. Keep it that way: no test should sit
 through wall-clock waits. See the note on the attention challenge below for the
 one case where that was tempting.
 
 ### The emergency reset — the only flow that can switch blocking off
 
 `EmergencyResetEndToEndTest` covers the lost-tag escape hatch, which had no
-coverage at all: the only mention of "Emergency Reset" anywhere in the suites
-was `FeatureShowcaseTest` asserting that a *tip* about it renders.
+coverage at all when it was written: the only mention of it anywhere in the
+suites was a first-run tip (since removed).
 
-The branch that matters is `HomeScreen`'s decision on CONTINUE — challenge when
-modes are active, straight through when none are. Both halves are pinned, along
-with the stricter property that the gate does **not** consult
+The flow is now one screen — outcome stated, tags ticked, button naming its own
+effect — with the challenge *after* confirmation rather than before it, so the
+user knows what they are waiting for. The branch that matters is `HomeScreen`'s
+decision on confirm: challenge when modes are active, straight through when
+none are. Both halves are pinned, along with the stricter property that the
+gate does **not** consult
 `safe_regime_enabled`: that setting lives outside `AppState` so an imported
 config cannot weaken the safety challenge, and a gate a toggle could switch off
 would undo that. Every abort path (cancel the warning, give up the challenge,
@@ -362,8 +365,9 @@ status message renders `.uppercase()` like everything else.
 
 `SettingsDialogTest` covers the sheet on the JVM — it holds no text field of its
 own, only `ChallengeDurationDialog` does, so that one dialog is covered on
-device in `DialogFlowsEndToEndTest` (the 1:30 floor is *refused*, not silently
-coerced) and everything else runs in milliseconds.
+device in `DialogFlowsEndToEndTest` (a value under the floor is *refused*, not
+silently coerced; the floor itself is reachable) and everything else runs in
+milliseconds.
 
 The gate here is a third variant, and all three are now pinned side by side:
 
@@ -373,13 +377,18 @@ The gate here is a third variant, and all three are now pinned side by side:
 | Schedule edit/delete | `safeRegimeEnabled && activeModes.isNotEmpty()` |
 | Switching the toggle off | `activeModes.isNotEmpty()` |
 
-`PermissionOnboardingTest` covers the flow past its first step — it is a dialog
-state machine, not a screen, and none of its dialogs holds a text field, so it
-runs on the JVM against the real permission state that drives it: the queue
-advancing in order, GRANT firing the right Settings intent, the pause reminder
-marking the flow complete, and the manufacturer branching (Pixel and Samsung are
-told accessibility is required; everyone else is offered it). This is the
-neighbourhood issue #12 lived in.
+First-run setup is covered from both sides. `OnboardingFlowTest` runs the whole
+flow on the JVM against shadowed permission state; `OnboardingEndToEndTest`
+covers the two things Robolectric cannot reach — the rows read against a real
+device, and swiping the pager.
+
+The property worth naming is *permission state is read, never assumed*. The
+previous flow was a chain of dialogs that fired `startActivity` and advanced
+its queue in the same breath: it moved on before the system screen appeared,
+never re-checked, and could mark setup complete with nothing granted. Rows now
+derive from `Permissions` and re-probe on `ON_RESUME`, and a test pins that
+tapping GRANT alone does not turn a row green. This is the neighbourhood issue
+#12 lived in.
 
 Note that `ChallengeDurationDialog`'s row sits *outside* the
 `if (safeRegimeEnabled)` block, so it stays configurable with protection off.
@@ -526,7 +535,7 @@ Each production bug now has a test that fails without its fix.
 
 | Issue | Test | Reproduces |
 |---|---|---|
-| [#12](https://github.com/Andebugulin/nfcGuard/issues/12) Galaxy S8 crash | `PermissionsTest`, `AppLoggerTest`, `AppNavigationEndToEndTest` | `unsafeCheckOpNoThrow` is API 29+; on API 26/28 it raised `NoSuchMethodError`, which `catch (Exception)` does not catch. The e2e test walks the whole carousel and asserts the permission flow takes over, which is the handoff that crashed |
+| [#12](https://github.com/Andebugulin/nfcGuard/issues/12) Galaxy S8 crash | `PermissionsTest`, `AppLoggerTest`, `AppNavigationEndToEndTest` | `unsafeCheckOpNoThrow` is API 29+; on API 26/28 it raised `NoSuchMethodError`, which `catch (Exception)` does not catch. The e2e test walks the whole tour and asserts it reaches Home, which is the handoff that crashed |
 | [#13](https://github.com/Andebugulin/nfcGuard/issues/13) app opens on unlock | `BlockerServiceScreenGateTest` | screen-off detection fell back to "last used app", so the overlay appeared over the lock screen |
 | [#10](https://github.com/Andebugulin/nfcGuard/issues/10) force-stop bypass | `ForegroundDetectorServiceTest` | force-stop kills alarms and broadcasts; the rebound accessibility service is the only recovery hook |
 

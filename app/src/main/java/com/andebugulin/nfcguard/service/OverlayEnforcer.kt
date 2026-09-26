@@ -276,13 +276,16 @@ class OverlayEnforcer(
                     }
                 }
 
+                // The instruction is "open nfcGuard", because that is what
+                // actually works: NFC dispatch is an Activity API, so nothing
+                // is listening for a tag while this overlay is what you see.
                 addView(label("BLOCKED", size = 48f, white = true, letterSpacing = 0.2f))
                 addView(arrow(32f, marginV = 16))
                 addView(label("TO UNLOCK:", size = 14f, white = false))
                 addView(arrow(24f, marginV = 12))
                 addView(openGuardianRow())
                 addView(arrow(24f, marginV = 12))
-                addView(label("TAP NFC TO UNLOCK", size = 14f, white = false))
+                addView(label("THEN TAP YOUR NFC TAG", size = 14f, white = false))
             }
             addView(content)
         }

@@ -60,7 +60,7 @@ class TagLimitEndToEndTest {
                 limits = limits
             )
         ),
-        tags = listOf(tag(id = tagId, name = "Desk key", modeIds = listOf("m1")))
+        tags = listOf(tag(id = tagId, name = "Desk key"))
     )
 
     private fun openEditor() =

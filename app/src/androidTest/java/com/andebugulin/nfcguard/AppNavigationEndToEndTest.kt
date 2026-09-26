@@ -86,18 +86,21 @@ class AppNavigationEndToEndTest {
     }
 
     /**
-     * Issue #12 crashed exactly here — on the handoff out of the last carousel
-     * page — so this walks the whole carousel and asserts the permission flow
-     * takes over rather than the app dying.
+     * Issue #12 crashed on the handoff off the last onboarding page. Setup is
+     * now one flow — the tour ends *on* the permissions page instead of handing
+     * off to a separate dialog chain — so this walks the tour, checks it lands
+     * there, and asserts GET STARTED reaches Home rather than the app dying.
      */
-    @Test fun aFirstRunWalksOnboardingAndHandsOffToThePermissionFlow() {
+    @Test fun aFirstRunWalksOnboardingAndReachesHome() {
         harness.resetToFirstRun()
         harness.launch()
 
         val onboarding = OnboardingRobot(compose).assertOnFirstPage()
-        repeat(4) { onboarding.next() }
+        onboarding.walkTour()
+        onboarding.assertOnPermissions()
+
         onboarding.getStarted()
 
-        onboarding.assertVisible("WELCOME TO NFCGUARD")
+        HomeRobot(compose).assertOnHome()
     }
 }

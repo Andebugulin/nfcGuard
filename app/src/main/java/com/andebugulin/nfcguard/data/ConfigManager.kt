@@ -30,7 +30,11 @@ object ConfigManager {
 
     @Serializable
     data class ExportData(
-        val version: Int = 1,
+        /**
+         * 2 — tags no longer carry `linkedModeIds`. Version 1 files still
+         * import: the key is read past and dropped.
+         */
+        val version: Int = 2,
         val modes: List<Mode>,
         val schedules: List<Schedule>,
         val nfcTags: List<NfcTag>
@@ -117,12 +121,10 @@ object ConfigManager {
             val obj = el.jsonObject
             val id = obj["id"]?.jsonPrimitive?.content ?: ""
             val name = obj["name"]?.jsonPrimitive?.content ?: ""
-            val linkedModeIds = obj["linkedModeIds"]?.jsonArray?.map { it.jsonPrimitive.content }
-                ?: run {
-                    val legacy = obj["linkedModeId"]?.jsonPrimitive?.contentOrNull
-                    if (legacy != null) listOf(legacy) else emptyList()
-                }
-            NfcTag(id, name, linkedModeIds)
+            // Older configs carried linkedModeIds (and a still older single
+            // linkedModeId) on the tag. That relationship now lives only on
+            // Mode.nfcTagIds, so both keys are read past and discarded.
+            NfcTag(id, name)
         }
 
         return ExportData(modes = modes, schedules = schedules, nfcTags = nfcTags)
@@ -225,14 +227,6 @@ object ConfigManager {
             for (tag in appState.nfcTags) {
                 sb.appendLine("  - id: \"${escapeYaml(tag.id)}\"")
                 sb.appendLine("    name: \"${escapeYaml(tag.name)}\"")
-                sb.appendLine("    linkedModeIds:")
-                if (tag.linkedModeIds.isEmpty()) {
-                    sb.appendLine("      []")
-                } else {
-                    for (modeId in tag.linkedModeIds) {
-                        sb.appendLine("      - \"${escapeYaml(modeId)}\"")
-                    }
-                }
             }
         }
 
@@ -466,7 +460,7 @@ object ConfigManager {
                 if (indent(line) < 2 && !line.trim().startsWith("-")) break
                 val trimmed = line.trim()
                 if (trimmed.startsWith("- id:")) {
-                    var id = ""; var name = ""; var linkedModeIds = listOf<String>()
+                    var id = ""; var name = ""
                     id = parseQuotedString(trimmed.removePrefix("- id:"))
                     advance()
                     while (currentLine() != null) {
@@ -476,22 +470,18 @@ object ConfigManager {
                         val tt = tl.trim()
                         when {
                             tt.startsWith("name:") -> { name = parseQuotedString(tt.removePrefix("name:")); advance() }
+                            // Legacy keys from when tags tracked their own
+                            // modes. Consumed so the parser stays aligned, then
+                            // dropped — Mode.nfcTagIds is the only record now.
                             tt.startsWith("linkedModeIds:") -> {
                                 advance()
-                                linkedModeIds = parseStringList(6)
+                                parseStringList(6)
                             }
-                            tt.startsWith("linkedModeId:") -> {
-                                // Legacy single-mode format migration
-                                val v = tt.removePrefix("linkedModeId:").trim()
-                                if (v != "null") {
-                                    linkedModeIds = listOf(parseQuotedString(v))
-                                }
-                                advance()
-                            }
+                            tt.startsWith("linkedModeId:") -> advance()
                             else -> advance()
                         }
                     }
-                    nfcTags.add(NfcTag(id, name, linkedModeIds))
+                    nfcTags.add(NfcTag(id, name))
                 } else {
                     advance()
                 }

@@ -22,6 +22,10 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.test.espresso.Espresso
 import com.andebugulin.nfcguard.ui.TestTags
 import com.andebugulin.nfcguard.ui.modes.AppInfo
+import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.hasScrollToIndexAction
 
 /**
  * Page objects over the real app's screens.
@@ -254,6 +258,15 @@ class ModeEditorRobot(compose: ComposeTestRule) : Robot(compose) {
     fun applyLimit() = apply { tapTag(TestTags.ModeEditor.LIMIT_APPLY) }
     fun cancelLimit() = apply { tapTag(TestTags.ModeEditor.LIMIT_CANCEL) }
 
+    // ---- registering a tag without leaving the editor ----
+
+    fun beginTagRegistration() = apply {
+        tapTag(TestTags.ModeEditor.REGISTER_TAG)
+        assertVisible("TAP NFC TAG")
+    }
+
+    fun assertCanRegisterTags() = apply { assertTagPresent(TestTags.ModeEditor.REGISTER_TAG) }
+
     /** SAVE warns first when every selected tag is capped. */
     fun assertNoPermanentUnlockWarning() = apply { assertVisible("NO PERMANENT UNLOCK") }
     fun saveAnyway() = apply { tapTag(TestTags.ModeEditor.NO_PERMANENT_SAVE_ANYWAY) }
@@ -267,19 +280,17 @@ class ModeEditorRobot(compose: ComposeTestRule) : Robot(compose) {
  */
 class EmergencyResetRobot(compose: ComposeTestRule) : Robot(compose) {
 
-    fun assertWarningShown() = apply { assertVisible("LOST NFC TAG?") }
-    fun continueFromWarning() = apply { tapTag(TestTags.Emergency.WARNING_CONTINUE) }
-    fun cancelWarning() = apply { tapTag(TestTags.Emergency.WARNING_CANCEL) }
+    fun assertRecoveryShown() = apply { assertVisible("RECOVER ACCESS") }
+    fun assertRecoveryNotShown() = apply { assertAbsent("RECOVER ACCESS") }
 
     fun assertChallengeRequired() = apply { assertTagPresent(TestTags.Challenge.GIVE_UP) }
     fun assertChallengeSkipped() = apply { assertTagAbsent(TestTags.Challenge.GIVE_UP) }
     fun giveUpChallenge() = apply { tapTag(TestTags.Challenge.GIVE_UP) }
 
-    fun assertTagSelectionShown() = apply { assertVisible("SELECT LOST TAGS") }
-    fun assertTagSelectionNotShown() = apply { assertAbsent("SELECT LOST TAGS") }
+    /** Tags are chosen on the recovery screen itself, before the challenge. */
     fun selectLostTag(tagId: String) = apply { tapTag(TestTags.Emergency.lostTag(tagId)) }
     fun confirmReset() = apply { tapTag(TestTags.Emergency.TAG_SELECTION_CONFIRM) }
-    fun cancelTagSelection() = apply { tapTag(TestTags.Emergency.TAG_SELECTION_CANCEL) }
+    fun cancelRecovery() = apply { tapTag(TestTags.Emergency.TAG_SELECTION_CANCEL) }
 }
 
 /**
@@ -299,16 +310,44 @@ class SettingsRobot(compose: ComposeTestRule) : Robot(compose) {
     fun setSeconds(value: String) = apply { replaceInTag(TestTags.Settings.DURATION_SECONDS, value) }
     fun assertCannotApply() = apply { assertTagDisabled(TestTags.Settings.DURATION_APPLY) }
     fun assertCanApply() = apply { assertTagEnabled(TestTags.Settings.DURATION_APPLY) }
-    fun assertBelowMinimumWarned() = apply { assertVisible("Minimum is 1:30") }
+    fun assertBelowMinimumWarned() = apply { assertVisible("Minimum is 1:00") }
     fun applyDuration() = apply { tapTag(TestTags.Settings.DURATION_APPLY) }
     fun done() = apply { tapTag(TestTags.Settings.DONE) }
 }
 
-/** The five-page intro carousel shown on a genuinely first-run device. */
+/** First-run setup: a short tour, then the permissions page. */
 class OnboardingRobot(compose: ComposeTestRule) : Robot(compose) {
-    fun assertOnFirstPage() = apply { assertVisible("DIGITAL WELLBEING") }
+    fun assertOnFirstPage() = apply { assertVisible("APPS YOU CAN'T OPEN") }
+    fun assertOnPermissions() = apply { assertVisible("PERMISSIONS") }
+
+    /** Tour pages before the permissions page — keep in step with `OnboardingFlow`. */
+    fun walkTour() = apply { repeat(TOUR_PAGES) { next() } }
+
     fun next() = apply { tap("NEXT") }
     fun getStarted() = apply { tap("GET STARTED") }
+
+    /**
+     * The pages are a `HorizontalPager`, so they can be swiped as well as
+     * stepped. Users tried to swipe long before it worked, which is why it
+     * does now — and why it is worth a test.
+     */
+    fun swipeForward() = apply { swipePager { swipeLeft() } }
+    fun swipeBack() = apply { swipePager { swipeRight() } }
+
+    private fun swipePager(gesture: androidx.compose.ui.test.TouchInjectionScope.() -> Unit) {
+        compose.onNode(hasScrollToIndexAction()).performTouchInput(gesture)
+        compose.waitForIdle()
+    }
+
+    /** A permission row reports what the device actually grants, never a guess. */
+    fun assertGranted(name: String) = apply {
+        scrollTo(name)
+        assertVisible("GRANTED")
+    }
+
+    fun recheckPermissions() = apply { tap("CHECK AGAIN") }
+
+    private companion object { const val TOUR_PAGES = 5 }
 }
 
 class SchedulesRobot(compose: ComposeTestRule) : Robot(compose) {
@@ -389,6 +428,19 @@ class TimePickerRobot(compose: ComposeTestRule) : Robot(compose) {
     fun cancel() = apply { tapTag(TestTags.TimePicker.CANCEL) }
 }
 
+/** The TAGS shortcut on a schedule card, which writes into its linked modes. */
+class ScheduleTagsRobot(compose: ComposeTestRule) : Robot(compose) {
+    fun open(scheduleId: String) = apply { tapTag(TestTags.Schedules.linkTags(scheduleId)) }
+    fun assertNotOffered(scheduleId: String) =
+        apply { assertTagAbsent(TestTags.Schedules.linkTags(scheduleId)) }
+
+    fun assertShown() = apply { assertVisible("UNLOCK TAGS") }
+    fun toggleTag(tagId: String) = apply { tapTag(TestTags.Schedules.tagOption(tagId)) }
+    fun add() = apply { tapTag(TestTags.Schedules.TAGS_SAVE) }
+    fun cancel() = apply { tapTag(TestTags.Schedules.TAGS_CANCEL) }
+    fun assertCannotAdd() = apply { assertTagDisabled(TestTags.Schedules.TAGS_SAVE) }
+}
+
 class NfcTagsRobot(compose: ComposeTestRule) : Robot(compose) {
     fun assertOnNfcTags() = apply { assertVisible("NFC TAGS") }
 
@@ -416,6 +468,17 @@ class NfcTagsRobot(compose: ComposeTestRule) : Robot(compose) {
         replaceInTag(TestTags.NfcTags.RENAME_INPUT, to)
         tapTag(TestTags.NfcTags.RENAME_SAVE)
     }
+
+    // ---- linking modes from the tag side ----
+
+    fun openLinkModes(tagId: String) = apply { tapTag(TestTags.NfcTags.linkModes(tagId)) }
+    fun toggleLinkedMode(modeId: String) = apply { tapTag(TestTags.NfcTags.linkOption(modeId)) }
+    fun saveLinks() = apply { tapTag(TestTags.NfcTags.LINK_SAVE) }
+    fun cancelLinks() = apply { tapTag(TestTags.NfcTags.LINK_CANCEL) }
+
+    /** The card lists what the tag opens, or says it opens nothing. */
+    fun assertUnlocks(modeName: String) = apply { assertVisible(modeName.uppercase()) }
+    fun assertUnlocksNothing() = apply { assertVisible("UNLOCKS NOTHING YET") }
 }
 
 class UnlockDialogRobot(compose: ComposeTestRule) : Robot(compose) {

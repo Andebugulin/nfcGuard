@@ -41,6 +41,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.andebugulin.nfcguard.ui.components.ScreenHeader
+import androidx.compose.ui.unit.TextUnit
+import com.andebugulin.nfcguard.ui.components.GuardianType
+import com.andebugulin.nfcguard.ui.components.SelectableOption
+import com.andebugulin.nfcguard.ui.components.GuardianDialog
+import androidx.compose.material.icons.filled.Nfc
+import com.andebugulin.nfcguard.ui.nfc.NfcTagRegistrationDialog
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.MutableState
 
 // Critical-apps list lives in BlockDecider — the picker filters using the
 // same set the service uses to allow, so the two can never drift.
@@ -53,7 +62,10 @@ fun ModeEditorScreen(
     availableNfcTags: List<NfcTag>,
     allModes: List<Mode> = emptyList(),  // FIX #8: Pass all modes for NFC usage count
     onBack: () -> Unit,
-    onSave: (List<String>, BlockMode, List<String>, Map<String, Long?>) -> Unit
+    onSave: (List<String>, BlockMode, List<String>, Map<String, Long?>) -> Unit,
+    scannedNfcTagId: MutableState<String?>? = null,
+    nfcRegistrationMode: MutableState<Boolean>? = null,
+    onRegisterTag: (String, String) -> Boolean = { _, _ -> false }
 ) {
     val context = LocalContext.current
     var selectedApps by remember { mutableStateOf(mode.blockedApps.toSet()) }
@@ -66,6 +78,33 @@ fun ModeEditorScreen(
 
     var tagToConfigureLimit by remember { mutableStateOf<String?>(null) } // tagId or "ANY"
     var showPermanentUnlockWarning by remember { mutableStateOf(false) }
+
+    // Registering a tag from here. Wanting a tag mid-edit used to be a dead
+    // end: the only register button lived on the NFC Tags screen, so the user
+    // had to abandon the editor and come back.
+    var showTagRegistration by remember { mutableStateOf(false) }
+    var pendingTagId by remember { mutableStateOf<String?>(null) }
+    val canRegisterTags = scannedNfcTagId != null && nfcRegistrationMode != null
+
+    // The same handshake NfcTagsScreen uses: while our dialog is open the
+    // Activity must route taps to us for capture instead of treating them as
+    // unlock attempts. Only one screen can be composed at a time, so the two
+    // registration sites cannot both claim the flag.
+    if (canRegisterTags) {
+        LaunchedEffect(showTagRegistration) {
+            nfcRegistrationMode!!.value = showTagRegistration
+        }
+        DisposableEffect(Unit) {
+            onDispose { nfcRegistrationMode!!.value = false }
+        }
+        LaunchedEffect(scannedNfcTagId!!.value, showTagRegistration) {
+            val scanned = scannedNfcTagId.value
+            if (scanned != null && showTagRegistration) {
+                pendingTagId = scanned
+                scannedNfcTagId.value = null
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         isLoading = true
@@ -106,23 +145,13 @@ fun ModeEditorScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary).windowInsetsPadding(WindowInsets.systemBars)) {
         Column(Modifier.fillMaxSize()) {
-            // Top bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Top bar. The title keeps the ambient font size (unlike the other
+            // screens' explicit 24sp) because mode names can be long.
+            ScreenHeader(
+                title = mode.name.uppercase(),
+                onBack = onBack,
+                titleFontSize = TextUnit.Unspecified
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
-                }
-                Text(
-                    mode.name.uppercase(),
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp,
-                    color = GuardianTheme.TextPrimary,
-                    modifier = Modifier.weight(1f)
-                )
                 // FIX #5: Disable SAVE when no apps selected
                 Button(
                     onClick = {
@@ -231,19 +260,16 @@ fun ModeEditorScreen(
                         )
                         Text(
                             "NFC TAG LOCK",
+                            style = GuardianType.Title,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = GuardianTheme.TextPrimary,
-                            letterSpacing = 1.sp
+                            color = GuardianTheme.TextPrimary
+                        )
+                        Text(
+                            "OPTIONAL",
+                            style = GuardianType.Meta,
+                            color = GuardianTheme.TextTertiary
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Optional: Require specific NFC tag(s) to unlock",
-                        fontSize = 10.sp,
-                        color = GuardianTheme.TextSecondary,
-                        letterSpacing = 0.5.sp
-                    )
 
                     Spacer(Modifier.height(12.dp))
 
@@ -290,6 +316,30 @@ fun ModeEditorScreen(
                                     }
                                 },
                                 onConfigureLimit = { tagToConfigureLimit = tag.id }
+                            )
+                        }
+                    }
+
+                    if (canRegisterTags) {
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(
+                            onClick = {
+                                pendingTagId = null
+                                showTagRegistration = true
+                            },
+                            modifier = Modifier.testTag(TestTags.ModeEditor.REGISTER_TAG)
+                        ) {
+                            Icon(
+                                Icons.Default.Nfc,
+                                contentDescription = null,
+                                tint = GuardianTheme.IconPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "REGISTER NEW TAG",
+                                style = GuardianType.Label,
+                                color = GuardianTheme.TextPrimary
                             )
                         }
                     }
@@ -402,6 +452,27 @@ fun ModeEditorScreen(
     }
 
     // Tag limit configuration dialog
+    if (showTagRegistration && canRegisterTags) {
+        NfcTagRegistrationDialog(
+            scannedTagId = pendingTagId,
+            existingTagIds = availableNfcTags.map { it.id }.toSet(),
+            existingNames = availableNfcTags.map { it.name },
+            onDismiss = {
+                showTagRegistration = false
+                pendingTagId = null
+            },
+            onSave = { tagId, name ->
+                if (onRegisterTag(tagId, name)) {
+                    // Select it straight away — the user asked for it while
+                    // configuring this mode, so linking it is the whole point.
+                    selectedNfcTagIds = selectedNfcTagIds + tagId
+                }
+                showTagRegistration = false
+                pendingTagId = null
+            }
+        )
+    }
+
     tagToConfigureLimit?.let { tagId ->
         TagLimitConfigDialog(
             currentLimit = tagUnlockLimits[tagId],
@@ -583,142 +654,79 @@ fun TagLimitConfigDialog(
         h * 60 + m
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = GuardianTheme.BackgroundSurface,
-        tonalElevation = 0.dp,
-        shape = RoundedCornerShape(0.dp),
-        modifier = Modifier.border(
-            width = GuardianTheme.DialogBorderWidth,
-            color = GuardianTheme.DialogBorderInfo,
-            shape = RoundedCornerShape(0.dp)
-        ),
-        title = {
-            Text(
-                "MAX UNLOCK DURATION",
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp,
-                fontSize = 14.sp
+    GuardianDialog(
+        title = "MAX UNLOCK",
+        detail = "Caps how long a tap on this tag can unlock the mode for. " +
+            "Permanent places no cap; a time limit means the unlock dialog will " +
+            "not offer anything longer.",
+        confirmLabel = "APPLY",
+        onConfirm = { onConfirm(if (selectedOption == 0) null else totalMinutes) },
+        confirmEnabled = selectedOption == 0 || totalMinutes > 0,
+        confirmModifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_APPLY),
+        dismissLabel = "CANCEL",
+        onDismiss = onDismiss,
+        dismissModifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_CANCEL)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SelectableOption(
+                label = "PERMANENT",
+                selected = selectedOption == 0,
+                onSelect = { selectedOption = 0 },
+                modifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_PERMANENT)
             )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "Set the maximum time this tag can unlock this mode for. Leave permanent for no restriction.",
-                    fontSize = 10.sp,
-                    color = GuardianTheme.TextSecondary,
-                    letterSpacing = 0.5.sp
-                )
 
-                // Option 1: Permanent
-                Surface(
-                    modifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_PERMANENT).fillMaxWidth(),
-                    shape = RoundedCornerShape(0.dp),
-                    color = if (selectedOption == 0) Color.White else GuardianTheme.SurfaceDim,
-                    onClick = { selectedOption = 0 }
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(
-                            "PERMANENT UNLOCK",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (selectedOption == 0) Color.Black else Color.White,
-                            letterSpacing = 1.sp
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "This tag can unlock this mode indefinitely",
-                            fontSize = 10.sp,
-                            color = if (selectedOption == 0) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-                }
-
-                // Option 2: Timed limit
-                Surface(
-                    modifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_TIMED).fillMaxWidth(),
-                    shape = RoundedCornerShape(0.dp),
-                    color = if (selectedOption == 1) Color.White else GuardianTheme.SurfaceDim,
-                    onClick = { selectedOption = 1 }
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(
-                            "MAX DURATION LIMIT",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (selectedOption == 1) Color.Black else Color.White,
-                            letterSpacing = 1.sp
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "This tag will only offer unlock durations up to this limit",
-                            fontSize = 10.sp,
-                            color = if (selectedOption == 1) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
-                            letterSpacing = 0.5.sp
-                        )
-
-                        if (selectedOption == 1) {
-                            Spacer(Modifier.height(12.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedTextField(
-                                    value = timedHours,
-                                    onValueChange = { timedHours = it.filter { c -> c.isDigit() }.take(2) },
-                                    label = { Text("HOURS", fontSize = 9.sp, letterSpacing = 1.sp) },
-                                    modifier = Modifier.weight(1f).testTag(TestTags.ModeEditor.LIMIT_HOURS),
-                                    singleLine = true,
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = Color.Black,
-                                        unfocusedBorderColor = GuardianTheme.OnLightSurfaceBorder,
-                                        focusedTextColor = Color.Black,
-                                        unfocusedTextColor = Color.Black,
-                                        focusedLabelColor = Color.Black,
-                                        cursorColor = Color.Black
-                                    ),
-                                    shape = RoundedCornerShape(0.dp)
-                                )
-                                OutlinedTextField(
-                                    value = timedMinutes,
-                                    onValueChange = { timedMinutes = it.filter { c -> c.isDigit() }.take(3) },
-                                    label = { Text("MINUTES", fontSize = 9.sp, letterSpacing = 1.sp) },
-                                    modifier = Modifier.weight(1f).testTag(TestTags.ModeEditor.LIMIT_MINUTES),
-                                    singleLine = true,
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = Color.Black,
-                                        unfocusedBorderColor = GuardianTheme.OnLightSurfaceBorder,
-                                        focusedTextColor = Color.Black,
-                                        unfocusedTextColor = Color.Black,
-                                        focusedLabelColor = Color.Black,
-                                        cursorColor = Color.Black
-                                    ),
-                                    shape = RoundedCornerShape(0.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                modifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_APPLY),
-                onClick = {
-                    onConfirm(if (selectedOption == 0) null else totalMinutes)
-                },
-                enabled = selectedOption == 0 || totalMinutes > 0
+            SelectableOption(
+                label = "TIME LIMIT",
+                selected = selectedOption == 1,
+                onSelect = { selectedOption = 1 },
+                modifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_TIMED)
             ) {
-                Text("APPLY", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    LimitField(
+                        value = timedHours,
+                        onValueChange = { timedHours = it.filter { c -> c.isDigit() }.take(2) },
+                        label = "HOURS",
+                        modifier = Modifier.weight(1f).testTag(TestTags.ModeEditor.LIMIT_HOURS)
+                    )
+                    LimitField(
+                        value = timedMinutes,
+                        onValueChange = { timedMinutes = it.filter { c -> c.isDigit() }.take(3) },
+                        label = "MINUTES",
+                        modifier = Modifier.weight(1f).testTag(TestTags.ModeEditor.LIMIT_MINUTES)
+                    )
+                }
             }
-        },
-        dismissButton = {
-            TextButton(
-                modifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_CANCEL),onClick = onDismiss) {
-                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
-            }
-        },
+        }
+    }
+}
+
+/** An hours/minutes field, drawn for the light surface of a selected option. */
+@Composable
+private fun LimitField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label, style = GuardianType.Meta) },
+        modifier = modifier,
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Color.Black,
+            unfocusedBorderColor = GuardianTheme.OnLightSurfaceBorder,
+            focusedTextColor = Color.Black,
+            unfocusedTextColor = Color.Black,
+            focusedLabelColor = Color.Black,
+            cursorColor = Color.Black
+        ),
+        shape = RoundedCornerShape(0.dp)
     )
 }
 

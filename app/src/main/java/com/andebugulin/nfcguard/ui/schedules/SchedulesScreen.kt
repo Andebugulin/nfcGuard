@@ -41,6 +41,17 @@ import kotlin.math.PI
 import kotlin.math.roundToInt
 import java.util.Calendar
 import kotlinx.coroutines.launch
+import com.andebugulin.nfcguard.ui.components.ScreenHeader
+import com.andebugulin.nfcguard.ui.components.EmptyState
+import com.andebugulin.nfcguard.ui.components.GuardianButton
+import com.andebugulin.nfcguard.ui.BLOCK_MODE_CONFLICT_MESSAGE
+import androidx.compose.foundation.layout.heightIn
+import com.andebugulin.nfcguard.NfcTag
+import com.andebugulin.nfcguard.ui.components.SelectableOption
+import com.andebugulin.nfcguard.ui.components.DialogKind
+import com.andebugulin.nfcguard.ui.components.GuardianDialog
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 
 enum class ScheduleState {
     NONE,        // Not in schedule time OR schedule ended
@@ -137,6 +148,7 @@ fun SchedulesScreen(
     val challengeDuration by viewModel.challengeDurationSeconds.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSchedule by remember { mutableStateOf<Schedule?>(null) }
+    var taggingSchedule by remember { mutableStateOf<Schedule?>(null) }
     var showDeleteDialog by remember { mutableStateOf<Schedule?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -213,72 +225,21 @@ fun SchedulesScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues).background(GuardianTheme.BackgroundPrimary)) {
             Column(Modifier.fillMaxSize()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
-                    }
-                    Text(
-                        "SCHEDULES",
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp,
-                        fontSize = 24.sp,
-                        color = GuardianTheme.TextPrimary,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                ScreenHeader(title = "SCHEDULES", onBack = onBack)
 
                 if (appState.schedules.isEmpty()) {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(48.dp),
-                        contentAlignment = Alignment.Center
+                    EmptyState(
+                        label = "NO SCHEDULES",
+                        // FIX #12: a schedule with nothing to switch on is useless,
+                        // so say what to do first rather than offering a dead button.
+                        secondary = "Create at least one mode first".takeIf { appState.modes.isEmpty() }
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                "NO SCHEDULES",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = GuardianTheme.TextDisabled,
-                                letterSpacing = 2.sp
-                            )
-                            Spacer(Modifier.height(16.dp))
-
-                            // FIX #12: Disable button if no modes exist, show guidance
-                            if (appState.modes.isEmpty()) {
-                                Text(
-                                    "Create at least one mode first",
-                                    fontSize = 11.sp,
-                                    color = GuardianTheme.TextTertiary,
-                                    letterSpacing = 0.5.sp
-                                )
-                                Spacer(Modifier.height(8.dp))
-                            }
-
-                            Button(
-                                onClick = { showAddDialog = true },
-                                enabled = appState.modes.isNotEmpty(),  // FIX #12
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = GuardianTheme.ButtonPrimary,
-                                    contentColor = GuardianTheme.ButtonPrimaryText,
-                                    disabledContainerColor = GuardianTheme.ButtonDisabledContainer,
-                                    disabledContentColor = GuardianTheme.ButtonDisabledText
-                                ),
-                                shape = RoundedCornerShape(0.dp),
-                                modifier = Modifier.testTag(TestTags.Schedules.ADD).height(48.dp)
-                            ) {
-                                Text(
-                                    if (appState.modes.isNotEmpty()) "CREATE SCHEDULE" else "CREATE MODES FIRST",
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
-                                )
-                            }
-                        }
+                        GuardianButton(
+                            label = if (appState.modes.isNotEmpty()) "CREATE SCHEDULE" else "CREATE MODES FIRST",
+                            onClick = { showAddDialog = true },
+                            enabled = appState.modes.isNotEmpty(),
+                            modifier = Modifier.testTag(TestTags.Schedules.ADD)
+                        )
                     }
                 } else {
                     LazyColumn(
@@ -298,10 +259,13 @@ fun SchedulesScreen(
                                     if (result == ActivationResult.BLOCK_MODE_CONFLICT) {
                                         scope.launch {
                                             snackbarHostState.showSnackbar(
-                                                "Cannot mix BLOCK and ALLOW ONLY modes. Deactivate current modes first."
+                                                BLOCK_MODE_CONFLICT_MESSAGE
                                             )
                                         }
                                     }
+                                },
+                                onLinkTags = if (appState.nfcTags.isEmpty()) null else {
+                                    { taggingSchedule = schedule }
                                 },
                                 onEdit = {
                                     val isActive = getScheduleState(schedule, appState) == ScheduleState.ACTIVE
@@ -354,6 +318,19 @@ fun SchedulesScreen(
             }
         }
     } // end Scaffold content
+
+    taggingSchedule?.let { schedule ->
+        ScheduleTagsDialog(
+            schedule = schedule,
+            modes = appState.modes,
+            tags = appState.nfcTags,
+            onDismiss = { taggingSchedule = null },
+            onConfirm = { tagIds ->
+                viewModel.linkTagsToScheduleModes(schedule.id, tagIds)
+                taggingSchedule = null
+            }
+        )
+    }
 
     if (showAddDialog) {
         ScheduleEditorDialog(
@@ -548,7 +525,8 @@ fun ScheduleCard(
     isInTimeRange: Boolean,
     onActivate: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onLinkTags: (() -> Unit)? = null
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -717,6 +695,14 @@ fun ScheduleCard(
                     }
                 }
 
+                if (onLinkTags != null) {
+                    TextButton(
+                        onClick = onLinkTags,
+                        modifier = Modifier.testTag(TestTags.Schedules.linkTags(schedule.id))
+                    ) {
+                        Text("TAGS", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
+                    }
+                }
                 TextButton(
                     onClick = onEdit,
                     modifier = Modifier.testTag(TestTags.Schedules.edit(schedule.id))
@@ -728,6 +714,69 @@ fun ScheduleCard(
                     modifier = Modifier.testTag(TestTags.Schedules.delete(schedule.id))
                 ) {
                     Text("DELETE", fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Add tags to every mode this schedule switches on.
+ *
+ * A schedule has no tag of its own — it activates modes, and tags unlock modes.
+ * Rather than invent a second relationship for the same idea, this writes
+ * straight into the linked modes, which is what the user means by "unlock this
+ * schedule". It only ever adds, so it cannot silently strip a tag that a mode
+ * was relying on, and it lives on the card rather than in the editor because it
+ * edits modes, not the schedule, and must not ride on the editor's save.
+ */
+@Composable
+private fun ScheduleTagsDialog(
+    schedule: Schedule,
+    modes: List<Mode>,
+    tags: List<NfcTag>,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<String>) -> Unit
+) {
+    val linkedModes = modes.filter { it.id in schedule.linkedModeIds }
+    var selected by remember(schedule.id) { mutableStateOf(emptySet<String>()) }
+
+    GuardianDialog(
+        title = "UNLOCK TAGS",
+        message = if (linkedModes.isEmpty()) {
+            "This schedule has no modes yet."
+        } else {
+            "Adds to: " + linkedModes.joinToString(", ") { it.name.uppercase() }
+        },
+        detail = "Tags are linked to modes, not to schedules. Picking tags here " +
+            "adds them to every mode this schedule turns on. Existing tags and " +
+            "their unlock limits are left alone.",
+        kind = DialogKind.Edit,
+        confirmLabel = "ADD",
+        onConfirm = { onConfirm(selected) },
+        confirmEnabled = selected.isNotEmpty() && linkedModes.isNotEmpty(),
+        confirmModifier = Modifier.testTag(TestTags.Schedules.TAGS_SAVE),
+        dismissLabel = "CANCEL",
+        onDismiss = onDismiss,
+        dismissModifier = Modifier.testTag(TestTags.Schedules.TAGS_CANCEL)
+    ) {
+        if (linkedModes.isNotEmpty()) {
+            Column(
+                Modifier
+                    .heightIn(max = 260.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                tags.forEach { tag ->
+                    SelectableOption(
+                        label = tag.name.uppercase(),
+                        selected = tag.id in selected,
+                        onSelect = {
+                            selected = if (tag.id in selected) selected - tag.id
+                            else selected + tag.id
+                        },
+                        modifier = Modifier.testTag(TestTags.Schedules.tagOption(tag.id))
+                    )
                 }
             }
         }

@@ -28,12 +28,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import com.andebugulin.nfcguard.ui.components.ScreenHeader
+import com.andebugulin.nfcguard.ui.components.EmptyState
+import com.andebugulin.nfcguard.ui.components.GuardianButton
+import com.andebugulin.nfcguard.ui.BLOCK_MODE_CONFLICT_MESSAGE
+import androidx.compose.runtime.MutableState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModesScreen(
     viewModel: GuardianViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    // Passed through to the editor so a tag can be registered mid-edit.
+    // Nullable so the per-screen Robolectric tests can compose this without
+    // standing up the Activity's NFC plumbing.
+    scannedNfcTagId: MutableState<String?>? = null,
+    nfcRegistrationMode: MutableState<Boolean>? = null
 ) {
     val appState by viewModel.appState.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
@@ -75,59 +85,16 @@ fun ModesScreen(
                 .background(GuardianTheme.BackgroundPrimary)
         ) {
             Column(Modifier.fillMaxSize()) {
-                // Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, null, tint = GuardianTheme.IconPrimary)
-                    }
-                    Text(
-                        "MODES",
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp,
-                        fontSize = 24.sp,
-                        color = GuardianTheme.TextPrimary,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                ScreenHeader(title = "MODES", onBack = onBack)
 
                 // Modes list
                 if (appState.modes.isEmpty()) {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(48.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                "NO MODES",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = GuardianTheme.TextDisabled,
-                                letterSpacing = 2.sp
-                            )
-                            Spacer(Modifier.height(16.dp))
-                            Button(
-                                onClick = { showAddDialog = true },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = GuardianTheme.ButtonPrimary,
-                                    contentColor = GuardianTheme.ButtonPrimaryText
-                                ),
-                                shape = RoundedCornerShape(0.dp),
-                                modifier = Modifier.height(48.dp).testTag(TestTags.Modes.ADD)
-                            ) {
-                                Text(
-                                    "CREATE MODE",
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
-                                )
-                            }
-                        }
+                    EmptyState(label = "NO MODES") {
+                        GuardianButton(
+                            label = "CREATE MODE",
+                            onClick = { showAddDialog = true },
+                            modifier = Modifier.testTag(TestTags.Modes.ADD)
+                        )
                     }
                 } else {
                     LazyColumn(
@@ -370,7 +337,7 @@ fun ModesScreen(
                 if (result == ActivationResult.BLOCK_MODE_CONFLICT) {
                     scope.launch {
                         snackbarHostState.showSnackbar(
-                            "Cannot mix BLOCK and ALLOW ONLY modes. Deactivate current modes first."
+                            BLOCK_MODE_CONFLICT_MESSAGE
                         )
                     }
                 }
@@ -392,7 +359,10 @@ fun ModesScreen(
                         viewModel.addMode(mode.name, apps, blockMode, nfcTagIds, tagUnlockLimits)
                     }
                     selectedMode = null
-                }
+                },
+                scannedNfcTagId = scannedNfcTagId,
+                nfcRegistrationMode = nfcRegistrationMode,
+                onRegisterTag = viewModel::addNfcTag
             )
         }
     }

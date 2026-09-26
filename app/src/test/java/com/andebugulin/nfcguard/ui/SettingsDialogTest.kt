@@ -226,12 +226,12 @@ class SettingsDialogTest {
 
     @Test fun `the toggle explains which state it is in`() {
         show()
-        assertVisible("Actions that could bypass blocking require a 1.5-minute attention challenge")
+        assertVisible("Risky actions need a timed challenge.")
 
         toggle()
         assertEquals(false, vm.safeRegimeEnabled.value)
 
-        assertVisible("Disabled — all actions are unrestricted")
+        assertVisible("Off. Nothing is protected.")
     }
 
     /**

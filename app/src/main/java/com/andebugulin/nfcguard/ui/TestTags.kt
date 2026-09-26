@@ -64,6 +64,12 @@ object TestTags {
         fun card(tagId: String) = "nfcTags:card:$tagId"
         fun rename(tagId: String) = "nfcTags:rename:$tagId"
         fun delete(tagId: String) = "nfcTags:delete:$tagId"
+        fun linkModes(tagId: String) = "nfcTags:linkModes:$tagId"
+
+        /** Mode-picker dialog reached from a tag card. */
+        fun linkOption(modeId: String) = "nfcTags:linkDialog:mode:$modeId"
+        const val LINK_SAVE = "nfcTags:linkDialog:save"
+        const val LINK_CANCEL = "nfcTags:linkDialog:cancel"
 
         const val REGISTER_NAME_INPUT = "nfcTags:registerDialog:input"
         const val REGISTER_CONFIRM = "nfcTags:registerDialog:confirm"
@@ -85,6 +91,9 @@ object TestTags {
         const val LIMIT_TIMED = "modeEditor:limitDialog:timed"
         const val LIMIT_HOURS = "modeEditor:limitDialog:hours"
         const val LIMIT_MINUTES = "modeEditor:limitDialog:minutes"
+        /** Register a brand-new tag without leaving the editor. */
+        const val REGISTER_TAG = "modeEditor:registerTag"
+
         const val LIMIT_APPLY = "modeEditor:limitDialog:apply"
         const val LIMIT_CANCEL = "modeEditor:limitDialog:cancel"
         const val NO_PERMANENT_SAVE_ANYWAY = "modeEditor:noPermanentDialog:confirm"
@@ -97,6 +106,12 @@ object TestTags {
         fun card(scheduleId: String) = "schedules:card:$scheduleId"
         fun edit(scheduleId: String) = "schedules:edit:$scheduleId"
         fun delete(scheduleId: String) = "schedules:delete:$scheduleId"
+        fun linkTags(scheduleId: String) = "schedules:linkTags:$scheduleId"
+
+        /** Tag-picker dialog reached from a schedule card. */
+        fun tagOption(tagId: String) = "schedules:tagDialog:tag:$tagId"
+        const val TAGS_SAVE = "schedules:tagDialog:save"
+        const val TAGS_CANCEL = "schedules:tagDialog:cancel"
 
         const val EDITOR_NAME = "schedules:editor:name"
         const val EDITOR_CONFIRM = "schedules:editor:confirm"
@@ -139,9 +154,12 @@ object TestTags {
         fun permissionRow(name: String) = "settings:permission:$name"
     }
 
+    /**
+     * Lost-tag recovery. Warning and tag selection used to be two dialogs with
+     * a challenge wedged between them; they are one screen now, so there is a
+     * single confirm and a single cancel.
+     */
     object Emergency {
-        const val WARNING_CONTINUE = "emergency:warning:continue"
-        const val WARNING_CANCEL = "emergency:warning:cancel"
         const val TAG_SELECTION_CONFIRM = "emergency:tagSelection:confirm"
         const val TAG_SELECTION_CANCEL = "emergency:tagSelection:cancel"
         fun lostTag(tagId: String) = "emergency:tagSelection:tag:$tagId"

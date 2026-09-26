@@ -62,11 +62,6 @@ class GuardianHarness(val compose: ComposeTestRule) {
         prefs().edit()
             .putBoolean("has_seen_onboarding", true)
             .putBoolean("initial_permissions_granted", true)
-            // The per-screen first-run popups would otherwise intercept the
-            // first visit to Modes/Schedules/NFC while those lists are empty.
-            .putBoolean("showcase_modes", true)
-            .putBoolean("showcase_schedules", true)
-            .putBoolean("showcase_nfc", true)
             // The app's own default. Written explicitly so a test that turns it
             // off cannot leak that into the next one — it lives outside
             // AppState by design, so resetting AppState does not clear it.

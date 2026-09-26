@@ -10,9 +10,6 @@ import com.andebugulin.nfcguard.ui.GuardianViewModel
 import com.andebugulin.nfcguard.ui.safety.SafeRegimeChallengeDialog
 import com.andebugulin.nfcguard.ui.Screen
 import com.andebugulin.nfcguard.ui.TestTags
-import com.andebugulin.nfcguard.ui.onboarding.FeatureShowcaseDialog
-import com.andebugulin.nfcguard.ui.onboarding.isShowcaseSeen
-import com.andebugulin.nfcguard.ui.onboarding.markShowcaseSeen
 
 import android.content.Context
 import android.content.Intent
@@ -53,6 +50,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.andebugulin.nfcguard.data.Permissions
+import com.andebugulin.nfcguard.ui.components.InfoDisclosure
+import com.andebugulin.nfcguard.ui.components.GuardianType
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.foundation.layout.heightIn
+import com.andebugulin.nfcguard.ui.components.SelectableOption
+import com.andebugulin.nfcguard.ui.components.DialogKind
+import com.andebugulin.nfcguard.ui.components.GuardianDialog
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,25 +71,8 @@ fun HomeScreen(
 
     var showEmergencyDialog by remember { mutableStateOf(false) }
     var showEmergencyChallenge by remember { mutableStateOf(false) }
-    var showTagSelectionDialog by remember { mutableStateOf(false) }
     var selectedTagsToDelete by remember { mutableStateOf(setOf<String>()) }
     var showSettingsDialog by remember { mutableStateOf(false) }
-    var showcaseFor by remember { mutableStateOf<Screen?>(null) }
-
-    // First-time entry to a section shows a one-off explainer, but only for a
-    // genuinely new user: that section has nothing configured AND the popup
-    // hasn't been seen. Otherwise navigate straight through.
-    val openSection: (Screen) -> Unit = { screen ->
-        val sectionEmpty = when (screen) {
-            Screen.MODES -> appState.modes.isEmpty()
-            Screen.SCHEDULES -> appState.schedules.isEmpty()
-            Screen.NFC_TAGS -> appState.nfcTags.isEmpty()
-            else -> false
-        }
-        if (sectionEmpty && !isShowcaseSeen(context, screen)) showcaseFor = screen
-        else onNavigate(screen)
-    }
-
     // Tick every 30s to keep timer countdowns fresh
     var timeTick by remember { mutableStateOf(0L) }
     LaunchedEffect(appState.timedModeDeactivations, appState.timedModeReactivations) {
@@ -226,9 +213,13 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Was a trash icon labelled "Emergency Reset" — which reads as
+                // "delete everything". This flow turns blocking off when you
+                // have lost your tag; nothing of yours is destroyed unless you
+                // tick a tag to forget.
                 Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Emergency Reset",
+                    imageVector = Icons.Default.LockOpen,
+                    contentDescription = "Recover access",
                     tint = GuardianTheme.IconPrimary,
                     modifier = Modifier
                         .testTag(TestTags.Home.EMERGENCY_RESET)
@@ -283,7 +274,7 @@ fun HomeScreen(
             subtitle = "${appState.modes.size} CREATED",
             icon = Icons.Default.Block,
             testTag = TestTags.Home.NAV_MODES,
-            onClick = { openSection(Screen.MODES) }
+            onClick = { onNavigate(Screen.MODES) }
         )
 
         NavigationCard(
@@ -291,7 +282,7 @@ fun HomeScreen(
             subtitle = "${appState.schedules.size} CONFIGURED",
             icon = Icons.Default.Schedule,
             testTag = TestTags.Home.NAV_SCHEDULES,
-            onClick = { openSection(Screen.SCHEDULES) }
+            onClick = { onNavigate(Screen.SCHEDULES) }
         )
 
         NavigationCard(
@@ -299,7 +290,7 @@ fun HomeScreen(
             subtitle = "${appState.nfcTags.size} REGISTERED",
             icon = Icons.Default.Nfc,
             testTag = TestTags.Home.NAV_NFC_TAGS,
-            onClick = { openSection(Screen.NFC_TAGS) }
+            onClick = { onNavigate(Screen.NFC_TAGS) }
         )
 
         Spacer(Modifier.weight(1f))
@@ -462,39 +453,12 @@ fun HomeScreen(
         }
     }
 
-    // Emergency Reset Dialogs
+    // Recovery. One screen states the outcome and takes the (optional) tag
+    // selection; the challenge comes after, so the user knows what they are
+    // waiting for instead of meeting a countdown they have never seen.
     if (showEmergencyDialog) {
-        EmergencyWarningDialog(
-            onDismiss = { showEmergencyDialog = false },
-            onConfirm = {
-                showEmergencyDialog = false
-                if (appState.activeModes.isNotEmpty()) {
-                    // Modes active — require safe regime challenge
-                    showEmergencyChallenge = true
-                } else {
-                    // No modes active --” skip safety gate, go straight to tag selection
-                    showTagSelectionDialog = true
-                }
-            }
-        )
-    }
-
-    if (showEmergencyChallenge) {
-        SafeRegimeChallengeDialog(
-            actionDescription = "Emergency reset will deactivate all modes and delete selected NFC tags. This could bypass the blocker.",
-            totalDurationSeconds = challengeDuration,
-            onComplete = {
-                showEmergencyChallenge = false
-                showTagSelectionDialog = true
-            },
-            onCancel = {
-                showEmergencyChallenge = false
-            }
-        )
-    }
-
-    if (showTagSelectionDialog) {
-        TagSelectionDialog(
+        RecoverAccessDialog(
+            activeModeCount = appState.activeModes.size,
             nfcTags = appState.nfcTags,
             selectedTags = selectedTagsToDelete,
             onTagToggle = { tagId ->
@@ -505,21 +469,36 @@ fun HomeScreen(
                 }
             },
             onDismiss = {
-                showTagSelectionDialog = false
+                showEmergencyDialog = false
                 selectedTagsToDelete = emptySet()
             },
             onConfirm = {
-                // Deactivate all modes
-                appState.activeModes.forEach { modeId ->
-                    viewModel.deactivateMode(modeId)
+                showEmergencyDialog = false
+                if (appState.activeModes.isNotEmpty()) {
+                    showEmergencyChallenge = true
+                } else {
+                    // Nothing is being bypassed, so there is nothing to gate.
+                    applyRecovery(viewModel, appState.activeModes, selectedTagsToDelete)
+                    selectedTagsToDelete = emptySet()
                 }
+            }
+        )
+    }
 
-                // Delete selected NFC tags
-                selectedTagsToDelete.forEach { tagId ->
-                    viewModel.deleteNfcTag(tagId)
-                }
-
-                showTagSelectionDialog = false
+    if (showEmergencyChallenge) {
+        SafeRegimeChallengeDialog(
+            actionDescription = recoveryOutcome(
+                appState.activeModes.size,
+                selectedTagsToDelete.size
+            ),
+            totalDurationSeconds = challengeDuration,
+            onComplete = {
+                showEmergencyChallenge = false
+                applyRecovery(viewModel, appState.activeModes, selectedTagsToDelete)
+                selectedTagsToDelete = emptySet()
+            },
+            onCancel = {
+                showEmergencyChallenge = false
                 selectedTagsToDelete = emptySet()
             }
         )
@@ -532,17 +511,6 @@ fun HomeScreen(
             onDismiss = {
                 showSettingsDialog = false
                 permissionCheckTrigger++ // recheck permissions when closing
-            }
-        )
-    }
-
-    showcaseFor?.let { screen ->
-        FeatureShowcaseDialog(
-            screen = screen,
-            onContinue = {
-                markShowcaseSeen(context, screen)
-                showcaseFor = null
-                onNavigate(screen)
             }
         )
     }
@@ -597,232 +565,103 @@ fun NavigationCard(
     }
 }
 
-@Composable
-fun EmergencyWarningDialog(
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = GuardianTheme.ButtonSecondary,
-        tonalElevation = 0.dp,
-        shape = RoundedCornerShape(0.dp),
-        modifier = Modifier.border(
-            width = GuardianTheme.DialogBorderWidth,
-            color = GuardianTheme.DialogBorderWarning,
-            shape = RoundedCornerShape(0.dp)
-        ),
-        title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = GuardianTheme.Error,
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    "LOST NFC TAG?",
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp,
-                    color = GuardianTheme.Error
-                )
-            }
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(
-                    "This will help you:",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = GuardianTheme.TextPrimary,
-                    letterSpacing = 0.5.sp
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "--- Deactivate all active modes",
-                        fontSize = 13.sp,
-                        color = GuardianTheme.OnLightSurfaceBorder,
-                        letterSpacing = 0.5.sp
-                    )
-                    Text(
-                        "--- Delete lost NFC tags",
-                        fontSize = 13.sp,
-                        color = GuardianTheme.OnLightSurfaceBorder,
-                        letterSpacing = 0.5.sp
-                    )
-                }
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(0.dp),
-                    color = GuardianTheme.ErrorDark
-                ) {
-                    Text(
-                        "Your modes and schedules will NOT be deleted",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GuardianTheme.Success,
-                        letterSpacing = 0.5.sp,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                modifier = Modifier.testTag(TestTags.Emergency.WARNING_CONTINUE),
-                onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = GuardianTheme.Error
-                )
-            ) {
-                Text("CONTINUE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-            }
-        },
-        dismissButton = {
-            TextButton(
-                modifier = Modifier.testTag(TestTags.Emergency.WARNING_CANCEL),
-                onClick = onDismiss,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = GuardianTheme.TextSecondary
-                )
-            ) {
-                Text("CANCEL", letterSpacing = 1.sp)
-            }
-        },
-    )
+/** Plain-language summary of exactly what recovery is about to do. */
+private fun recoveryOutcome(activeModes: Int, lostTags: Int): String {
+    val modes = when (activeModes) {
+        0 -> "No modes are active"
+        1 -> "Turns off 1 active mode"
+        else -> "Turns off $activeModes active modes"
+    }
+    val tags = when (lostTags) {
+        0 -> ""
+        1 -> ", forgets 1 tag"
+        else -> ", forgets $lostTags tags"
+    }
+    return "$modes$tags."
 }
 
+/** The confirm button says what it does, not "continue". */
+private fun recoveryConfirmLabel(activeModes: Int, lostTags: Int): String {
+    val modes = if (activeModes > 0) "TURN OFF MODES" else "DONE"
+    if (lostTags == 0) return modes
+    return "$modes & FORGET $lostTags TAG" + if (lostTags == 1) "" else "S"
+}
 
+private fun applyRecovery(
+    viewModel: GuardianViewModel,
+    activeModes: Set<String>,
+    lostTags: Set<String>
+) {
+    activeModes.forEach { viewModel.deactivateMode(it) }
+    lostTags.forEach { viewModel.deleteNfcTag(it) }
+}
+
+/**
+ * Lost-tag recovery, in one screen.
+ *
+ * This used to be three steps in the wrong order: a warning dialog whose button
+ * said "CONTINUE", *then* an attention challenge the user had never heard
+ * of, and only *then* the question of which tags were lost. People sat through
+ * the wait without knowing what they were waiting for, and the screen never
+ * said plainly that their modes were about to switch off.
+ *
+ * Now the outcome is stated first, the tag list is optional and right there,
+ * the button names its own effect, and the challenge — which exists to stop
+ * this being a one-tap bypass — runs last, against a decision already made.
+ * Onboarding introduces that challenge, so it is no longer a surprise.
+ */
 @Composable
-fun TagSelectionDialog(
+fun RecoverAccessDialog(
+    activeModeCount: Int,
     nfcTags: List<NfcTag>,
     selectedTags: Set<String>,
     onTagToggle: (String) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = GuardianTheme.ButtonSecondary,
-        tonalElevation = 0.dp,
-        shape = RoundedCornerShape(0.dp),
-        modifier = Modifier.border(
-            width = GuardianTheme.DialogBorderWidth,
-            color = GuardianTheme.DialogBorderWarning,
-            shape = RoundedCornerShape(0.dp)
-        ),
-        title = {
+    GuardianDialog(
+        title = "RECOVER ACCESS",
+        message = recoveryOutcome(activeModeCount, selectedTags.size),
+        detail = "Your modes, schedules and settings are kept. Only the tags you " +
+            "tick are forgotten." + if (activeModeCount > 0) {
+                " Because this switches blocking off, it runs behind the " +
+                    "attention challenge."
+            } else "",
+        kind = DialogKind.Warning,
+        confirmLabel = recoveryConfirmLabel(activeModeCount, selectedTags.size),
+        onConfirm = onConfirm,
+        confirmColor = GuardianTheme.ErrorTextEmphasized,
+        confirmModifier = Modifier.testTag(TestTags.Emergency.TAG_SELECTION_CONFIRM),
+        dismissLabel = "CANCEL",
+        onDismiss = onDismiss,
+        dismissModifier = Modifier.testTag(TestTags.Emergency.TAG_SELECTION_CANCEL)
+    ) {
+        if (nfcTags.isNotEmpty()) {
             Text(
-                "SELECT LOST TAGS",
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp,
-                color = GuardianTheme.TextPrimary
+                "LOST A TAG? TICK IT TO FORGET IT",
+                style = GuardianType.Meta,
+                color = GuardianTheme.TextTertiary
             )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(
-                    "Select which NFC tags you lost:",
-                    fontSize = 13.sp,
-                    color = GuardianTheme.OnLightSurfaceBorder,
-                    letterSpacing = 0.5.sp
-                )
-
-                if (nfcTags.isEmpty()) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(0.dp),
-                        color = GuardianTheme.BackgroundSurface
-                    ) {
-                        Text(
-                            "No NFC tags registered",
-                            fontSize = 12.sp,
-                            color = GuardianTheme.TextSecondary,
-                            letterSpacing = 0.5.sp,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        nfcTags.forEach { tag ->
-                            Surface(
-                                modifier = Modifier.testTag(TestTags.Emergency.lostTag(tag.id)),
-                                onClick = { onTagToggle(tag.id) },
-                                shape = RoundedCornerShape(0.dp),
-                                color = if (selectedTags.contains(tag.id)) Color.White else GuardianTheme.BackgroundSurface
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        tag.name.uppercase(),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (selectedTags.contains(tag.id)) Color.Black else Color.White,
-                                        letterSpacing = 1.sp,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    if (selectedTags.contains(tag.id)) {
-                                        Icon(
-                                            Icons.Default.Check,
-                                            contentDescription = null,
-                                            tint = Color.Black
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(0.dp),
-                    color = GuardianTheme.SuccessBackground
-                ) {
-                    Text(
-                        "This will deactivate ALL modes and delete selected tags only",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GuardianTheme.Success,
-                        letterSpacing = 0.5.sp,
-                        modifier = Modifier.padding(12.dp)
+            Spacer(Modifier.height(8.dp))
+            Column(
+                Modifier
+                    .heightIn(max = 220.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                nfcTags.forEach { tag ->
+                    SelectableOption(
+                        label = tag.name.uppercase(),
+                        selected = tag.id in selectedTags,
+                        onSelect = { onTagToggle(tag.id) },
+                        modifier = Modifier.testTag(TestTags.Emergency.lostTag(tag.id))
                     )
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                modifier = Modifier.testTag(TestTags.Emergency.TAG_SELECTION_CONFIRM),
-                onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = GuardianTheme.Error
-                )
-            ) {
-                Text("CONFIRM", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-            }
-        },
-        dismissButton = {
-            TextButton(
-                modifier = Modifier.testTag(TestTags.Emergency.TAG_SELECTION_CANCEL),
-                onClick = onDismiss,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = GuardianTheme.TextSecondary
-                )
-            ) {
-                Text("CANCEL", letterSpacing = 1.sp)
-            }
-        },
-    )
+        }
+    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsDialog(
     viewModel: GuardianViewModel,
@@ -1080,7 +919,7 @@ fun SettingsDialog(
                             )
                         }
                         Text(
-                            "Recommended -” prevents Android from hibernating NFCGUARD in background",
+                            "Stops Android pausing nfcGuard.",
                             fontSize = 9.sp,
                             color = GuardianTheme.WarningTextMuted,
                             letterSpacing = 0.3.sp
@@ -1111,21 +950,26 @@ fun SettingsDialog(
                         modifier = Modifier.padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(Modifier.weight(1f)) {
+                        // The list of protected actions used to be a second card
+                        // below this row; it is the same information, one tap away.
+                        InfoDisclosure(
+                            detail = "Protected: linking a schedule to an active mode, " +
+                                "editing or deleting an active schedule, and switching " +
+                                "this setting off.",
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Text(
                                 "ANTI-BYPASS PROTECTION",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = GuardianTheme.TextPrimary,
-                                letterSpacing = 1.sp
+                                style = GuardianType.Label,
+                                color = GuardianTheme.TextPrimary
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                if (safeRegimeEnabled) "Actions that could bypass blocking require a 1.5-minute attention challenge"
-                                else "Disabled — all actions are unrestricted",
-                                fontSize = 9.sp,
-                                color = GuardianTheme.TextTertiary,
-                                letterSpacing = 0.3.sp
+                                if (safeRegimeEnabled) "Risky actions need a timed challenge."
+                                else "Off. Nothing is protected.",
+                                style = GuardianType.Meta,
+                                fontWeight = FontWeight.Normal,
+                                color = GuardianTheme.TextTertiary
                             )
                         }
                         Spacer(Modifier.width(8.dp))
@@ -1155,29 +999,7 @@ fun SettingsDialog(
                     }
                 }
 
-                if (safeRegimeEnabled) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(0.dp),
-                        color = GuardianTheme.WarningBackground
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(Icons.Default.Shield, null, tint = GuardianTheme.Warning, modifier = Modifier.size(14.dp))
-                            Text(
-                                "Protected: schedule linking to active modes, editing/deleting active schedules, disabling safe regime",
-                                fontSize = 9.sp,
-                                color = GuardianTheme.WarningTextMuted,
-                                letterSpacing = 0.3.sp
-                            )
-                        }
-                    }
-                }
-
-                // Challenge duration — configurable, but never below 1:30
+                // Challenge duration — configurable, but never below the floor
                 Surface(
                     modifier = Modifier.fillMaxWidth().testTag(TestTags.Settings.CHALLENGE_DURATION_ROW),
                     shape = RoundedCornerShape(0.dp),
@@ -1198,7 +1020,7 @@ fun SettingsDialog(
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                "How long you must stay attentive (minimum 1:30)",
+                                "Minimum 1:00.",
                                 fontSize = 9.sp,
                                 color = GuardianTheme.TextTertiary,
                                 letterSpacing = 0.3.sp
@@ -1457,7 +1279,7 @@ fun SettingsDialog(
                                 letterSpacing = 1.sp
                             )
                             Text(
-                                "Standard data format -” compatible with most tools",
+                                "Works with most tools.",
                                 fontSize = 10.sp,
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.3.sp
@@ -1482,7 +1304,7 @@ fun SettingsDialog(
                                 letterSpacing = 1.sp
                             )
                             Text(
-                                "Human-readable format -” easy to edit by hand",
+                                "Easy to edit by hand.",
                                 fontSize = 10.sp,
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.3.sp
@@ -1692,7 +1514,7 @@ private fun ChallengeDurationDialog(
     var mins by remember { mutableStateOf((currentSeconds / 60).toString()) }
     var secs by remember { mutableStateOf((currentSeconds % 60).toString()) }
     val total = (mins.toIntOrNull() ?: 0) * 60 + (secs.toIntOrNull() ?: 0)
-    val belowMin = total < 90
+    val belowMin = total < GuardianViewModel.CHALLENGE_MIN_SECONDS
 
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = GuardianTheme.BorderFocused,
@@ -1726,7 +1548,7 @@ private fun ChallengeDurationDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "How long you must stay attentive before a bypass-risky action goes through. The minimum is 1:30 — you can make it longer, never shorter.",
+                    "How long you must stay attentive before a bypass-risky action goes through. The minimum is 1:00 — you can make it longer, never shorter.",
                     fontSize = 10.sp,
                     color = GuardianTheme.TextSecondary,
                     letterSpacing = 0.3.sp
@@ -1757,7 +1579,7 @@ private fun ChallengeDurationDialog(
                 }
                 if (belowMin) {
                     Text(
-                        "Minimum is 1:30",
+                        "Minimum is 1:00",
                         fontSize = 10.sp,
                         color = GuardianTheme.Error,
                         letterSpacing = 0.5.sp

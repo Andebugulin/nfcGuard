@@ -119,9 +119,22 @@ class GuardianViewModelTest {
         assertFalse(prefs().getBoolean("safe_regime_enabled", true))
     }
 
-    @Test fun `challenge duration cannot be lowered below the 90s floor`() {
+    @Test fun `challenge duration cannot be lowered below the floor`() {
         vm.setChallengeDurationSeconds(10)
-        assertEquals(90, vm.challengeDurationSeconds.value)
+        assertEquals(GuardianViewModel.CHALLENGE_MIN_SECONDS, vm.challengeDurationSeconds.value)
+    }
+
+    /**
+     * The floor and the starting value are separate on purpose: a fresh
+     * install begins at the longer default, and the floor is only how far it
+     * may be wound down.
+     */
+    @Test fun `a fresh install starts above the floor`() {
+        assertEquals(GuardianViewModel.CHALLENGE_DEFAULT_SECONDS, vm.challengeDurationSeconds.value)
+        assertTrue(
+            "the default must not sit on the floor",
+            GuardianViewModel.CHALLENGE_DEFAULT_SECONDS > GuardianViewModel.CHALLENGE_MIN_SECONDS
+        )
     }
 
     @Test fun `challenge duration can be raised`() {

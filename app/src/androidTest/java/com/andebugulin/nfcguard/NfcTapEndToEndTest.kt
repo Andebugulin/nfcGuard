@@ -81,7 +81,7 @@ class NfcTapEndToEndTest {
     @Test fun theRightTagOpensTheUnlockDialogAndReleasesTheMode() {
         harness.seedConfig(
             modes = listOf(mode(id = "m1", name = "Deep Work", tagIds = listOf(rightTag))),
-            tags = listOf(tag(id = rightTag, name = "Desk key", modeIds = listOf("m1")))
+            tags = listOf(tag(id = rightTag, name = "Desk key"))
         )
         harness.launch()
 
@@ -98,7 +98,7 @@ class NfcTapEndToEndTest {
     @Test fun cancellingTheUnlockDialogLeavesTheModeActive() {
         harness.seedConfig(
             modes = listOf(mode(id = "m1", name = "Deep Work", tagIds = listOf(rightTag))),
-            tags = listOf(tag(id = rightTag, name = "Desk key", modeIds = listOf("m1")))
+            tags = listOf(tag(id = rightTag, name = "Desk key"))
         )
         harness.launch()
         HomeRobot(compose).openModes().activate("m1").back()
@@ -112,7 +112,7 @@ class NfcTapEndToEndTest {
     @Test fun theWrongTagWarnsAndDoesNotOfferAnUnlock() {
         harness.seedConfig(
             modes = listOf(mode(id = "m1", name = "Deep Work", tagIds = listOf(rightTag))),
-            tags = listOf(tag(id = rightTag, name = "Desk key", modeIds = listOf("m1")))
+            tags = listOf(tag(id = rightTag, name = "Desk key"))
         )
         harness.launch()
         HomeRobot(compose).openModes().activate("m1").back()
@@ -133,7 +133,7 @@ class NfcTapEndToEndTest {
     @Test fun aTapWakesTheAppFromColdAndStillOffersTheUnlock() {
         harness.seedConfig(
             modes = listOf(mode(id = "m1", name = "Deep Work", tagIds = listOf(rightTag))),
-            tags = listOf(tag(id = rightTag, name = "Desk key", modeIds = listOf("m1")))
+            tags = listOf(tag(id = rightTag, name = "Desk key"))
         )
         harness.launch()
         HomeRobot(compose).openModes().activate("m1")
@@ -148,7 +148,7 @@ class NfcTapEndToEndTest {
     @Test fun aTapWithNothingActiveIsIgnored() {
         harness.seedConfig(
             modes = listOf(mode(id = "m1", name = "Deep Work", tagIds = listOf(rightTag))),
-            tags = listOf(tag(id = rightTag, name = "Desk key", modeIds = listOf("m1")))
+            tags = listOf(tag(id = rightTag, name = "Desk key"))
         )
         harness.launch()
 

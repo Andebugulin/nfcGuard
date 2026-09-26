@@ -40,7 +40,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
 
     /** Anti-bypass challenge wait time, in seconds. Floor is 90s (raise-only) so
      *  it can be made harder but never weakened. Stored separately from AppState. */
-    private val _challengeDurationSeconds = MutableStateFlow(CHALLENGE_MIN_SECONDS)
+    private val _challengeDurationSeconds = MutableStateFlow(CHALLENGE_DEFAULT_SECONDS)
     val challengeDurationSeconds: StateFlow<Int> = _challengeDurationSeconds
 
     /** Pending NFC unlock awaiting user duration choice */
@@ -53,7 +53,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
         val prefs = context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE)
         _safeRegimeEnabled.value = prefs.getBoolean("safe_regime_enabled", true)
         _challengeDurationSeconds.value =
-            prefs.getInt("safe_regime_challenge_seconds", CHALLENGE_MIN_SECONDS)
+            prefs.getInt("safe_regime_challenge_seconds", CHALLENGE_DEFAULT_SECONDS)
                 .coerceAtLeast(CHALLENGE_MIN_SECONDS)
 
         ensureServiceRunning()
@@ -83,7 +83,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     }
 
     /** Set the anti-bypass challenge wait time. Coerced to the [CHALLENGE_MIN_SECONDS]
-     *  floor so users can lengthen the challenge but never shorten it below 1:30. */
+     *  floor so the challenge can be lengthened but never shortened past it. */
     fun setChallengeDurationSeconds(seconds: Int) {
         val coerced = seconds.coerceAtLeast(CHALLENGE_MIN_SECONDS)
         _challengeDurationSeconds.value = coerced
@@ -139,9 +139,6 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                     activeModes = state.activeModes - id,
                     schedules = state.schedules.map { schedule ->
                         schedule.copy(linkedModeIds = schedule.linkedModeIds.filter { it != id })
-                    },
-                    nfcTags = state.nfcTags.map { tag ->
-                        tag.copy(linkedModeIds = tag.linkedModeIds.filter { it != id })
                     },
                     manuallyActivatedModes = state.manuallyActivatedModes - id,
                     timedModeDeactivations = state.timedModeDeactivations - id,
@@ -234,11 +231,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
             return false
         }
         viewModelScope.launch {
-            val newTag = NfcTag(
-                id = tagId,
-                name = name,
-                linkedModeIds = emptyList()
-            )
+            val newTag = NfcTag(id = tagId, name = name)
             mutate { it.copy(nfcTags = it.nfcTags + newTag) }
         }
         return true
@@ -250,6 +243,68 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                 state.copy(
                     nfcTags = state.nfcTags.map { tag ->
                         if (tag.id == tagId) tag.copy(name = name) else tag
+                    }
+                )
+            }
+        }
+    }
+
+    /**
+     * Link [tagId] so that tapping it unlocks [modeIds], and only [modeIds].
+     *
+     * `Mode.nfcTagIds` is the single source of truth for this relationship —
+     * the mode editor writes it from one side and the tag screen from the
+     * other, so this walks every mode and adds or removes the tag to match.
+     *
+     * A newly linked tag gets no `tagUnlockLimits` entry, i.e. permanent
+     * unlock. That is deliberate: it is the permissive default, and it keeps
+     * `ModeEditorScreen`'s "no permanent unlock way" guard satisfiable rather
+     * than tripping it behind the user's back.
+     */
+    fun setModesForTag(tagId: String, modeIds: Set<String>) {
+        viewModelScope.launch {
+            mutate { state ->
+                state.copy(
+                    modes = state.modes.map { mode ->
+                        val shouldLink = mode.id in modeIds
+                        val isLinked = mode.nfcTagIds.contains(tagId)
+                        when {
+                            shouldLink && !isLinked ->
+                                mode.copy(nfcTagIds = mode.nfcTagIds + tagId)
+                            !shouldLink && isLinked ->
+                                mode.copy(
+                                    nfcTagIds = mode.nfcTagIds.filter { it != tagId },
+                                    tagUnlockLimits = mode.tagUnlockLimits - tagId
+                                )
+                            else -> mode
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+    /**
+     * Add [tagIds] to every mode the schedule switches on.
+     *
+     * A schedule has no tag relationship of its own — it activates modes, and
+     * modes are what tags unlock. This is the shortcut that spares the user
+     * opening each linked mode in turn; it only ever adds, so a tag already
+     * linked to one of the modes is left alone along with its unlock limit.
+     */
+    fun linkTagsToScheduleModes(scheduleId: String, tagIds: Set<String>) {
+        if (tagIds.isEmpty()) return
+        viewModelScope.launch {
+            mutate { state ->
+                val modeIds = state.schedules
+                    .find { it.id == scheduleId }?.linkedModeIds.orEmpty().toSet()
+                state.copy(
+                    modes = state.modes.map { mode ->
+                        if (mode.id in modeIds) {
+                            mode.copy(nfcTagIds = (mode.nfcTagIds + tagIds).distinct())
+                        } else {
+                            mode
+                        }
                     }
                 )
             }
@@ -466,8 +521,18 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     }
 
     companion object {
-        /** Minimum (and default) anti-bypass challenge wait time, in seconds. */
-        const val CHALLENGE_MIN_SECONDS = 90
+        /**
+         * Floor for the anti-bypass challenge, in seconds.
+         *
+         * Separate from [CHALLENGE_DEFAULT_SECONDS]: the default is what a new
+         * install gets, the floor is how far a user may wind it down. They were
+         * one constant, which meant lowering the floor would also have lowered
+         * what everybody starts on.
+         */
+        const val CHALLENGE_MIN_SECONDS = 60
+
+        /** What a fresh install starts with. */
+        const val CHALLENGE_DEFAULT_SECONDS = 90
     }
 
 }

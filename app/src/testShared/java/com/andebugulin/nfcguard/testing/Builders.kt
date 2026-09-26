@@ -50,7 +50,6 @@ fun schedule(
     hasEndTime = hasEndTime
 )
 
-fun tag(id: String = "t1", name: String = "Desk tag", modeIds: List<String> = emptyList()) =
-    NfcTag(id = id, name = name, linkedModeIds = modeIds)
+fun tag(id: String = "t1", name: String = "Desk tag") = NfcTag(id = id, name = name)
 
 fun emptyState() = AppState()

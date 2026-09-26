@@ -49,6 +49,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import android.net.Uri
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
+import androidx.compose.runtime.saveable.rememberSaveable
 
 enum class Screen {
     HOME, MODES, SCHEDULES, NFC_TAGS, INFO
@@ -182,11 +183,12 @@ fun MainNavigation(
     nfcRegistrationMode: MutableState<Boolean>
 ) {
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("guardian_prefs", Context.MODE_PRIVATE) }
-    var hasSeenOnboarding by remember {
-        mutableStateOf(prefs.getBoolean("has_seen_onboarding", false))
+    var setupPending by rememberSaveable {
+        mutableStateOf(com.andebugulin.nfcguard.ui.onboarding.needsOnboarding(context))
     }
-    var currentScreen by remember { mutableStateOf(Screen.HOME) }
+    // Survives rotation: a plain `remember` sent the user back to Home (and,
+    // before that, back into onboarding) on every configuration change.
+    var currentScreen by rememberSaveable { mutableStateOf(Screen.HOME) }
     val appState by viewModel.appState.collectAsState()
     val pendingUnlock by viewModel.pendingUnlock.collectAsState()
 
@@ -216,32 +218,19 @@ fun MainNavigation(
         )
     }
 
-    // Show the permission-setup flow after onboarding completes (or on
-    // subsequent launches if it was never finished). The `remember` key is
-    // `hasSeenOnboarding` so completing OnboardingScreen re-evaluates and
-    // triggers the dialog flow without manual postDelayed plumbing.
-    var showPermissionOnboarding by remember(hasSeenOnboarding) {
-        mutableStateOf(com.andebugulin.nfcguard.ui.onboarding.shouldShowOnboarding(context))
-    }
-    if (showPermissionOnboarding) {
-        com.andebugulin.nfcguard.ui.onboarding.PermissionOnboarding(
-            onDone = { showPermissionOnboarding = false }
-        )
-    }
-
     // Back from a sub-screen returns to Home instead of exiting to the
     // launcher. On Home, Back is left unhandled so the system exits normally.
-    BackHandler(enabled = hasSeenOnboarding && currentScreen != Screen.HOME) {
+    BackHandler(enabled = !setupPending && currentScreen != Screen.HOME) {
         currentScreen = Screen.HOME
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        if (!hasSeenOnboarding) {
-            OnboardingScreen(
-                onComplete = {
-                    prefs.edit().putBoolean("has_seen_onboarding", true).apply()
-                    hasSeenOnboarding = true
-                }
+        if (setupPending) {
+            val challengeSeconds by viewModel.challengeDurationSeconds.collectAsState()
+            com.andebugulin.nfcguard.ui.onboarding.OnboardingFlow(
+                onComplete = { setupPending = false },
+                startAtPermissions = remember { onlyPermissionsLeft(context) },
+                challengeSeconds = challengeSeconds
             )
         } else {
             when (currentScreen) {
@@ -251,7 +240,9 @@ fun MainNavigation(
                 )
                 Screen.MODES -> ModesScreen(
                     viewModel = viewModel,
-                    onBack = { currentScreen = Screen.HOME }
+                    onBack = { currentScreen = Screen.HOME },
+                    scannedNfcTagId = scannedNfcTagId,
+                    nfcRegistrationMode = nfcRegistrationMode
                 )
                 Screen.SCHEDULES -> SchedulesScreen(
                     viewModel = viewModel,
@@ -276,241 +267,14 @@ fun MainNavigation(
     }
 }
 
-@Composable
-fun OnboardingScreen(onComplete: () -> Unit) {
-    var currentPage by remember { mutableStateOf(0) }
-    val pages = listOf(
-        OnboardingPage(
-            title = "NFCGUARD",
-            subtitle = "DIGITAL WELLBEING",
-            description = "Break free from mindless scrolling. NFCGUARD blocks distracting apps until you physically unlock them with NFC tags.",
-            icon = "none"
-        ),
-        OnboardingPage(
-            title = "MODES",
-            subtitle = "FLEXIBLE CONTROL",
-            description = "Create blocking modes for any situation:\n\n" +
-                    "•  BLOCK — block the specific apps that distract you\n" +
-                    "•  ALLOW ONLY — block everything except the apps you choose",
-            icon = "modes"
-        ),
-        OnboardingPage(
-            title = "NFC LOCKS",
-            subtitle = "PHYSICAL FRICTION",
-            description = "Add NFC tags as physical keys to unlock your modes.\n\n" +
-                    "Keep a tag somewhere inconvenient — a drawer, the kitchen, another room — so opening a blocked app takes real, deliberate effort.\n\n" +
-                    "This is an optional extra layer; modes work fine without it.",
-            icon = "nfc"
-        ),
-        OnboardingPage(
-            title = "SCHEDULES",
-            subtitle = "AUTOMATION",
-            description = "Let modes turn on by themselves, on the days and times you set:\n\n" +
-                    "•  Work hours on weekdays\n" +
-                    "•  Sleep schedule overnight\n" +
-                    "•  Deep-work blocks on weekends",
-            icon = "schedule"
-        ),
-        OnboardingPage(
-            title = "READY",
-            subtitle = "LET'S GET STARTED",
-            description = "NFCGUARD needs a few permissions to do its job. We'll walk through each one and explain why:\n\n" +
-                    "•  Notifications (optional) — show which modes are active\n" +
-                    "•  Usage access — see which app is open\n" +
-                    "•  Display over apps — show the block screen\n" +
-                    "•  Battery optimization — keep running reliably\n" +
-                    "•  Pause app activity — must be turned off for NFCGUARD\n" +
-                    "•  Accessibility — more reliable, instant blocking\n\n" +
-                    "Let's set them up.",
-            icon = "ready"
-        )
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(GuardianTheme.BackgroundPrimary)
-            .windowInsetsPadding(WindowInsets.systemBars)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Page content
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                OnboardingPageContent(pages[currentPage])
-            }
-
-            // Progress indicators
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                pages.indices.forEach { index ->
-                    if (index == currentPage) {
-                        // Active page - filled white circle
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .padding(2.dp)
-                                .background(
-                                    GuardianTheme.TextPrimary,
-                                    shape = androidx.compose.foundation.shape.CircleShape
-                                )
-                        )
-                    } else {
-                        // Inactive page - hollow circle with white border
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .padding(2.dp)
-                                .border(
-                                    width = 1.dp,
-                                    color = GuardianTheme.TextPrimary,
-                                    shape = androidx.compose.foundation.shape.CircleShape
-                                )
-                        )
-                    }
-                }
-            }
-
-            // Navigation buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                if (currentPage > 0) {
-                    TextButton(
-                        onClick = { currentPage-- },
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = GuardianTheme.TextSecondary
-                        )
-                    ) {
-                        Text("BACK", letterSpacing = 1.sp)
-                    }
-                } else {
-                    Spacer(modifier = Modifier.width(80.dp))
-                }
-
-                Button(
-                    onClick = {
-                        if (currentPage < pages.size - 1) {
-                            currentPage++
-                        } else {
-                            onComplete()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = GuardianTheme.ButtonPrimary,
-                        contentColor = GuardianTheme.ButtonPrimaryText
-                    ),
-                    shape = RoundedCornerShape(0.dp),
-                    modifier = Modifier.height(48.dp).widthIn(min = 120.dp)
-                ) {
-                    Text(
-                        if (currentPage < pages.size - 1) "NEXT" else "GET STARTED",
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun OnboardingPageContent(page: OnboardingPage) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        // Icon
-        when (page.icon) {
-            "modes" -> Icon(
-                Icons.Default.DarkMode,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = GuardianTheme.IconPrimary
-            )
-            "nfc" -> Icon(
-                Icons.Default.Nfc,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = GuardianTheme.IconPrimary
-            )
-            "schedule" -> Icon(
-                Icons.Default.Schedule,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = GuardianTheme.IconPrimary
-            )
-            "ready" -> Icon(
-                Icons.Default.CheckCircle,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = GuardianTheme.IconPrimary
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Title
-        Text(
-            page.title,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Black,
-            color = GuardianTheme.TextPrimary,
-            letterSpacing = 3.sp,
-            textAlign = TextAlign.Center
-        )
-
-        // Subtitle
-        Text(
-            page.subtitle,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = GuardianTheme.TextSecondary,
-            letterSpacing = 2.sp,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Description — left-aligned so multi-line bullet lists line up
-        // cleanly instead of rendering ragged under centered alignment.
-        Text(
-            page.description,
-            fontSize = 14.sp,
-            color = GuardianTheme.TextPrimary,
-            letterSpacing = 0.5.sp,
-            lineHeight = 22.sp,
-            textAlign = TextAlign.Start,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp)
-        )
-    }
-}
-
-data class OnboardingPage(
-    val title: String,
-    val subtitle: String,
-    val description: String,
-    val icon: String
-)
+/**
+ * True when the tour is already done but permission setup never finished —
+ * an install upgrading from a build that had the two as separate flows.
+ */
+private fun onlyPermissionsLeft(context: Context): Boolean =
+    context.getSharedPreferences(
+        com.andebugulin.nfcguard.ui.onboarding.PREFS_NAME, Context.MODE_PRIVATE
+    ).getBoolean(com.andebugulin.nfcguard.ui.onboarding.KEY_SEEN_ONBOARDING, false)
 
 @Composable
 fun WrongTagFeedback() {

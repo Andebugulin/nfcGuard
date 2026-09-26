@@ -149,7 +149,7 @@ class DialogFlowsEndToEndTest {
                     limits = mapOf(tagId to limitMinutes)
                 )
             ),
-            tags = listOf(tag(id = tagId, name = "Desk key", modeIds = listOf("m1")))
+            tags = listOf(tag(id = tagId, name = "Desk key"))
         )
         harness.launch()
         HomeRobot(compose).openModes().activate("m1").back()
@@ -198,7 +198,7 @@ class DialogFlowsEndToEndTest {
         assumeMockTags()
         harness.seedConfig(
             modes = listOf(mode(id = "m1", name = "Deep Work", tagIds = listOf(tagId))),
-            tags = listOf(tag(id = tagId, name = "Desk key", modeIds = listOf("m1")))
+            tags = listOf(tag(id = tagId, name = "Desk key"))
         )
         harness.launch()
         HomeRobot(compose).openModes().activate("m1").back()
@@ -226,7 +226,7 @@ class DialogFlowsEndToEndTest {
                     tagIds = listOf(tagId), limits = mapOf(tagId to 30L)
                 )
             ),
-            tags = listOf(tag(id = tagId, name = "Desk key", modeIds = listOf("m1", "m2")))
+            tags = listOf(tag(id = tagId, name = "Desk key"))
         )
         harness.launch()
         val modes = HomeRobot(compose).openModes()
@@ -270,7 +270,7 @@ class DialogFlowsEndToEndTest {
     // ---------------- the challenge duration dialog ----------------
 
     /**
-     * The 1:30 floor is the app's own protection against a user weakening the
+     * The floor is the app's own protection against a user weakening the
      * anti-bypass gate in a weak moment, so the UI must refuse to go under it —
      * not merely coerce afterwards.
      */
@@ -283,6 +283,22 @@ class DialogFlowsEndToEndTest {
             .setSeconds("30")
             .assertBelowMinimumWarned()
             .assertCannotApply()
+    }
+
+    /**
+     * ...but the floor itself is reachable. It sits below the default on
+     * purpose: `CHALLENGE_DEFAULT_SECONDS` is what a new install starts on,
+     * `CHALLENGE_MIN_SECONDS` is how far it may be wound down.
+     */
+    @Test fun theChallengeDurationCanBeSetToExactlyTheFloor() {
+        harness.launch()
+
+        HomeRobot(compose).openSettings()
+            .openChallengeDuration()
+            .setMinutes("1")
+            .setSeconds("0")
+            .assertCanApply()
+            .applyDuration()
     }
 
     @Test fun theChallengeDurationCanBeRaised() {

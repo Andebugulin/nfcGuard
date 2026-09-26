@@ -8,4 +8,5 @@
     <style name="Theme.NFCGuard" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowLightStatusBar">false</item>
     </style>
+
 </resources>
