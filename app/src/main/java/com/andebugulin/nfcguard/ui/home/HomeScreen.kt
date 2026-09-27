@@ -6,6 +6,7 @@ import com.andebugulin.nfcguard.NfcTag
 import com.andebugulin.nfcguard.Schedule
 import com.andebugulin.nfcguard.service.ForegroundDetectorService
 import com.andebugulin.nfcguard.ui.GuardianTheme
+import com.andebugulin.nfcguard.ui.onboarding.PermissionsPage
 import com.andebugulin.nfcguard.ui.GuardianViewModel
 import com.andebugulin.nfcguard.ui.safety.SafeRegimeChallengeDialog
 import com.andebugulin.nfcguard.ui.Screen
@@ -678,8 +679,9 @@ fun SettingsDialog(
     var showTestChallenge by remember { mutableStateOf(false) }
     var showDurationPicker by remember { mutableStateOf(false) }
 
-    // Auto-refresh permissions when activity resumes + periodic poll
-    // (Battery optimization dialog stays in-app, so ON_RESUME doesn't fire for it)
+    // Re-read on resume and on a slow poll: the permissions list below does
+    // its own probing, but the blocking-method readout still has to notice the
+    // accessibility switch being flipped while this dialog is open.
     var permRefreshKey by remember { mutableStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -696,25 +698,6 @@ fun SettingsDialog(
             kotlinx.coroutines.delay(2000)
             permRefreshKey++
         }
-    }
-
-    // Permission state - rechecked on every activity resume
-    val usageStatsGranted = remember(permRefreshKey) {
-        Permissions.hasUsageStats(context)
-    }
-    val overlayGranted = remember(permRefreshKey) { Settings.canDrawOverlays(context) }
-    val batteryGranted = remember(permRefreshKey) {
-        try {
-            val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-            pm.isIgnoringBatteryOptimizations(context.packageName)
-        } catch (_: Exception) { false }
-    }
-    val notificationGranted = remember(permRefreshKey) {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            androidx.core.content.ContextCompat.checkSelfPermission(
-                context, android.Manifest.permission.POST_NOTIFICATIONS
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        } else true
     }
 
     // Export launchers
@@ -818,114 +801,14 @@ fun SettingsDialog(
                     letterSpacing = 2.sp
                 )
 
-                PermissionRow(
-                    name = "USAGE ACCESS",
-                    granted = usageStatsGranted,
-                    onClick = {
-                        context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-                    }
-                )
-                PermissionRow(
-                    name = "DISPLAY OVER APPS",
-                    granted = overlayGranted,
-                    onClick = {
-                        context.startActivity(
-                            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                Uri.parse("package:${context.packageName}"))
-                        )
-                    }
-                )
-                PermissionRow(
-                    name = "BATTERY OPTIMIZATION",
-                    granted = batteryGranted,
-                    onClick = {
-                        try {
-                            context.startActivity(
-                                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                    data = Uri.parse("package:${context.packageName}")
-                                }
-                            )
-                        } catch (_: Exception) {
-                            context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                        }
-                    }
-                )
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    PermissionRow(
-                        name = "NOTIFICATIONS (OPTIONAL)",
-                        granted = notificationGranted,
-                        onClick = {
-                            try {
-                                context.startActivity(
-                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                                    }
-                                )
-                            } catch (_: Exception) {
-                                context.startActivity(
-                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                        data = Uri.parse("package:${context.packageName}")
-                                    }
-                                )
-                            }
-                        }
-                    )
-                }
-// Accessibility Service — required on Google/Samsung, recommended elsewhere
-                val accessibilityGranted = remember(permRefreshKey) {
-                    ForegroundDetectorService.isEnabled(context)
-                }
-                val accessibilityIsRequired = Build.MANUFACTURER.equals("Google", ignoreCase = true) ||
-                        Build.MANUFACTURER.equals("Samsung", ignoreCase = true)
-                PermissionRow(
-                    name = if (accessibilityIsRequired) "ACCESSIBILITY SERVICE"
-                    else "ACCESSIBILITY (RECOMMENDED)",
-                    granted = accessibilityGranted,
-                    optional = !accessibilityIsRequired,
-                    onClick = {
-                        try {
-                            context.startActivity(
-                                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                            )
-                        } catch (_: Exception) {}
-                    }
-                )
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(0.dp),
-                    color = GuardianTheme.WarningBackground,
-                    onClick = {
-                        try {
-                            context.startActivity(
-                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.parse("package:${context.packageName}")
-                                }
-                            )
-                        } catch (_: Exception) {}
-                    }
-                ) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(Icons.Default.OpenInNew, null, tint = GuardianTheme.Warning, modifier = Modifier.size(14.dp))
-                            Text(
-                                "DISABLE 'PAUSE APP IF UNUSED'",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = GuardianTheme.Warning,
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-                        Text(
-                            "Stops Android pausing nfcGuard.",
-                            fontSize = 9.sp,
-                            color = GuardianTheme.WarningTextMuted,
-                            letterSpacing = 0.3.sp
-                        )
-                    }
-                }
+
+                // One list, one owner. This used to be a second implementation
+                // of the onboarding permissions page — its own permission
+                // checks, its own row widget, its own 2-second poll — and the
+                // two had already drifted: Settings never mentioned autostart
+                // and called `canDrawOverlays` directly instead of going
+                // through `Permissions`.
+                PermissionsPage(scrollable = false)
 
                 Spacer(Modifier.height(8.dp))
 
@@ -1082,7 +965,7 @@ fun SettingsDialog(
                 )
 
                 val accessibilityOn = remember(permRefreshKey) {
-                    ForegroundDetectorService.isEnabled(context)
+                    Permissions.hasAccessibility(context)
                 }
 
                 Surface(
@@ -1442,65 +1325,6 @@ fun SettingsDialog(
                 }
             },
         )
-    }
-}
-
-@Composable
-private fun PermissionRow(
-    name: String,
-    granted: Boolean,
-    onClick: () -> Unit,
-    optional: Boolean = false
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(0.dp),
-        color = GuardianTheme.BackgroundSurface,
-        onClick = onClick
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                when {
-                    granted -> Icons.Default.CheckCircle
-                    optional -> Icons.Default.Info
-                    else -> Icons.Default.Error
-                },
-                contentDescription = null,
-                tint = when {
-                    granted -> GuardianTheme.Success
-                    optional -> GuardianTheme.TextSecondary
-                    else -> GuardianTheme.Error
-                },
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(Modifier.width(10.dp))
-            Text(
-                name,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = GuardianTheme.TextPrimary,
-                letterSpacing = 1.sp,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                when {
-                    granted -> "GRANTED"
-                    optional -> "TAP TO ENABLE"
-                    else -> "TAP TO GRANT"
-                },
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-                color = when {
-                    granted -> GuardianTheme.TextSecondary
-                    optional -> GuardianTheme.TextSecondary
-                    else -> GuardianTheme.Error
-                },
-                letterSpacing = 0.5.sp
-            )
-        }
     }
 }
 

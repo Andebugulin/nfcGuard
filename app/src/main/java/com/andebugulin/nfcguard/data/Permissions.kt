@@ -2,6 +2,7 @@ package com.andebugulin.nfcguard.data
 
 import android.Manifest
 import android.app.AppOpsManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -108,6 +109,54 @@ object Permissions {
         Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
 
     fun accessibilityIntent(): Intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+
+    /**
+     * OEM "autostart" / "auto-launch" allow-lists, in the order we try them.
+     *
+     * Xiaomi, Oppo, vivo, Huawei and OnePlus each ship a list that decides
+     * whether an app may be started by the system at all. nfcGuard's whole
+     * restart story — [com.andebugulin.nfcguard.receiver.BootReceiver] on
+     * BOOT_COMPLETED, the watchdog alarm, `ServiceRestartReceiver` — is inert
+     * on those phones until the user adds nfcGuard here, so blocking silently
+     * stops after the first reboot.
+     *
+     * There is no API for this: no permission to query, nothing AOSP defines.
+     * All we can do is open the screen if the device has one, which is why the
+     * row that uses this never reports a granted state.
+     */
+    private val AUTOSTART_SCREENS = listOf(
+        // Xiaomi / Redmi / POCO — MIUI and HyperOS.
+        "com.miui.securitycenter" to "com.miui.permcenter.autostart.AutoStartManagementActivity",
+        // Oppo / realme — ColorOS, new and old package names.
+        "com.coloros.safecenter" to "com.coloros.safecenter.permission.startup.StartupAppListActivity",
+        "com.coloros.safecenter" to "com.coloros.safecenter.startupapp.StartupAppListActivity",
+        "com.oppo.safe" to "com.oppo.safe.permission.startup.StartupAppListActivity",
+        // vivo — Funtouch OS / OriginOS.
+        "com.vivo.permissionmanager" to "com.vivo.permissionmanager.activity.BgStartUpManagerActivity",
+        "com.iqoo.secure" to "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity",
+        // Huawei / Honor — EMUI, MagicOS.
+        "com.huawei.systemmanager" to "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity",
+        "com.huawei.systemmanager" to "com.huawei.systemmanager.optimize.process.ProtectActivity",
+        // OnePlus — OxygenOS.
+        "com.oneplus.security" to "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity",
+        // Letv / Asus, still in the wild on older hardware.
+        "com.letv.android.letvsafe" to "com.letv.android.letvsafe.AutobootManageActivity",
+        "com.asus.mobilemanager" to "com.asus.mobilemanager.autostart.AutoStartActivity"
+    )
+
+    /**
+     * An intent onto this device's autostart list, or null when it has none —
+     * a Pixel, a Nothing phone, most of AOSP. Callers must hide the autostart
+     * affordance entirely on null rather than offer a button that cannot work.
+     */
+    fun autostartIntent(context: Context): Intent? =
+        AUTOSTART_SCREENS.firstNotNullOfOrNull { (pkg, cls) ->
+            val intent = Intent().setComponent(ComponentName(pkg, cls))
+            val resolved = runCatching {
+                context.packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            }.getOrNull()
+            intent.takeIf { resolved != null }
+        }
 
     fun appDetailsIntent(context: Context): Intent =
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)

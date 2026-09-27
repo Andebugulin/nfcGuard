@@ -152,6 +152,22 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+
+        <!--
+            OEM autostart managers. From API 30 a component in another package
+            is invisible unless it is declared here, so without these
+            `Permissions.autostartIntent` resolves to null on the very phones
+            that need it. Named packages only — never QUERY_ALL_PACKAGES.
+        -->
+        <package android:name="com.miui.securitycenter" />
+        <package android:name="com.coloros.safecenter" />
+        <package android:name="com.oppo.safe" />
+        <package android:name="com.vivo.permissionmanager" />
+        <package android:name="com.iqoo.secure" />
+        <package android:name="com.huawei.systemmanager" />
+        <package android:name="com.oneplus.security" />
+        <package android:name="com.letv.android.letvsafe" />
+        <package android:name="com.asus.mobilemanager" />
     </queries>
 
 </manifest>

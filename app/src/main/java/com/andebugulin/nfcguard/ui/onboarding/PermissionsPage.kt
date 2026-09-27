@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Accessibility
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Fullscreen
@@ -69,9 +70,18 @@ import androidx.compose.foundation.layout.Box
  *
  * Nothing blocks: CONTINUE is always live, because a user who wants to look
  * around before granting anything should be allowed to.
+ *
+ * Settings shows this same composable rather than a second list of its own.
+ * It used to keep a parallel copy — its own `canDrawOverlays` call, its own
+ * `isIgnoringBatteryOptimizations` call, its own row widget — which is exactly
+ * the drift [Permissions] exists to prevent. [scrollable] is the one thing the
+ * two call sites genuinely disagree about: the onboarding page is the only
+ * thing on screen and scrolls itself, while in the Settings dialog the
+ * surrounding column already scrolls and a second scroller nested inside it
+ * would be measured with infinite height.
  */
 @Composable
-fun PermissionsPage(modifier: Modifier = Modifier) {
+fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -92,6 +102,8 @@ fun PermissionsPage(modifier: Modifier = Modifier) {
     val accessibility = remember(probe) { Permissions.hasAccessibility(context) }
     val notifications = remember(probe) { Permissions.hasNotifications(context) }
     val accessibilityRequired = remember { Permissions.accessibilityIsRequired() }
+    // Null on stock Android, so the row below simply does not exist there.
+    val autostart = remember { Permissions.autostartIntent(context) }
 
     val notificationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -102,7 +114,7 @@ fun PermissionsPage(modifier: Modifier = Modifier) {
     Column(
         modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState()),
+            .then(if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         PermissionRow(
@@ -183,6 +195,28 @@ fun PermissionsPage(modifier: Modifier = Modifier) {
                 notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         )
+
+        // Neither of these is a permission Android will tell us about, so
+        // neither can ever show GRANTED. Grouping them under a heading that
+        // says so is the honest alternative to a row that looks permanently
+        // un-granted — the whole point of this page.
+        SectionDivider("SYSTEM SETTINGS")
+
+        if (autostart != null) {
+            PermissionRow(
+                icon = Icons.Default.RestartAlt,
+                name = "AUTOSTART",
+                why = "Start again after a reboot.",
+                detail = "Your phone keeps a list of apps allowed to start on " +
+                    "their own. nfcGuard is off it by default, so blocking " +
+                    "stops after a restart until you switch it on.\n\nAndroid " +
+                    "gives no way to read this list, so this row cannot show " +
+                    "whether it worked.",
+                granted = false,
+                grantLabel = "OPEN",
+                onGrant = { context.launch(autostart) }
+            )
+        }
         PermissionRow(
             icon = Icons.Default.OpenInNew,
             name = "PAUSE IF UNUSED",

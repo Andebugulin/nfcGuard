@@ -159,10 +159,14 @@ class SettingsDialogTest {
         assertVisible("GRANTED")
     }
 
+    /**
+     * Settings renders the onboarding `PermissionsPage`, so the invitation is
+     * that page's GRANT button rather than the old "TAP TO ENABLE" caption.
+     */
     @Test fun `an ungranted permission invites the user to enable it`() {
         show()
-        scrollTo("TAP TO ENABLE")
-        compose.onAllNodesWithText("TAP TO ENABLE", substring = true).onFirst().assertIsDisplayed()
+        scrollTo("GRANT")
+        compose.onAllNodesWithText("GRANT").onFirst().assertIsDisplayed()
     }
 
     // ---------------- anti-bypass toggle ----------------
