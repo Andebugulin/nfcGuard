@@ -71,36 +71,6 @@
         color: var(--black);
       }
 
-      /* ═══ SCANLINE OVERLAY ═══ */
-      body::after {
-        content: "";
-        position: fixed;
-        inset: 0;
-        background: repeating-linear-gradient(
-          0deg,
-          transparent,
-          transparent 2px,
-          rgba(255, 255, 255, 0.008) 2px,
-          rgba(255, 255, 255, 0.008) 4px
-        );
-        pointer-events: none;
-        z-index: 9999;
-      }
-
-      /* ═══ GRID BACKGROUND ═══ */
-      .grid-bg {
-        position: fixed;
-        inset: 0;
-        background-image: linear-gradient(
-            rgba(255, 255, 255, 0.02) 1px,
-            transparent 1px
-          ),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-        background-size: 60px 60px;
-        pointer-events: none;
-        z-index: 0;
-      }
-
       /* ═══ NAVIGATION ═══ */
       nav {
         position: fixed;
@@ -331,42 +301,6 @@
         transform: translateY(-2px);
       }
 
-      .hero-scroll {
-        position: absolute;
-        bottom: 40px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        color: var(--gray-dark);
-        font-size: 9px;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        opacity: 0;
-        animation: fadeUp 0.8s 1.4s forwards;
-      }
-
-      .scroll-line {
-        width: 1px;
-        height: 40px;
-        background: linear-gradient(to bottom, var(--gray-dark), transparent);
-        animation: scrollPulse 2s infinite;
-      }
-
-      @keyframes scrollPulse {
-        0%,
-        100% {
-          opacity: 1;
-          height: 40px;
-        }
-        50% {
-          opacity: 0.3;
-          height: 30px;
-        }
-      }
-
       @keyframes fadeUp {
         to {
           opacity: 1;
@@ -407,14 +341,6 @@
         margin-bottom: 24px;
       }
 
-      .section-desc {
-        font-size: 14px;
-        line-height: 1.8;
-        color: var(--gray);
-        max-width: 540px;
-        letter-spacing: 0.3px;
-      }
-
       /* ═══ REVEAL ANIMATION ═══ */
       .reveal {
         opacity: 0;
@@ -438,48 +364,6 @@
       }
       .reveal-delay-4 {
         transition-delay: 0.4s;
-      }
-
-      /* ═══ PROBLEM SECTION ═══ */
-      .problem {
-        max-width: 1200px;
-        margin: 0 auto;
-      }
-
-      .problem-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 80px;
-        margin-top: 64px;
-        align-items: center;
-      }
-
-      .stat-block {
-        border-left: 1px solid var(--gray-dark);
-        padding-left: 32px;
-        margin-bottom: 40px;
-      }
-
-      .stat-number {
-        font-family: var(--font-display);
-        font-size: 64px;
-        letter-spacing: 2px;
-        line-height: 1;
-        margin-bottom: 8px;
-      }
-
-      .stat-label {
-        font-size: 11px;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        color: var(--gray);
-      }
-
-      .stat-desc {
-        font-size: 12px;
-        color: var(--gray-dark);
-        margin-top: 8px;
-        line-height: 1.6;
       }
 
       /* ═══ HOW IT WORKS ═══ */
@@ -544,69 +428,6 @@
         color: var(--gray);
       }
 
-      /* ═══ FEATURES ═══ */
-      .features-section {
-        max-width: 1200px;
-        margin: 0 auto;
-      }
-
-      .features-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 2px;
-        margin-top: 64px;
-      }
-
-      .feature-card {
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        padding: 48px 36px;
-        position: relative;
-        overflow: hidden;
-        transition: all 0.4s;
-      }
-
-      .feature-card::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 2px;
-        background: var(--white);
-        transform: scaleX(0);
-        transform-origin: left;
-        transition: transform 0.4s;
-      }
-
-      .feature-card:hover::before {
-        transform: scaleX(1);
-      }
-
-      .feature-card:hover {
-        background: rgba(255, 255, 255, 0.02);
-      }
-
-      .feature-icon {
-        font-size: 28px;
-        margin-bottom: 24px;
-        display: block;
-      }
-
-      .feature-card h3 {
-        font-family: var(--font-heading);
-        font-size: 14px;
-        font-weight: 700;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        margin-bottom: 16px;
-      }
-
-      .feature-card p {
-        font-size: 12px;
-        line-height: 1.8;
-        color: var(--gray);
-      }
-
       /* ═══ SCREENSHOTS ═══ */
       .screenshots-section {
         max-width: 1400px;
@@ -662,64 +483,6 @@
         letter-spacing: 3px;
         text-transform: uppercase;
         color: var(--gray-dark);
-      }
-
-      /* ═══ OPEN SOURCE BANNER ═══ */
-      .oss-section {
-        max-width: 1200px;
-        margin: 0 auto;
-        text-align: center;
-        border-top: 1px solid var(--gray-dark);
-        padding-top: 120px;
-      }
-
-      .oss-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 12px;
-        border: 1px solid var(--gray-dark);
-        padding: 12px 28px;
-        margin-bottom: 48px;
-        font-size: 11px;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        color: var(--gray);
-      }
-
-      .oss-section .section-title {
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      .oss-section .section-desc {
-        margin: 0 auto 48px;
-        text-align: center;
-      }
-
-      .oss-stats {
-        display: flex;
-        justify-content: center;
-        gap: 64px;
-        margin-top: 48px;
-      }
-
-      .oss-stat {
-        text-align: center;
-      }
-
-      .oss-stat-num {
-        font-family: var(--font-display);
-        font-size: 48px;
-        letter-spacing: 2px;
-        line-height: 1;
-        margin-bottom: 8px;
-      }
-
-      .oss-stat-label {
-        font-size: 10px;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        color: var(--gray);
       }
 
       /* ═══ CTA SECTION ═══ */
@@ -811,39 +574,6 @@
         letter-spacing: 1px;
       }
 
-      /* ═══ MARQUEE ═══ */
-      .marquee-strip {
-        overflow: hidden;
-        white-space: nowrap;
-        border-top: 1px solid rgba(255, 255, 255, 0.04);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-        padding: 16px 0;
-        position: relative;
-        z-index: 1;
-      }
-
-      .marquee-inner {
-        display: inline-flex;
-        animation: marquee 40s linear infinite;
-      }
-
-      .marquee-inner span {
-        font-family: var(--font-display);
-        font-size: 14px;
-        letter-spacing: 8px;
-        color: var(--gray-dark);
-        padding: 0 40px;
-      }
-
-      @keyframes marquee {
-        0% {
-          transform: translateX(0);
-        }
-        100% {
-          transform: translateX(-50%);
-        }
-      }
-
       /* ═══ NFC ANIMATION (HERO VISUAL) ═══ */
       .hero-visual {
         margin-top: 64px;
@@ -911,12 +641,6 @@
         .steps-grid {
           grid-template-columns: repeat(2, 1fr);
         }
-        .features-grid {
-          grid-template-columns: repeat(2, 1fr);
-        }
-        .problem-grid {
-          gap: 48px;
-        }
       }
 
       @media (max-width: 768px) {
@@ -952,22 +676,8 @@
         .hero h1 {
           letter-spacing: 4px;
         }
-        .problem-grid {
-          grid-template-columns: 1fr;
-          gap: 48px;
-        }
         .steps-grid {
           grid-template-columns: 1fr;
-        }
-        .features-grid {
-          grid-template-columns: 1fr;
-        }
-        .stat-number {
-          font-size: 48px;
-        }
-        .oss-stats {
-          gap: 32px;
-          flex-wrap: wrap;
         }
         .screenshot-item img {
           height: 360px;
@@ -1013,8 +723,6 @@
     </style>
   </head>
   <body>
-    <div class="grid-bg"></div>
-
     <!-- ═══ NAVIGATION ═══ -->
     <nav id="nav">
       <a href="#" class="nav-brand">
@@ -1026,9 +734,7 @@
         <span>nfcGuard</span>
       </a>
       <div class="nav-links" id="navLinks">
-        <a href="#problem">Why</a>
         <a href="#how">How it Works</a>
-        <a href="#features">Features</a>
         <a href="#screenshots">Screenshots</a>
         <a href="blog-best-free-alternatives-to-brick-app.html">Blog</a>
         <a href="https://github.com/Andebugulin/nfcGuard" target="_blank"
@@ -1048,11 +754,11 @@
         Open Source &middot; Free Forever
       </div>
       <h1>nfcGuard</h1>
-      <div class="hero-subtitle">Physical Friction for Digital Wellbeing</div>
+      <div class="hero-subtitle">Apps you can't open</div>
       <p class="hero-desc">
-        Block distracting apps with NFC tags as physical keys. Place a tag
-        somewhere inconvenient — your kitchen, gym bag, a friend's house — and
-        think twice before mindlessly scrolling.
+        Lock distracting apps behind a physical NFC tag. Keep the tag somewhere
+        inconvenient — the kitchen, a gym bag, a friend's flat — and opening
+        Instagram costs a walk instead of a thumb.
       </p>
       <div class="hero-actions">
         <a
@@ -1096,117 +802,6 @@
       </div>
     </section>
 
-    <!-- ═══ MARQUEE ═══ -->
-    <div class="marquee-strip">
-      <div class="marquee-inner">
-        <span>NFC TAGS</span><span>&bull;</span> <span>BLOCK MODES</span
-        ><span>&bull;</span> <span>SCHEDULES</span><span>&bull;</span>
-        <span>OPEN SOURCE</span><span>&bull;</span>
-        <span>DIGITAL WELLBEING</span><span>&bull;</span>
-        <span>PHYSICAL FRICTION</span><span>&bull;</span> <span>FOCUS</span
-        ><span>&bull;</span> <span>ANDROID</span><span>&bull;</span>
-        <span>NFC TAGS</span><span>&bull;</span> <span>BLOCK MODES</span
-        ><span>&bull;</span> <span>SCHEDULES</span><span>&bull;</span>
-        <span>OPEN SOURCE</span><span>&bull;</span>
-        <span>DIGITAL WELLBEING</span><span>&bull;</span>
-        <span>PHYSICAL FRICTION</span><span>&bull;</span> <span>FOCUS</span
-        ><span>&bull;</span> <span>ANDROID</span><span>&bull;</span>
-      </div>
-    </div>
-
-    <!-- ═══ PROBLEM ═══ -->
-    <section id="problem" class="problem">
-      <div class="reveal">
-        <div class="section-label">The Problem</div>
-        <div class="section-title">YOUR WILLPOWER<br />ISN'T ENOUGH</div>
-        <p class="section-desc">
-          The average person unlocks their phone 150+ times a day. App blockers
-          that use timers, PIN codes, or "are you sure?" prompts fail because
-          the override is always one tap away. nfcGuard is different.
-        </p>
-      </div>
-
-      <div class="problem-grid">
-        <div>
-          <div class="stat-block reveal reveal-delay-1">
-            <div class="stat-number">150+</div>
-            <div class="stat-label">Daily Phone Unlocks</div>
-            <div class="stat-desc">
-              Most are unconscious — muscle memory, not intention.
-            </div>
-          </div>
-          <div class="stat-block reveal reveal-delay-2">
-            <div class="stat-number">4.5H</div>
-            <div class="stat-label">Average Screen Time</div>
-            <div class="stat-desc">
-              Hours spent on apps designed to be addictive.
-            </div>
-          </div>
-          <div class="stat-block reveal reveal-delay-3">
-            <div class="stat-number">88%</div>
-            <div class="stat-label">Override Rate</div>
-            <div class="stat-desc">
-              Software-only blockers get bypassed almost immediately.
-            </div>
-          </div>
-        </div>
-        <div
-          class="reveal reveal-delay-2"
-          style="border: 1px solid var(--gray-dark); padding: 48px"
-        >
-          <div
-            style="
-              font-size: 11px;
-              letter-spacing: 3px;
-              text-transform: uppercase;
-              color: var(--gray);
-              margin-bottom: 24px;
-            "
-          >
-            nfcGuard's Approach
-          </div>
-          <div
-            style="
-              font-family: var(--font-heading);
-              font-size: 24px;
-              font-weight: 700;
-              letter-spacing: 1px;
-              margin-bottom: 20px;
-            "
-          >
-            Physical friction changes the equation.
-          </div>
-          <p style="font-size: 13px; line-height: 1.8; color: var(--gray)">
-            When unlocking requires walking to another room to tap an NFC tag,
-            the cost of giving in becomes real. You don't need more willpower —
-            you need a better system.
-          </p>
-          <div
-            style="
-              margin-top: 32px;
-              padding-top: 24px;
-              border-top: 1px solid var(--gray-dark);
-            "
-          >
-            <div
-              style="
-                font-size: 10px;
-                letter-spacing: 3px;
-                color: var(--gray-dark);
-                text-transform: uppercase;
-                margin-bottom: 12px;
-              "
-            >
-              The result
-            </div>
-            <div style="font-family: var(--font-display); font-size: 36px">
-              INTENTIONAL USAGE
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- ═══ HOW IT WORKS ═══ -->
     <section id="how" class="how-section">
       <div class="reveal">
@@ -1233,8 +828,8 @@
           </div>
           <h3>Create Modes</h3>
           <p>
-            Choose apps to block — or allow only essential ones. Create
-            different modes for work, sleep, study, or any context.
+            Pick the apps to block — or allow only the essential ones. One mode
+            for work, one for sleep, one for study.
           </p>
         </div>
         <div class="step reveal reveal-delay-2">
@@ -1255,8 +850,8 @@
           </div>
           <h3>Link NFC Tags</h3>
           <p>
-            Register physical NFC tags as unlock keys. Place them in
-            inconvenient locations — your kitchen, gym, or a friend's house.
+            Register tags as unlock keys. Each one decides how much it gives
+            you: full access, or five minutes before the mode snaps back on.
           </p>
         </div>
         <div class="step reveal reveal-delay-3">
@@ -1276,8 +871,8 @@
           </div>
           <h3>Set Schedules</h3>
           <p>
-            Automate blocking with per-day schedules. Different times for
-            weekdays vs weekends. Set it and forget it.
+            Per-day schedules turn modes on by themselves. Different hours for
+            weekdays and weekends.
           </p>
         </div>
         <div class="step reveal reveal-delay-4">
@@ -1297,71 +892,8 @@
           </div>
           <h3>Stay Focused</h3>
           <p>
-            Blocked apps show a full-screen overlay. To unlock, physically walk
-            to your NFC tag and tap. Friction is the feature.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══ FEATURES ═══ -->
-    <section id="features" class="features-section">
-      <div class="reveal">
-        <div class="section-label">Features</div>
-        <div class="section-title">BUILT TO<br />BE UNBEATABLE</div>
-        <p class="section-desc">
-          Every feature is designed around one principle: make it physically
-          harder to give in to distraction.
-        </p>
-      </div>
-      <div class="features-grid">
-        <div class="feature-card reveal reveal-delay-1">
-          <span class="feature-icon">⊘</span>
-          <h3>Block Mode</h3>
-          <p>
-            Block specific distracting apps while everything else stays
-            accessible. Target Instagram, TikTok, YouTube — whatever your
-            weaknesses.
-          </p>
-        </div>
-        <div class="feature-card reveal reveal-delay-2">
-          <span class="feature-icon">◉</span>
-          <h3>Allow Mode</h3>
-          <p>
-            Nuclear option. Block everything except a whitelist of essential
-            apps. Only phone, messages, and maps? Done.
-          </p>
-        </div>
-        <div class="feature-card reveal reveal-delay-3">
-          <span class="feature-icon">⬡</span>
-          <h3>NFC Tag Lock</h3>
-          <p>
-            Each mode can require a specific NFC tag to unlock. Wrong tag?
-            Denied. No tag linked? Any NFC device works.
-          </p>
-        </div>
-        <div class="feature-card reveal reveal-delay-1">
-          <span class="feature-icon">⏀</span>
-          <h3>Smart Schedules</h3>
-          <p>
-            Per-day configuration with different start and end times.
-            Auto-activate for work hours, auto-release when you're done.
-          </p>
-        </div>
-        <div class="feature-card reveal reveal-delay-2">
-          <span class="feature-icon">↻</span>
-          <h3>Persistent Service</h3>
-          <p>
-            Survives reboots, task kills, and app restarts. nfcGuard comes back
-            every time. No escape routes.
-          </p>
-        </div>
-        <div class="feature-card reveal reveal-delay-3">
-          <span class="feature-icon">⚿</span>
-          <h3>Emergency Reset</h3>
-          <p>
-            Lost your tag? A 60-second cooldown + confirmation text safety flow
-            lets you recover without losing your configurations.
+            A blocked app is covered or closed outright. To get in, walk to the
+            tag and tap it. The friction is the feature.
           </p>
         </div>
       </div>
@@ -1425,44 +957,14 @@
       </div>
     </section>
 
-    <!-- ═══ OPEN SOURCE ═══ -->
-    <section class="oss-section">
-      <div class="reveal">
-        <div class="oss-badge">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-            <path
-              d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.605-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12"
-            />
-          </svg>
-          Free &middot; Open Source &middot; MIT License
-        </div>
-        <div class="section-title">BUILT IN THE OPEN</div>
-        <p class="section-desc">
-          nfcGuard is fully open source. Inspect the code, submit issues,
-          contribute features. No tracking, no ads, no subscriptions.
-        </p>
-      </div>
-      <div class="oss-stats reveal">
-        <div class="oss-stat">
-          <div class="oss-stat-num">100%</div>
-          <div class="oss-stat-label">Kotlin</div>
-        </div>
-        <div class="oss-stat">
-          <div class="oss-stat-num">0</div>
-          <div class="oss-stat-label">Ads / Tracking</div>
-        </div>
-        <div class="oss-stat">
-          <div class="oss-stat-num">FREE</div>
-          <div class="oss-stat-label">Forever</div>
-        </div>
-      </div>
-    </section>
-
     <!-- ═══ DOWNLOAD CTA ═══ -->
     <section id="download" class="cta-section">
       <div class="reveal">
         <div class="section-title">TAKE BACK<br />YOUR TIME</div>
-        <div class="cta-tagline">Android 8.0+ &middot; NFC Required</div>
+        <div class="cta-tagline">
+          Android 8.0+ &middot; NFC required &middot; Open source, MIT &middot; No ads,
+          no tracking, no subscription
+        </div>
         <div class="cta-buttons">
           <a
             href="https://play.google.com/store/apps/details?id=com.andebugulin.nfcguard"
