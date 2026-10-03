@@ -49,6 +49,7 @@ class ForegroundDetectorService : AccessibilityService() {
         // system rebinds on its own, which makes this the only dependable
         // recovery hook. Restore enforcement from persisted state.
         try {
+            ScheduleAlarmReceiver.catchUpMissedStarts(this)
             val state = AppStateRepository.getInstance(this).current
             StateSyncer.sync(this, state)
             ScheduleAlarmReceiver.scheduleWatchdog(this)
@@ -76,6 +77,32 @@ class ForegroundDetectorService : AccessibilityService() {
             // is moot: when accessibility is ON, we use force-close mode (no overlay).
             lastDetectedPackage = pkg
             lastDetectedTime = System.currentTimeMillis()
+            healIfDue(lastDetectedTime)
+        }
+    }
+
+    /**
+     * HyperOS can kill nfcGuard and drop its alarms while leaving this
+     * service bound, so [onServiceConnected] never runs again and a schedule
+     * start silently waits for something else to wake the app. Every app
+     * switch reaches us, which makes this the place to notice: start any
+     * schedule whose start was missed, and if the blocker service is gone,
+     * restore it (which also re-arms the alarms). Throttled so a busy user
+     * costs one state read per [HEAL_INTERVAL_MS].
+     */
+    private fun healIfDue(now: Long) {
+        if (now - lastHealAt < HEAL_INTERVAL_MS) return
+        lastHealAt = now
+        try {
+            ScheduleAlarmReceiver.catchUpMissedStarts(this)
+            val state = AppStateRepository.getInstance(this).current
+            val hasWork = state.activeModes.isNotEmpty() || state.schedules.isNotEmpty()
+            if (hasWork && !BlockerService.isRunning()) {
+                AppLogger.log("SERVICE", "Blocker service missing on app switch, restoring")
+                StateSyncer.sync(this, state)
+            }
+        } catch (e: Exception) {
+            AppLogger.log("SERVICE", "Heal on app switch failed: ${e.message}")
         }
     }
 
@@ -91,6 +118,11 @@ class ForegroundDetectorService : AccessibilityService() {
     }
 
     companion object {
+        private const val HEAL_INTERVAL_MS = 15_000L
+
+        @Volatile
+        private var lastHealAt = 0L
+
         @Volatile
         var lastDetectedPackage: String? = null
             private set

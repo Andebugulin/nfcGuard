@@ -35,7 +35,7 @@ class ScheduleTransitionsTest {
     @Test
     fun applyScheduleActivation_scheduleNotFound_returnsSentinel() {
         val state = AppState()
-        val result = ScheduleTransitions.applyScheduleActivation(state, "ghost")
+        val result = ScheduleTransitions.applyScheduleActivation(state, "ghost", 0L)
         assertTrue(result is ScheduleTransitions.ScheduleActivationResult.ScheduleNotFound)
         assertSame(state, result.newState) // state untouched
     }
@@ -47,7 +47,7 @@ class ScheduleTransitionsTest {
         val s = dailySchedule("s1", listOf("m1", "m2"))
         val state = AppState(modes = listOf(m1, m2), schedules = listOf(s))
 
-        val result = ScheduleTransitions.applyScheduleActivation(state, "s1")
+        val result = ScheduleTransitions.applyScheduleActivation(state, "s1", 0L)
 
         assertTrue(result is ScheduleTransitions.ScheduleActivationResult.Applied)
         val applied = result as ScheduleTransitions.ScheduleActivationResult.Applied
@@ -68,7 +68,7 @@ class ScheduleTransitionsTest {
             deactivatedSchedules = setOf("s1") // user dismissed previously
         )
 
-        val result = ScheduleTransitions.applyScheduleActivation(state, "s1")
+        val result = ScheduleTransitions.applyScheduleActivation(state, "s1", 0L)
 
         assertTrue(result is ScheduleTransitions.ScheduleActivationResult.Applied)
         assertFalse(result.newState.deactivatedSchedules.contains("s1"))
@@ -87,7 +87,7 @@ class ScheduleTransitionsTest {
             activeModes = setOf("m1")
         )
 
-        val result = ScheduleTransitions.applyScheduleActivation(state, "s1")
+        val result = ScheduleTransitions.applyScheduleActivation(state, "s1", 0L)
         val applied = result as ScheduleTransitions.ScheduleActivationResult.Applied
         assertTrue(applied.activatedModeIds.isEmpty())
         assertEquals(setOf("m2"), applied.conflictSkippedModeIds)
@@ -103,7 +103,7 @@ class ScheduleTransitionsTest {
         val s = dailySchedule("s1", listOf("m1", "ghost-mode"))
         val state = AppState(modes = listOf(m1), schedules = listOf(s))
 
-        val result = ScheduleTransitions.applyScheduleActivation(state, "s1")
+        val result = ScheduleTransitions.applyScheduleActivation(state, "s1", 0L)
         val applied = result as ScheduleTransitions.ScheduleActivationResult.Applied
         assertEquals(setOf("m1"), applied.activatedModeIds)
         assertTrue(applied.conflictSkippedModeIds.isEmpty()) // missing != conflict
@@ -122,7 +122,7 @@ class ScheduleTransitionsTest {
             pausedModeRemainingMs = mapOf("m1" to 600_000L)
         )
 
-        val result = ScheduleTransitions.applyScheduleActivation(state, "s1")
+        val result = ScheduleTransitions.applyScheduleActivation(state, "s1", 0L)
         val applied = result as ScheduleTransitions.ScheduleActivationResult.Applied
         assertFalse(applied.newState.timedModeReactivations.containsKey("m1"))
         assertFalse(applied.newState.pausedModeRemainingMs.containsKey("m1"))
@@ -285,5 +285,101 @@ class ScheduleTransitionsTest {
         val result = ScheduleTransitions.applyTimedModeDeactivation(state, "m1")
         val applied = result as ScheduleTransitions.TimedDeactivationResult.Applied
         assertTrue(applied.deactivatedScheduleIds.isEmpty())
+    }
+
+    // ─── missedScheduleStarts ──────────────────────────────────────────────
+
+    /** A UTC midnight, so minute-of-day and epoch millis agree exactly. */
+    private val today = 20_000L * 86_400_000L
+    private fun at(minuteOfDay: Int, seconds: Int = 30) =
+        today + minuteOfDay * 60_000L + seconds * 1_000L
+
+    private fun missed(state: AppState, minuteOfDay: Int, day: Int = 1) =
+        ScheduleTransitions.missedScheduleStarts(state, day, minuteOfDay, at(minuteOfDay))
+
+    private val nine = 9 * 60
+
+    @Test
+    fun missedScheduleStarts_neverStarted_isMissed() {
+        val state = AppState(schedules = listOf(dailySchedule("s1", emptyList())))
+        assertEquals(listOf("s1"), missed(state, nine + 5))
+    }
+
+    @Test
+    fun missedScheduleStarts_startedToday_isNotMissed() {
+        val state = AppState(
+            schedules = listOf(dailySchedule("s1", emptyList())),
+            scheduleLastStartedAt = mapOf("s1" to at(nine, seconds = 0))
+        )
+        assertTrue(missed(state, nine + 5).isEmpty())
+    }
+
+    @Test
+    fun missedScheduleStarts_unlockedToday_staysUnlocked() {
+        val state = AppState(
+            schedules = listOf(dailySchedule("s1", emptyList())),
+            deactivatedSchedules = setOf("s1"),
+            scheduleLastStartedAt = mapOf("s1" to at(nine, seconds = 1))
+        )
+        assertTrue(missed(state, nine + 30).isEmpty())
+    }
+
+    @Test
+    fun missedScheduleStarts_unlockedYesterday_isMissedToday() {
+        val state = AppState(
+            schedules = listOf(dailySchedule("s1", emptyList())),
+            deactivatedSchedules = setOf("s1"),
+            scheduleLastStartedAt = mapOf("s1" to at(nine) - 86_400_000L)
+        )
+        assertEquals(listOf("s1"), missed(state, nine + 5))
+    }
+
+    @Test
+    fun missedScheduleStarts_unlockedWithNoStartOnRecord_isLeftAlone() {
+        val state = AppState(
+            schedules = listOf(dailySchedule("s1", emptyList())),
+            deactivatedSchedules = setOf("s1")
+        )
+        assertTrue(missed(state, nine + 5).isEmpty())
+    }
+
+    @Test
+    fun missedScheduleStarts_outsideWindow_isNotMissed() {
+        val state = AppState(schedules = listOf(dailySchedule("s1", emptyList())))
+        assertTrue(missed(state, nine - 1).isEmpty())
+        assertTrue(missed(state, 17 * 60).isEmpty())
+    }
+
+    @Test
+    fun missedScheduleStarts_noEndTime_isMissedUntilMidnight() {
+        val s = dailySchedule("s1", emptyList()).copy(hasEndTime = false)
+        assertEquals(listOf("s1"), missed(AppState(schedules = listOf(s)), 23 * 60))
+    }
+
+    @Test
+    fun missedScheduleStarts_alreadyActive_isNotMissed() {
+        val state = AppState(
+            schedules = listOf(dailySchedule("s1", emptyList())),
+            activeSchedules = setOf("s1")
+        )
+        assertTrue(missed(state, nine + 5).isEmpty())
+    }
+
+    @Test
+    fun missedScheduleStarts_otherDay_isNotMissed() {
+        val s = Schedule(
+            id = "s1", name = "s1",
+            timeSlot = TimeSlot(listOf(DayTime(2, 9, 0, 17, 0))),
+            linkedModeIds = emptyList(), hasEndTime = true
+        )
+        assertTrue(missed(AppState(schedules = listOf(s)), nine + 5, day = 1).isEmpty())
+    }
+
+    @Test
+    fun applyScheduleActivation_recordsStartTime() {
+        val state = AppState(schedules = listOf(dailySchedule("s1", emptyList())))
+        val result = ScheduleTransitions.applyScheduleActivation(state, "s1", at(nine))
+        assertEquals(at(nine), result.newState.scheduleLastStartedAt["s1"])
+        assertTrue(missed(result.newState.copy(activeSchedules = emptySet()), nine + 5).isEmpty())
     }
 }

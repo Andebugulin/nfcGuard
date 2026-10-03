@@ -44,6 +44,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
         when (intent.action) {
             ACTION_CHECK_SCHEDULE -> {
                 AppLogger.log("ALARM", "Watchdog CHECK fired")
+                catchUpMissedStarts(context)
                 ensureServiceRunning(context)
                 // Self-chain: schedule the next watchdog
                 scheduleWatchdog(context)
@@ -84,7 +85,9 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
         try {
             val result = runBlocking {
                 repo.updateWith { state ->
-                    val r = ScheduleTransitions.applyScheduleActivation(state, scheduleId)
+                    val r = ScheduleTransitions.applyScheduleActivation(
+                        state, scheduleId, System.currentTimeMillis()
+                    )
                     r.newState to r
                 }
             }
@@ -220,6 +223,43 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
             }
             AppLogger.log("ALARM", "Watchdog scheduled for ${java.util.Date(triggerAt)}")
+        }
+
+        /**
+         * Start any schedule whose start alarm should have fired today but
+         * did not. HyperOS and similar drop an app's alarms when they kill it,
+         * so the alarm alone is not enough; callers run this whenever the app
+         * gets a chance to. Cheap when there is nothing to do: one read of
+         * the current state, no write.
+         */
+        fun catchUpMissedStarts(context: Context) {
+            val repo = AppStateRepository.getInstance(context)
+            val now = System.currentTimeMillis()
+            val calendar = Calendar.getInstance().apply { timeInMillis = now }
+            val day = NfcUnlockLogic.calendarDayToScheduleDay(calendar.get(Calendar.DAY_OF_WEEK))
+            val minuteOfDay = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+
+            fun missed(state: AppState) =
+                ScheduleTransitions.missedScheduleStarts(state, day, minuteOfDay, now)
+
+            if (missed(repo.current).isEmpty()) return
+            try {
+                val started = runBlocking {
+                    repo.updateWith { state ->
+                        // Re-check inside the lock: the alarm may have just run.
+                        val ids = missed(state)
+                        val next = ids.fold(state) { s, id ->
+                            ScheduleTransitions.applyScheduleActivation(s, id, now).newState
+                        }
+                        next to ids
+                    }
+                }
+                if (started.isNotEmpty()) {
+                    AppLogger.log("ALARM", "Caught up missed schedule starts: $started")
+                }
+            } catch (e: Exception) {
+                AppLogger.log("ALARM", "Error catching up missed starts: ${e.message}")
+            }
         }
 
         fun cancelWatchdog(context: Context) {

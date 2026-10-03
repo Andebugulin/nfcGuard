@@ -47,10 +47,14 @@ object ScheduleTransitions {
      * schedule that links both BLOCK_SELECTED and ALLOW_SELECTED modes
      * applied against an empty active set will produce mixed-polarity
      * state. This is preserved current behavior.
+     *
+     * [now] is recorded in `scheduleLastStartedAt` so a later
+     * [missedScheduleStarts] check knows this occurrence already ran.
      */
     fun applyScheduleActivation(
         state: AppState,
-        scheduleId: String
+        scheduleId: String,
+        now: Long
     ): ScheduleActivationResult {
         val schedule = state.schedules.find { it.id == scheduleId }
             ?: return ScheduleActivationResult.ScheduleNotFound(state)
@@ -76,11 +80,54 @@ object ScheduleTransitions {
             activeSchedules = state.activeSchedules + scheduleId,
             deactivatedSchedules = state.deactivatedSchedules - scheduleId,
             timedModeReactivations = state.timedModeReactivations - activated,
-            pausedModeRemainingMs = state.pausedModeRemainingMs - activated
+            pausedModeRemainingMs = state.pausedModeRemainingMs - activated,
+            scheduleLastStartedAt = state.scheduleLastStartedAt + (scheduleId to now)
         )
 
         return ScheduleActivationResult.Applied(newState, activated, conflictSkipped)
     }
+
+    // ─── Missed starts ──────────────────────────────────────────────────────
+
+    /**
+     * Schedules whose start time today has passed but whose start never ran.
+     *
+     * Some OEMs (Xiaomi's HyperOS especially) drop an app's pending alarms
+     * when they kill it, so the start alarm can simply never fire. The app
+     * calls this whenever it gets a chance to run and applies
+     * [applyScheduleActivation] to each result.
+     *
+     * A schedule counts as missed when today ([day], 1 = Monday) is one of
+     * its days, [minuteOfDay] is at or after its start, still before its end
+     * if it has one, and it has not started since today's start time.
+     * Schedules that end past midnight are only caught up until midnight.
+     *
+     * Already-active schedules are skipped. So is a schedule the user
+     * unlocked when there is no start time on record, which is every
+     * schedule saved before `scheduleLastStartedAt` existed: there is no way
+     * to tell whether that unlock was for today's occurrence.
+     */
+    fun missedScheduleStarts(
+        state: AppState,
+        day: Int,
+        minuteOfDay: Int,
+        now: Long
+    ): List<String> = state.schedules.filter { schedule ->
+        if (schedule.id in state.activeSchedules) return@filter false
+        val time = schedule.timeSlot.getTimeForDay(day) ?: return@filter false
+
+        val start = time.startHour * 60 + time.startMinute
+        val end = time.endHour * 60 + time.endMinute
+        if (minuteOfDay < start) return@filter false
+        if (schedule.hasEndTime && end > start && minuteOfDay >= end) return@filter false
+
+        val lastStarted = state.scheduleLastStartedAt[schedule.id]
+            ?: return@filter schedule.id !in state.deactivatedSchedules
+        // Start of today's start minute; a start since then means this
+        // occurrence already ran.
+        val todaysStart = now - (minuteOfDay - start) * 60_000L - now % 60_000L
+        lastStarted < todaysStart
+    }.map { it.id }
 
     // ─── Schedule deactivation ──────────────────────────────────────────────
 

@@ -12,6 +12,7 @@ import com.andebugulin.nfcguard.NfcTag
 import com.andebugulin.nfcguard.NfcUnlockLogic
 import com.andebugulin.nfcguard.PendingUnlock
 import com.andebugulin.nfcguard.Schedule
+import com.andebugulin.nfcguard.receiver.ScheduleAlarmReceiver
 import com.andebugulin.nfcguard.service.BlockerService
 import com.andebugulin.nfcguard.sync.StateSyncer
 import com.andebugulin.nfcguard.TimeSlot
@@ -63,6 +64,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                 delay(5000)  // Check every 5 seconds
                 checkTimedDeactivations()
                 checkTimedReactivations()
+                ScheduleAlarmReceiver.catchUpMissedStarts(context)
             }
         }
     }

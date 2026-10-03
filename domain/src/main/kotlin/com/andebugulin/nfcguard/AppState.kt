@@ -105,7 +105,13 @@ data class AppState(
     /** modeId -> epoch millis when it should auto-reactivate after NFC unlock. */
     val timedModeReactivations: Map<String, Long> = emptyMap(),
     /** modeId -> remaining deactivation ms saved when mode was paused by NFC unlock. */
-    val pausedModeRemainingMs: Map<String, Long> = emptyMap()
+    val pausedModeRemainingMs: Map<String, Long> = emptyMap(),
+    /**
+     * scheduleId -> epoch millis its start last ran. Lets
+     * [ScheduleTransitions.missedScheduleStarts] tell a start that never ran
+     * from one the user has since unlocked.
+     */
+    val scheduleLastStartedAt: Map<String, Long> = emptyMap()
 )
 
 /** Pending NFC unlock awaiting user duration choice. Not persisted; UI-only. */

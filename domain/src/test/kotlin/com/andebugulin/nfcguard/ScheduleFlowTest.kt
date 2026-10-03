@@ -31,7 +31,7 @@ class ScheduleFlowTest {
         val initial = AppState(modes = listOf(m), schedules = listOf(s))
 
         // Start alarm fires
-        val afterStart = (ScheduleTransitions.applyScheduleActivation(initial, "s1")
+        val afterStart = (ScheduleTransitions.applyScheduleActivation(initial, "s1", 0L)
             as ScheduleTransitions.ScheduleActivationResult.Applied).newState
         assertEquals(setOf("m1"), afterStart.activeModes)
         assertEquals(setOf("s1"), afterStart.activeSchedules)
@@ -54,7 +54,7 @@ class ScheduleFlowTest {
         val s = dailySchedule("s1", listOf("m1"))
         val initial = AppState(modes = listOf(m), schedules = listOf(s))
 
-        val afterStart = (ScheduleTransitions.applyScheduleActivation(initial, "s1")
+        val afterStart = (ScheduleTransitions.applyScheduleActivation(initial, "s1", 0L)
             as ScheduleTransitions.ScheduleActivationResult.Applied).newState
 
         val userDeadline = now + 30 * 60_000L
@@ -81,7 +81,7 @@ class ScheduleFlowTest {
         val m = mode("m1")
         val s = dailySchedule("s1", listOf("m1"))
         val afterStart = (ScheduleTransitions.applyScheduleActivation(
-            AppState(modes = listOf(m), schedules = listOf(s)), "s1"
+            AppState(modes = listOf(m), schedules = listOf(s)), "s1", 0L
         ) as ScheduleTransitions.ScheduleActivationResult.Applied).newState
 
         val withUserTimer = (ModeActivationLogic.applyModeActivation(
@@ -108,7 +108,7 @@ class ScheduleFlowTest {
 
         // Day 1 morning: schedule active, mode active
         val day1Morning = (ScheduleTransitions.applyScheduleActivation(
-            AppState(modes = listOf(m), schedules = listOf(s)), "s1"
+            AppState(modes = listOf(m), schedules = listOf(s)), "s1", 0L
         ) as ScheduleTransitions.ScheduleActivationResult.Applied).newState
 
         // User permanently NFC-unlocks during the day
@@ -121,7 +121,7 @@ class ScheduleFlowTest {
         assertFalse(afterUnlock.activeModes.contains("m1"))
 
         // Day 2 morning: start alarm fires again
-        val day2Morning = (ScheduleTransitions.applyScheduleActivation(afterUnlock, "s1")
+        val day2Morning = (ScheduleTransitions.applyScheduleActivation(afterUnlock, "s1", 0L)
             as ScheduleTransitions.ScheduleActivationResult.Applied).newState
 
         // Schedule is active again, mode re-activated, deactivated flag gone

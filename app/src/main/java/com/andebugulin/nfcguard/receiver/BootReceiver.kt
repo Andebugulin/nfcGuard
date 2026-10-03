@@ -22,6 +22,8 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
             intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             try {
+                // A schedule that started while the phone was off is due now.
+                ScheduleAlarmReceiver.catchUpMissedStarts(context)
                 val appState = AppStateRepository.getInstance(context).current
                 AppLogger.log("BOOT", "State loaded: ${appState.modes.size} modes, ${appState.activeModes.size} active, ${appState.schedules.size} schedules")
                 // One call restores everything: service start (or empty-keep-alive
