@@ -82,16 +82,6 @@ class OnboardingEndToEndTest {
         onboarding.assertGranted("DISPLAY OVER APPS")
     }
 
-    /** CHECK AGAIN re-probes rather than trusting whatever was read on entry. */
-    @Test fun checkAgainReReadsPermissionState() {
-        harness.launch()
-
-        val onboarding = OnboardingRobot(compose).assertOnFirstPage()
-        onboarding.walkTour().assertOnPermissions()
-
-        onboarding.recheckPermissions().assertOnPermissions()
-    }
-
     /**
      * Nothing blocks: a user may look around before granting anything, and
      * setup must then stay done rather than reappearing on the next launch.

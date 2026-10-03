@@ -345,8 +345,6 @@ class OnboardingRobot(compose: ComposeTestRule) : Robot(compose) {
         assertVisible("GRANTED")
     }
 
-    fun recheckPermissions() = apply { tap("CHECK AGAIN") }
-
     private companion object { const val TOUR_PAGES = 5 }
 }
 

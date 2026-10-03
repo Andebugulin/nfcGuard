@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -157,7 +156,7 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
                 "Some phones (Xiaomi, Samsung) have a second power-saving " +
                 "setting of their own that Android does not report. Tap again " +
                 "for the full battery list, set nfcGuard to Unrestricted, then " +
-                "use CHECK AGAIN below.",
+                "come back here.",
             granted = battery,
             grantLabel = if (batteryAttempted) "SETTINGS" else "GRANT",
             onGrant = {
@@ -237,21 +236,6 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
             grantLabel = "OPEN",
             onGrant = { context.launch(Permissions.appDetailsIntent(context)) }
         )
-
-        // Returning from Settings re-probes automatically, but some OEMs apply
-        // the change a beat after handing focus back. This is the manual retry
-        // so a stale row is never the end of the road.
-        Row(
-            Modifier.fillMaxWidth().padding(top = 4.dp),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            GuardianButton(
-                label = "CHECK AGAIN",
-                kind = ButtonKind.Secondary,
-                onClick = { probe++ },
-                modifier = Modifier.height(36.dp)
-            )
-        }
     }
 
     if (showAccessibilityConsent) {
