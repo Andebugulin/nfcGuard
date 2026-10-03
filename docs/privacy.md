@@ -1,4 +1,4 @@
-# Privacy Policy — Guardian
+# Privacy Policy - Guardian
 
 **Last updated:** February 2026
 
@@ -16,10 +16,10 @@ All data stays on your device. There are no servers, no analytics, no tracking, 
 
 Guardian stores the following data locally on your device using Android SharedPreferences:
 
-- **Mode configurations** — names, selected apps, block mode type
-- **Schedule configurations** — names, days, times, linked modes
-- **NFC tag identifiers** — hardware IDs of registered NFC tags
-- **Runtime state** — which modes and schedules are currently active
+- **Mode configurations** - names, selected apps, block mode type
+- **Schedule configurations** - names, days, times, linked modes
+- **NFC tag identifiers** - hardware IDs of registered NFC tags
+- **Runtime state** - which modes and schedules are currently active
 
 This data never leaves your device unless you explicitly export it using the Export Config feature.
 
