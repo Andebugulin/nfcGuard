@@ -84,7 +84,7 @@ class ForceCloseEnforcerTest {
         ShadowLooper.idleMainLooper()
 
         assertEquals(
-            "BLOCKED — open NFCGUARD & tap your NFC tag",
+            "BLOCKED - open NFCGUARD & tap your NFC tag",
             ShadowToast.getTextOfLatestToast()
         )
     }

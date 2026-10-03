@@ -119,7 +119,7 @@ fun SafetyPreview(
             if (failed) {
                 "That is what happens if you walk away. It restarts from the top."
             } else {
-                "Try ignoring a prompt — see what happens."
+                "Try ignoring a prompt - see what happens."
             },
             style = GuardianType.EmptyHint,
             color = if (failed) GuardianTheme.ErrorText else GuardianTheme.TextTertiary,

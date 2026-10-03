@@ -361,15 +361,15 @@ class BlockerService : Service() {
                         if (isTimed) {
                             val endTime = timedModeDeactivations[modeId] ?: 0
                             val prefix = if (isManual) "manual" else "active"
-                            append(" — $prefix, until ${formatNotificationTime(endTime)}")
+                            append(" - $prefix, until ${formatNotificationTime(endTime)}")
                         } else if (isManual) {
-                            append(" — manual")
+                            append(" - manual")
                         } else {
                             val schedEnd = getScheduleEndTimeForMode(modeId)
                             if (schedEnd != null) {
-                                append(" — by schedule, until $schedEnd")
+                                append(" - by schedule, until $schedEnd")
                             } else {
-                                append(" — by schedule")
+                                append(" - by schedule")
                             }
                         }
                         append("\n")
@@ -380,7 +380,7 @@ class BlockerService : Service() {
                     if (isNotEmpty()) append("\n")
                     timedModeReactivations.forEach { (modeId, reactivateAt) ->
                         val name = resolvedNames[modeId]?.uppercase() ?: modeId.take(8)
-                        append("• $name — resumes at ${formatNotificationTime(reactivateAt)}\n")
+                        append("• $name - resumes at ${formatNotificationTime(reactivateAt)}\n")
                     }
                 }
             }.trimEnd()
@@ -419,7 +419,7 @@ class BlockerService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        AppLogger.log("SERVICE", "Task removed — scheduling restart")
+        AppLogger.log("SERVICE", "Task removed - scheduling restart")
         scheduleServiceRestart()
     }
 

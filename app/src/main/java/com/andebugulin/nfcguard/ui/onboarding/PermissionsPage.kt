@@ -172,11 +172,11 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
             },
             detail = if (accessibilityRequired) {
                 "Your device has a detection bug that makes blocking unreliable " +
-                    "without this. nfcGuard only reads which app is in front — " +
+                    "without this. nfcGuard only reads which app is in front - " +
                     "never screen content."
             } else {
                 "Lets nfcGuard close a blocked app instantly instead of covering " +
-                    "it. nfcGuard only reads which app is in front — never screen " +
+                    "it. nfcGuard only reads which app is in front - never screen " +
                     "content."
             },
             granted = accessibility,

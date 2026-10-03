@@ -1070,7 +1070,7 @@ fun UnlockDurationDialog(
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                if (modes.size > 1) "PERMANENT DISABLED — SELECTED MODES HAVE A ${effectiveLimit}M LIMIT"
+                                if (modes.size > 1) "PERMANENT DISABLED - SELECTED MODES HAVE A ${effectiveLimit}M LIMIT"
                                 else "PERMANENT UNLOCK DISABLED\nTHIS TAG HAS A ${effectiveLimit}M LIMIT SET ON THIS MODE",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,

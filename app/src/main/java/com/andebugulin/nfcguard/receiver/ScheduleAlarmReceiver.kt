@@ -33,7 +33,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             return
         }
 
-        AppLogger.log("ALARM", "Watchdog: SERVICE DEAD — restarting with ${appState.activeModes.size} active modes")
+        AppLogger.log("ALARM", "Watchdog: SERVICE DEAD - restarting with ${appState.activeModes.size} active modes")
         StateSyncer.sync(context, appState)
     }
 
@@ -95,7 +95,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 is ScheduleTransitions.ScheduleActivationResult.Applied -> {
                     result.conflictSkippedModeIds.forEach { skipped ->
                         val name = result.newState.modes.find { it.id == skipped }?.name ?: skipped
-                        AppLogger.log("ALARM", "CONFLICT: Skipping mode $name — BLOCK/ALLOW conflict")
+                        AppLogger.log("ALARM", "CONFLICT: Skipping mode $name - BLOCK/ALLOW conflict")
                     }
                     AppLogger.log("ALARM", "Schedule activated: activeModes=${result.newState.activeModes}, activeSchedules=${result.newState.activeSchedules}")
                     // Service restart, alarm reschedule, and widget refresh
@@ -124,7 +124,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 }
                 is ScheduleTransitions.ScheduleDeactivationResult.Applied -> {
                     result.keptDueToUserTimerModeIds.forEach { kept ->
-                        AppLogger.log("ALARM", "Skipping timed mode $kept — user timer takes priority over schedule end")
+                        AppLogger.log("ALARM", "Skipping timed mode $kept - user timer takes priority over schedule end")
                     }
                     AppLogger.log("ALARM", "Schedule deactivated: removed=${result.deactivatedModeIds}, kept=${result.keptDueToUserTimerModeIds}, activeModes=${result.newState.activeModes}")
                     // Side effects dispatched by AppStateRepository via StateSyncer.

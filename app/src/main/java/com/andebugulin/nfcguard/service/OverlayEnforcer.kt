@@ -249,7 +249,7 @@ class OverlayEnforcer(
                 or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
 
             setOnTouchListener { _, _ ->
-                android.util.Log.d(TAG, "Touch on overlay — re-checking foreground")
+                android.util.Log.d(TAG, "Touch on overlay - re-checking foreground")
                 onTouch()
                 true
             }

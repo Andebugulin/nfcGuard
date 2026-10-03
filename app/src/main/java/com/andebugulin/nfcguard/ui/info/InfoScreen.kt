@@ -364,10 +364,10 @@ fun InfoScreen(
                     InfoSection(
                         title = "HOW IT WORKS",
                         items = listOf(
-                            "1. MODES \u2014 pick apps to block, or apps to allow",
-                            "2. TAGS \u2014 register an NFC tag as the key",
-                            "3. SCHEDULES \u2014 turn modes on automatically",
-                            "4. TAP \u2014 unlock with the tag when you need to"
+                            "1. MODES - pick apps to block, or apps to allow",
+                            "2. TAGS - register an NFC tag as the key",
+                            "3. SCHEDULES - turn modes on automatically",
+                            "4. TAP - unlock with the tag when you need to"
                         )
                     )
                 }
@@ -392,7 +392,7 @@ fun InfoScreen(
                                 name = "FORCE-CLOSE MODE",
                                 summary = "Closes the app instantly. Needs Accessibility.",
                                 detail = "Opening a blocked app sends you straight home and kills " +
-                                    "it in the background. The most reliable method \u2014 it behaves " +
+                                    "it in the background. The most reliable method - it behaves " +
                                     "consistently everywhere, including Samsung and Pixel, where the " +
                                     "overlay can flicker or be dismissed."
                             )
@@ -421,7 +421,7 @@ fun InfoScreen(
                         items = listOf(
                             "\u2022 Enable Accessibility for the most reliable blocking",
                             "\u2022 Turn off 'Pause app if unused' in app settings",
-                            "\u2022 Xiaomi/Samsung \u2014 enable Autostart, disable battery optimization"
+                            "\u2022 Xiaomi/Samsung - enable Autostart, disable battery optimization"
                         )
                     )
                 }

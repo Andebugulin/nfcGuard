@@ -157,7 +157,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
             is ModeActivationLogic.ActivateModeResult.ModeNotFound -> ActivationResult.MODE_NOT_FOUND
             is ModeActivationLogic.ActivateModeResult.Conflict -> {
                 val mode = repo.current.modes.find { it.id == modeId }
-                AppLogger.log("MODE", "CONFLICT: Cannot activate '${result.modeName}' (${mode?.blockMode}) — conflicts with active modes")
+                AppLogger.log("MODE", "CONFLICT: Cannot activate '${result.modeName}' (${mode?.blockMode}) - conflicts with active modes")
                 ActivationResult.BLOCK_MODE_CONFLICT
             }
             is ModeActivationLogic.ActivateModeResult.Activated -> {
@@ -414,7 +414,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                     // Schedule (or other path) already re-activated it; just clean up
                 }
                 is NfcUnlockLogic.ReactivationResult.Conflict -> {
-                    AppLogger.log("TIMER", "Reactivation conflict for '${result.modeName}' — skipping, clearing timer")
+                    AppLogger.log("TIMER", "Reactivation conflict for '${result.modeName}' - skipping, clearing timer")
                 }
                 is NfcUnlockLogic.ReactivationResult.Reactivated -> {
                     val mode = repo.current.modes.find { it.id == modeId }

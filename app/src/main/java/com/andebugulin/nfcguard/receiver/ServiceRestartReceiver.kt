@@ -29,7 +29,7 @@ class ServiceRestartReceiver : BroadcastReceiver() {
             StateSyncer.sync(context, appState)
             ScheduleAlarmReceiver.scheduleWatchdog(context)
         } catch (e: Exception) {
-            AppLogger.log("SERVICE_RESTART", "Restart failed: ${e.javaClass.simpleName} — ${e.message}")
+            AppLogger.log("SERVICE_RESTART", "Restart failed: ${e.javaClass.simpleName} - ${e.message}")
         }
     }
 }

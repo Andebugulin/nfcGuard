@@ -141,7 +141,7 @@ class BlockerServiceTickTest {
         worker.start()
         worker.join(5_000)
         check(!worker.isAlive) {
-            "the tick did not finish — a path dispatched to Dispatchers.Main, " +
+            "the tick did not finish - a path dispatched to Dispatchers.Main, " +
                 "which a paused Robolectric looper cannot drain"
         }
         failure?.let { throw it }
@@ -200,7 +200,7 @@ class BlockerServiceTickTest {
         tick(service)
 
         assertFalse(
-            "the overlay path must not send HOME — that is the force-close enforcer",
+            "the overlay path must not send HOME - that is the force-close enforcer",
             sentHome()
         )
         assertTrue("the overlay should still be the one in charge", overlayShowing(service))

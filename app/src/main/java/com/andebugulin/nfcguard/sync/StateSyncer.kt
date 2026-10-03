@@ -92,7 +92,7 @@ object StateSyncer {
             val keepAlive = state.schedules.isNotEmpty() ||
                 state.timedModeReactivations.isNotEmpty()
             if (keepAlive) {
-                AppLogger.log("SYNC", "No active modes — keeping service alive for ${state.schedules.size} schedules / ${state.timedModeReactivations.size} pending reactivations")
+                AppLogger.log("SYNC", "No active modes - keeping service alive for ${state.schedules.size} schedules / ${state.timedModeReactivations.size} pending reactivations")
                 BlockerService.start(
                     context = context,
                     blockedApps = emptySet(),
@@ -101,7 +101,7 @@ object StateSyncer {
                     timedModeReactivations = state.timedModeReactivations
                 )
             } else {
-                AppLogger.log("SYNC", "No active modes, schedules, or pending reactivations — stopping service")
+                AppLogger.log("SYNC", "No active modes, schedules, or pending reactivations - stopping service")
                 BlockerService.stop(context)
                 ScheduleAlarmReceiver.cancelWatchdog(context)
             }

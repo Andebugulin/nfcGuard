@@ -293,7 +293,7 @@ fun SafeRegimeChallengeBody(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                "PRESS NOW — ${cycleSecondsLeft}s",
+                                "PRESS NOW - ${cycleSecondsLeft}s",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Black,
                                 color = GuardianTheme.WarningAccent,

@@ -1017,8 +1017,8 @@ fun SettingsDialog(
                     ) {
                         Icon(Icons.Default.Info, null, tint = GuardianTheme.Warning, modifier = Modifier.size(14.dp))
                         Text(
-                            if (accessibilityOn) "Accessibility ON — force-close avoids overlay conflicts on Samsung/Pixel"
-                            else "Accessibility OFF — overlay mode active. Enable accessibility for force-close",
+                            if (accessibilityOn) "Accessibility ON - force-close avoids overlay conflicts on Samsung/Pixel"
+                            else "Accessibility OFF - overlay mode active. Enable accessibility for force-close",
                             fontSize = 9.sp,
                             color = GuardianTheme.WarningTextMuted,
                             letterSpacing = 0.3.sp
@@ -1372,7 +1372,7 @@ private fun ChallengeDurationDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "How long you must stay attentive before a bypass-risky action goes through. The minimum is 1:00 — you can make it longer, never shorter.",
+                    "How long you must stay attentive before a bypass-risky action goes through. The minimum is 1:00 - you can make it longer, never shorter.",
                     fontSize = 10.sp,
                     color = GuardianTheme.TextSecondary,
                     letterSpacing = 0.3.sp

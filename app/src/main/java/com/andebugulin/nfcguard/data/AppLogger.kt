@@ -99,7 +99,7 @@ object AppLogger {
     private fun buildSummary(context: Context): String {
         val sb = StringBuilder()
 
-        sb.appendLine("**Device:** ${Build.MANUFACTURER} ${Build.MODEL} — Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+        sb.appendLine("**Device:** ${Build.MANUFACTURER} ${Build.MODEL} - Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
 
         try {
             val overlayOk = Settings.canDrawOverlays(context)
@@ -227,7 +227,7 @@ object AppLogger {
                 if (logsTruncated) {
                     appendLine(logText.takeLast(GITHUB_BODY_LIMIT))
                     appendLine()
-                    appendLine("... (truncated \u2014 full log has ${entries.size} entries)")
+                    appendLine("... (truncated - full log has ${entries.size} entries)")
                     appendLine("Please attach the full log file using the SAVE LOG FILE button in the app.")
                 } else {
                     appendLine(logText)
