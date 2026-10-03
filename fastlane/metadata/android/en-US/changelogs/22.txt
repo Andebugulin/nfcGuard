@@ -1,0 +1,5 @@
+* Schedules start on time on Xiaomi and other phones that cut background apps.
+* The notification lists what is blocked; tap ACTIVE NOW on Home for the full list.
+* Autostart is now a required permission, and shows when it is granted on Xiaomi.
+* Clear consent screen before turning on Accessibility.
+* Simpler permissions page and new app icon.
