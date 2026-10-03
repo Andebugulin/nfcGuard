@@ -105,6 +105,8 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
     val accessibilityRequired = remember { Permissions.accessibilityIsRequired() }
     // Null on stock Android, so the row below simply does not exist there.
     val autostart = remember { Permissions.autostartIntent(context) }
+    // Null where the phone gives no way to read the switch (all but Xiaomi).
+    val autostartGranted = remember(probe) { Permissions.hasAutostart(context) }
 
     val notificationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -190,6 +192,28 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
             onGrant = { showAccessibilityConsent = true }
         )
 
+        // Required where it exists: without it these phones kill nfcGuard
+        // and drop its alarms, so schedules start late or not at all. Only
+        // Xiaomi lets us read the switch; elsewhere the row stays at OPEN.
+        if (autostart != null) {
+            PermissionRow(
+                icon = Icons.Default.RestartAlt,
+                name = "AUTOSTART",
+                why = "Keep schedules on time.",
+                detail = "Your phone keeps a list of apps allowed to start on " +
+                    "their own. nfcGuard is off it by default, so your phone " +
+                    "can shut it down, which makes schedules start late and " +
+                    "stops blocking after a restart." +
+                    if (autostartGranted == null) {
+                        "\n\nYour phone gives no way to read this list, so " +
+                            "this row cannot show whether it worked."
+                    } else "",
+                granted = autostartGranted == true,
+                grantLabel = "OPEN",
+                onGrant = { context.launch(autostart) }
+            )
+        }
+
         SectionDivider("OPTIONAL")
 
         PermissionRow(
@@ -203,27 +227,11 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
             }
         )
 
-        // Neither of these is a permission Android will tell us about, so
-        // neither can ever show GRANTED. Grouping them under a heading that
-        // says so is the honest alternative to a row that looks permanently
-        // un-granted — the whole point of this page.
+        // Not a permission Android will tell us about, so it can never show
+        // GRANTED. A heading that says so is the honest alternative to a row
+        // that looks permanently un-granted.
         SectionDivider("SYSTEM SETTINGS")
 
-        if (autostart != null) {
-            PermissionRow(
-                icon = Icons.Default.RestartAlt,
-                name = "AUTOSTART",
-                why = "Start again after a reboot.",
-                detail = "Your phone keeps a list of apps allowed to start on " +
-                    "their own. nfcGuard is off it by default, so blocking " +
-                    "stops after a restart until you switch it on.\n\nAndroid " +
-                    "gives no way to read this list, so this row cannot show " +
-                    "whether it worked.",
-                granted = false,
-                grantLabel = "OPEN",
-                onGrant = { context.launch(autostart) }
-            )
-        }
         PermissionRow(
             icon = Icons.Default.OpenInNew,
             name = "PAUSE IF UNUSED",

@@ -158,6 +158,34 @@ object Permissions {
             intent.takeIf { resolved != null }
         }
 
+    /**
+     * Xiaomi's autostart switch, or null where it cannot be read.
+     *
+     * Only MIUI / HyperOS keep it somewhere readable: a private app-op
+     * (10008) that the stock `checkOpNoThrow(int, int, String)` answers when
+     * called by number. That overload is hidden API, so it is reached by
+     * reflection; if a future build blocks it this returns null and the row
+     * falls back to never claiming GRANTED, as on every other OEM.
+     */
+    fun hasAutostart(context: Context): Boolean? {
+        if (!Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)) return null
+        return try {
+            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+            val check = AppOpsManager::class.java.getMethod(
+                "checkOpNoThrow",
+                Int::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType,
+                String::class.java
+            )
+            val mode = check.invoke(appOps, MIUI_OP_AUTO_START, Process.myUid(), context.packageName) as Int
+            mode == AppOpsManager.MODE_ALLOWED
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    private const val MIUI_OP_AUTO_START = 10008
+
     fun appDetailsIntent(context: Context): Intent =
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
             .setData(Uri.parse("package:${context.packageName}"))
