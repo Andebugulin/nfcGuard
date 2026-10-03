@@ -158,4 +158,39 @@ class BlockDeciderTest {
         assertEquals(true, "com.google.android.dialer" in BlockDecider.CRITICAL_SYSTEM_APPS)
         assertEquals(true, "com.android.emergency" in BlockDecider.CRITICAL_SYSTEM_APPS)
     }
+
+    // ─── ruleFor: combining active modes ────────────────────────────────────
+
+    private fun mode(id: String, blockMode: BlockMode, vararg apps: String) =
+        Mode(id = id, name = id, blockedApps = apps.toList(), blockMode = blockMode)
+
+    @Test
+    fun ruleFor_blockModes_unionTheirBlocklists() {
+        val rule = BlockDecider.ruleFor(listOf(
+            mode("a", BlockMode.BLOCK_SELECTED, "x", "y"),
+            mode("b", BlockMode.BLOCK_SELECTED, "y", "z")
+        ))
+        assertEquals(BlockDecider.Rule(BlockMode.BLOCK_SELECTED, setOf("x", "y", "z")), rule)
+    }
+
+    @Test
+    fun ruleFor_anyAllowMode_winsAndOnlyAllowListsCount() {
+        val rule = BlockDecider.ruleFor(listOf(
+            mode("a", BlockMode.BLOCK_SELECTED, "x"),
+            mode("b", BlockMode.ALLOW_SELECTED, "maps")
+        ))
+        assertEquals(BlockDecider.Rule(BlockMode.ALLOW_SELECTED, setOf("maps")), rule)
+    }
+
+    @Test
+    fun ruleFor_state_usesOnlyActiveModes() {
+        val state = AppState(
+            modes = listOf(
+                mode("on", BlockMode.BLOCK_SELECTED, "x"),
+                mode("off", BlockMode.ALLOW_SELECTED, "maps")
+            ),
+            activeModes = setOf("on")
+        )
+        assertEquals(BlockDecider.Rule(BlockMode.BLOCK_SELECTED, setOf("x")), BlockDecider.ruleFor(state))
+    }
 }

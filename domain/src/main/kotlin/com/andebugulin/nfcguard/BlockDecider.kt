@@ -53,6 +53,31 @@ object BlockDecider {
         "com.coloros.lockscreen"
     )
 
+    /**
+     * What a set of active modes enforces together. Under BLOCK_SELECTED
+     * [apps] are blocked; under ALLOW_SELECTED they are the only apps left
+     * usable.
+     */
+    data class Rule(val blockMode: BlockMode, val apps: Set<String>)
+
+    /**
+     * Combine [activeModes] into one [Rule]. Any ALLOW_SELECTED mode wins:
+     * only ALLOW modes contribute, and the union of their allowlists is what
+     * stays usable. Otherwise the blocklists are unioned.
+     */
+    fun ruleFor(activeModes: List<Mode>): Rule {
+        val allowModes = activeModes.filter { it.blockMode == BlockMode.ALLOW_SELECTED }
+        return if (allowModes.isNotEmpty()) {
+            Rule(BlockMode.ALLOW_SELECTED, allowModes.flatMap { it.blockedApps }.toSet())
+        } else {
+            Rule(BlockMode.BLOCK_SELECTED, activeModes.flatMap { it.blockedApps }.toSet())
+        }
+    }
+
+    /** [ruleFor] the modes currently active in [state]. */
+    fun ruleFor(state: AppState): Rule =
+        ruleFor(state.modes.filter { it.id in state.activeModes })
+
     fun decide(
         currentApp: String,
         isLauncher: Boolean,

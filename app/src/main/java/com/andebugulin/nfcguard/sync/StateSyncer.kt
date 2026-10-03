@@ -1,6 +1,7 @@
 package com.andebugulin.nfcguard.sync
 
 import com.andebugulin.nfcguard.AppState
+import com.andebugulin.nfcguard.BlockDecider
 import com.andebugulin.nfcguard.BlockMode
 import com.andebugulin.nfcguard.data.AppLogger
 import com.andebugulin.nfcguard.data.AppStateRepository
@@ -108,21 +109,7 @@ object StateSyncer {
             return
         }
 
-        val hasAllow = activeModes.any { it.blockMode == BlockMode.ALLOW_SELECTED }
-        val apps: Set<String>
-        val blockMode: BlockMode
-        if (hasAllow) {
-            // ALLOW_SELECTED takes precedence — only collect apps from ALLOW
-            // modes (the union of their allowlists is what stays accessible)
-            apps = activeModes
-                .filter { it.blockMode == BlockMode.ALLOW_SELECTED }
-                .flatMap { it.blockedApps }
-                .toSet()
-            blockMode = BlockMode.ALLOW_SELECTED
-        } else {
-            apps = activeModes.flatMap { it.blockedApps }.toSet()
-            blockMode = BlockMode.BLOCK_SELECTED
-        }
+        val (blockMode, apps) = BlockDecider.ruleFor(activeModes)
 
         AppLogger.log("SYNC", "Starting service: mode=$blockMode, ${apps.size} apps, activeModes=${state.activeModes}")
         BlockerService.start(

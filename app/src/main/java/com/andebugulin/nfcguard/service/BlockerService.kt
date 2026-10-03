@@ -5,6 +5,7 @@ import com.andebugulin.nfcguard.BlockDecider
 import com.andebugulin.nfcguard.BlockMode
 import com.andebugulin.nfcguard.data.AppLogger
 import com.andebugulin.nfcguard.data.AppStateRepository
+import com.andebugulin.nfcguard.data.InstalledApps
 import com.andebugulin.nfcguard.receiver.ScheduleAlarmReceiver
 import com.andebugulin.nfcguard.receiver.ServiceRestartReceiver
 import com.andebugulin.nfcguard.ui.MainActivity
@@ -131,6 +132,8 @@ class BlockerService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "guardian_channel"
+        /** Most app names the notification lists before switching to a count. */
+        private const val NOTIFICATION_APP_LIMIT = 7
         private var isRunning = false
 
         fun start(
@@ -352,6 +355,7 @@ class BlockerService : Service() {
 
         if (activeModeIds.isNotEmpty() || timedModeReactivations.isNotEmpty()) {
             val details = buildString {
+                blockedAppsSummary()?.let { append(it).append("\n\n") }
                 if (activeModeIds.isNotEmpty()) {
                     activeModeIds.forEach { modeId ->
                         val name = resolvedNames[modeId]?.uppercase() ?: modeId.take(8)
@@ -396,6 +400,29 @@ class BlockerService : Service() {
             .setOngoing(true)
             .setContentIntent(pendingIntent)
             .build()
+    }
+
+    /**
+     * One line saying what is blocked right now, or null when nothing is.
+     * Names are listed up to [NOTIFICATION_APP_LIMIT]; past that the line
+     * gives the count and points at the app, where the full list lives.
+     */
+    private fun blockedAppsSummary(): String? {
+        if (activeModeIds.isEmpty()) return null
+        val names = blockedApps.map { InstalledApps.label(this, it) }.sortedBy { it.lowercase() }
+        val listed = names.size <= NOTIFICATION_APP_LIMIT
+        return when (blockMode) {
+            BlockMode.BLOCK_SELECTED -> when {
+                names.isEmpty() -> null
+                listed -> "Blocking: ${names.joinToString(", ")}"
+                else -> "Blocking ${names.size} apps. Open nfcGuard to see them."
+            }
+            BlockMode.ALLOW_SELECTED -> when {
+                names.isEmpty() -> "Blocking all apps"
+                listed -> "Only allowed: ${names.joinToString(", ")}"
+                else -> "Only ${names.size} apps allowed. Open nfcGuard to see them."
+            }
+        }
     }
 
     private fun formatNotificationTime(epochMillis: Long): String {

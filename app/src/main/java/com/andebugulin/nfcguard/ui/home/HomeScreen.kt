@@ -1,6 +1,8 @@
 package com.andebugulin.nfcguard.ui.home
 
 import com.andebugulin.nfcguard.AppState
+import com.andebugulin.nfcguard.BlockDecider
+import com.andebugulin.nfcguard.BlockMode
 import com.andebugulin.nfcguard.data.ConfigManager
 import com.andebugulin.nfcguard.NfcTag
 import com.andebugulin.nfcguard.Schedule
@@ -74,6 +76,7 @@ fun HomeScreen(
     var showEmergencyChallenge by remember { mutableStateOf(false) }
     var selectedTagsToDelete by remember { mutableStateOf(setOf<String>()) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showBlockedApps by remember { mutableStateOf(false) }
     // Tick every 30s to keep timer countdowns fresh
     var timeTick by remember { mutableStateOf(0L) }
     LaunchedEffect(appState.timedModeDeactivations, appState.timedModeReactivations) {
@@ -298,19 +301,47 @@ fun HomeScreen(
 
         // Active Modes Summary
         if (appState.activeModes.isNotEmpty()) {
+            val rule = BlockDecider.ruleFor(appState)
             Surface(
+                onClick = { showBlockedApps = true },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(0.dp),
                 color = GuardianTheme.TextPrimary
             ) {
                 Column(Modifier.padding(20.dp)) {
-                    Text(
-                        "ACTIVE NOW",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GuardianTheme.BackgroundSurface,
-                        letterSpacing = 1.sp
-                    )
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "ACTIVE NOW",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = GuardianTheme.BackgroundSurface,
+                            letterSpacing = 1.sp
+                        )
+                        val count = rule.apps.size
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                when {
+                                    rule.blockMode == BlockMode.ALLOW_SELECTED -> "$count ALLOWED"
+                                    count == 1 -> "1 APP BLOCKED"
+                                    else -> "$count APPS BLOCKED"
+                                },
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = GuardianTheme.OnLightSurfaceSecondaryText,
+                                letterSpacing = 1.sp
+                            )
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = "Show apps",
+                                tint = GuardianTheme.OnLightSurfaceSecondaryText,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(12.dp))
                     appState.modes.filter { appState.activeModes.contains(it.id) }.forEach { mode ->
                         val isManual = appState.manuallyActivatedModes.contains(mode.id)
@@ -452,6 +483,13 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    if (showBlockedApps && appState.activeModes.isNotEmpty()) {
+        BlockedAppsDialog(
+            rule = BlockDecider.ruleFor(appState),
+            onDismiss = { showBlockedApps = false }
+        )
     }
 
     // Recovery. One screen states the outcome and takes the (optional) tag
