@@ -46,7 +46,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.andebugulin.nfcguard.data.Permissions
 import com.andebugulin.nfcguard.ui.GuardianTheme
 import com.andebugulin.nfcguard.ui.components.ButtonKind
+import com.andebugulin.nfcguard.ui.components.DialogKind
 import com.andebugulin.nfcguard.ui.components.GuardianButton
+import com.andebugulin.nfcguard.ui.components.GuardianDialog
 import com.andebugulin.nfcguard.ui.components.GuardianType
 import com.andebugulin.nfcguard.ui.components.InfoDisclosure
 import androidx.compose.foundation.layout.fillMaxSize
@@ -110,6 +112,12 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
     ) { probe++ }
 
     var batteryAttempted by remember { mutableStateOf(false) }
+
+    // Play's AccessibilityService policy requires a disclosure the user must
+    // affirmatively accept or decline before the permission is requested —
+    // tapping away must not count as consent. GRANT opens this dialog instead
+    // of the system screen directly; only ALLOW launches it.
+    var showAccessibilityConsent by remember { mutableStateOf(false) }
 
     Column(
         modifier
@@ -180,7 +188,7 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
                     "content."
             },
             granted = accessibility,
-            onGrant = { context.launch(Permissions.accessibilityIntent()) }
+            onGrant = { showAccessibilityConsent = true }
         )
 
         SectionDivider("OPTIONAL")
@@ -244,6 +252,28 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
                 modifier = Modifier.height(36.dp)
             )
         }
+    }
+
+    if (showAccessibilityConsent) {
+        GuardianDialog(
+            title = "ACCESSIBILITY ACCESS",
+            message = "nfcGuard uses Android's Accessibility API only to see " +
+                "which app is in the foreground, so it can close a blocked " +
+                "app instantly instead of covering it.\n\nIt never reads, " +
+                "records, or sends screen content, typed text, or any other " +
+                "personal data - on this device or anywhere else.",
+            kind = DialogKind.Warning,
+            confirmLabel = "ALLOW",
+            onConfirm = {
+                showAccessibilityConsent = false
+                context.launch(Permissions.accessibilityIntent())
+            },
+            dismissLabel = "DON'T ALLOW",
+            // Tapping away or pressing back must decline, never grant —
+            // onDismiss is explicit here so GuardianDialog's onDismissRequest
+            // never falls back to onConfirm.
+            onDismiss = { showAccessibilityConsent = false }
+        )
     }
 }
 
