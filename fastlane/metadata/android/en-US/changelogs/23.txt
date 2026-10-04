@@ -1,0 +1,4 @@
+* Now in 13 more languages, including German, Spanish, French, Russian, Japanese and Chinese.
+* Schedules can run overnight, e.g. 22:00 - 07:00, and end at 00:00.
+* A schedule whose end was missed on phones that cut background apps now ends on time.
+* UNTIL times on Home, Modes and the notification now show the schedule actually running.
