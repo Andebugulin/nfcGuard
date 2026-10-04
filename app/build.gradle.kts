@@ -35,7 +35,10 @@ android {
                 val props = Properties().apply {
                     load(FileInputStream(propsFile))
                 }
-                storeFile = file("keystore/release.jks")
+                // KEYSTORE_FILE points at the signing key outside the repo.
+                // The keystore/release.jks fallback holds the key retired
+                // after 1.1.6 and must not sign anything published.
+                storeFile = file(props.getProperty("KEYSTORE_FILE", "keystore/release.jks"))
                 storePassword = props.getProperty("KEYSTORE_PASSWORD", "")
                 keyAlias = props.getProperty("KEY_ALIAS", "guardian")
                 keyPassword = props.getProperty("KEY_PASSWORD", "")
