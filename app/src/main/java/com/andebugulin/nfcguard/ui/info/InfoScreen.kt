@@ -38,38 +38,10 @@ fun InfoScreen(
     onBack: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    var githubStars by remember { mutableStateOf(0) }
     var showLogViewer by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var logCount by remember { mutableIntStateOf(AppLogger.getEntryCount()) }
-
-    // Fetch GitHub stars
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                val url = java.net.URL("https://api.github.com/repos/Andebugulin/nfcGuard")
-                val connection = url.openConnection() as java.net.HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
-                connection.setRequestProperty("User-Agent", "nfcGuard-App")
-                connection.connectTimeout = 10000
-                connection.readTimeout = 10000
-
-                if (connection.responseCode == 200) {
-                    val jsonString = connection.inputStream.bufferedReader().use { it.readText() }
-                    val json = org.json.JSONObject(jsonString)
-                    val stars = json.getInt("stargazers_count")
-
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        githubStars = stars
-                    }
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("InfoScreen", "Failed to fetch stars", e)
-            }
-        }
-    }
 
     Scaffold(
         snackbarHost = {
@@ -186,7 +158,7 @@ fun InfoScreen(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Text(
-                                        if (githubStars > 0) githubStars.toString() else "0",
+                                        GITHUB_STARS_LABEL,
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = GuardianTheme.TextPrimary,
@@ -663,3 +635,10 @@ fun GitHubOctocat(modifier: Modifier = Modifier) {
         )
     }
 }
+
+/**
+ * Star count shown on the GitHub card, updated by hand now and then.
+ * nfcGuard makes no network requests and holds no INTERNET permission, so
+ * it does not fetch the live number.
+ */
+private const val GITHUB_STARS_LABEL = "20+"

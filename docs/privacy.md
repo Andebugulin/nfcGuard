@@ -37,7 +37,7 @@ Guardian requests the following Android permissions:
 | **Boot Completed** | Restart the blocking service and reschedule alarms after device reboot |
 | **Exact Alarm** | Fire schedule start/end events at precise times |
 
-Guardian does **not** request internet access for its own functionality. The `INTERNET` permission in the manifest is inherited from dependencies and is not actively used by the app.
+Guardian does **not** have the `INTERNET` permission, so it cannot connect to the network at all.
 
 ## Third-Party Services
 

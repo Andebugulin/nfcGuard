@@ -189,7 +189,7 @@ footer {
     <tr><td><strong>Boot Completed</strong></td><td>Restart the blocking service and reschedule alarms after device reboot</td></tr>
     <tr><td><strong>Exact Alarm</strong></td><td>Fire schedule start/end events at precise times</td></tr>
   </table>
-  <p>nfcGuard does <strong>not</strong> request internet access for its own functionality. The INTERNET permission in the manifest is inherited from dependencies and is not actively used by the app.</p>
+  <p>nfcGuard does <strong>not</strong> have the INTERNET permission, so it cannot connect to the network at all.</p>
 
   <h2>Accessibility Service (AccessibilityService API) Disclosure</h2>
   <p>nfcGuard uses the Android AccessibilityService API <strong>solely</strong> to detect which application is currently in the foreground. This is required because the standard UsageStatsManager API does not reliably report foreground app transitions on certain devices, including Google Pixel and Samsung Galaxy phones.</p>
