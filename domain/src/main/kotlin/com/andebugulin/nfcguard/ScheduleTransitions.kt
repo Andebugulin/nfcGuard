@@ -1,5 +1,7 @@
 package com.andebugulin.nfcguard
 
+import java.util.TimeZone
+
 /**
  * Pure transformation logic for schedule alarm transitions.
  *
@@ -90,22 +92,21 @@ object ScheduleTransitions {
     // ─── Missed starts ──────────────────────────────────────────────────────
 
     /**
-     * Schedules whose start time today has passed but whose start never ran.
+     * Schedules that should be running now but whose start never ran.
      *
      * Some OEMs (Xiaomi's HyperOS especially) drop an app's pending alarms
      * when they kill it, so the start alarm can simply never fire. The app
      * calls this whenever it gets a chance to run and applies
      * [applyScheduleActivation] to each result.
      *
-     * A schedule counts as missed when today ([day], 1 = Monday) is one of
-     * its days, [minuteOfDay] is at or after its start, still before its end
-     * if it has one, and it has not started since today's start time.
-     * Schedules that end past midnight are only caught up until midnight.
+     * A schedule counts as missed when [ScheduleClock] says it is running at
+     * [day] (1 = Monday) / [minuteOfDay], including the morning half of an
+     * overnight schedule, and it has not started since that occurrence began.
      *
      * Already-active schedules are skipped. So is a schedule the user
      * unlocked when there is no start time on record, which is every
      * schedule saved before `scheduleLastStartedAt` existed: there is no way
-     * to tell whether that unlock was for today's occurrence.
+     * to tell whether that unlock was for the current occurrence.
      */
     fun missedScheduleStarts(
         state: AppState,
@@ -114,19 +115,41 @@ object ScheduleTransitions {
         now: Long
     ): List<String> = state.schedules.filter { schedule ->
         if (schedule.id in state.activeSchedules) return@filter false
-        val time = schedule.timeSlot.getTimeForDay(day) ?: return@filter false
-
-        val start = time.startHour * 60 + time.startMinute
-        val end = time.endHour * 60 + time.endMinute
-        if (minuteOfDay < start) return@filter false
-        if (schedule.hasEndTime && end > start && minuteOfDay >= end) return@filter false
+        val occurrence = ScheduleClock.occurrenceAt(schedule, day, minuteOfDay)
+            ?: return@filter false
 
         val lastStarted = state.scheduleLastStartedAt[schedule.id]
             ?: return@filter schedule.id !in state.deactivatedSchedules
-        // Start of today's start minute; a start since then means this
-        // occurrence already ran.
-        val todaysStart = now - (minuteOfDay - start) * 60_000L - now % 60_000L
-        lastStarted < todaysStart
+        // Start of the occurrence's start minute; a start since then means
+        // this occurrence already ran.
+        val occurrenceStart = now - occurrence.minutesSinceStart * 60_000L - now % 60_000L
+        lastStarted < occurrenceStart
+    }.map { it.id }
+
+    /**
+     * Active schedules whose end alarm should have fired but did not: the
+     * mirror image of [missedScheduleStarts]. Apply
+     * [applyScheduleDeactivation] to each result.
+     *
+     * A schedule counts as missed when it has an end time, is not running
+     * now, and one of its end times has passed since it last turned on.
+     * Measuring from the last start keeps a schedule switched on by hand
+     * outside its hours running until its next end, exactly as the end alarm
+     * would. Without a start on record nothing is assumed.
+     */
+    fun missedScheduleEnds(
+        state: AppState,
+        day: Int,
+        minuteOfDay: Int,
+        now: Long,
+        timeZone: TimeZone = TimeZone.getDefault()
+    ): List<String> = state.schedules.filter { schedule ->
+        if (schedule.id !in state.activeSchedules || !schedule.hasEndTime) return@filter false
+        if (ScheduleClock.isRunning(schedule, day, minuteOfDay)) return@filter false
+        val lastStarted = state.scheduleLastStartedAt[schedule.id] ?: return@filter false
+        schedule.timeSlot.dayTimes.any { slot ->
+            ScheduleClock.nextTrigger(slot, end = true, nowMillis = lastStarted, timeZone = timeZone) <= now
+        }
     }.map { it.id }
 
     // ─── Schedule deactivation ──────────────────────────────────────────────

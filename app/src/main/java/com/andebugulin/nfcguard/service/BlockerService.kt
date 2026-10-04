@@ -1,5 +1,6 @@
 package com.andebugulin.nfcguard.service
 
+import com.andebugulin.nfcguard.ScheduleClock
 import com.andebugulin.nfcguard.AppState
 import com.andebugulin.nfcguard.BlockDecider
 import com.andebugulin.nfcguard.BlockMode
@@ -338,19 +339,8 @@ class BlockerService : Service() {
                     AppStateRepository.getInstance(this).current.also { resolvedAppState = it }
                 } catch (_: Exception) { return null }
             }
-            val cal = java.util.Calendar.getInstance()
-            val currentDay = when (cal.get(java.util.Calendar.DAY_OF_WEEK)) {
-                java.util.Calendar.MONDAY -> 1; java.util.Calendar.TUESDAY -> 2
-                java.util.Calendar.WEDNESDAY -> 3; java.util.Calendar.THURSDAY -> 4
-                java.util.Calendar.FRIDAY -> 5; java.util.Calendar.SATURDAY -> 6
-                java.util.Calendar.SUNDAY -> 7; else -> 1
-            }
-            return state.schedules.firstOrNull { schedule ->
-                schedule.linkedModeIds.contains(modeId) &&
-                        schedule.hasEndTime
-            }?.timeSlot?.getTimeForDay(currentDay)?.let { dt ->
-                String.format("%02d:%02d", dt.endHour, dt.endMinute)
-            }
+            val moment = ScheduleClock.momentOf(System.currentTimeMillis())
+            return ScheduleClock.modeHeldUntil(state, modeId, moment)?.let(ScheduleClock::format)
         }
 
         if (activeModeIds.isNotEmpty() || timedModeReactivations.isNotEmpty()) {

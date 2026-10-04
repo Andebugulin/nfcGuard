@@ -12,6 +12,7 @@ import com.andebugulin.nfcguard.NfcTag
 import com.andebugulin.nfcguard.NfcUnlockLogic
 import com.andebugulin.nfcguard.PendingUnlock
 import com.andebugulin.nfcguard.Schedule
+import com.andebugulin.nfcguard.ScheduleClock
 import com.andebugulin.nfcguard.receiver.ScheduleAlarmReceiver
 import com.andebugulin.nfcguard.service.BlockerService
 import com.andebugulin.nfcguard.sync.StateSyncer
@@ -64,7 +65,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                 delay(5000)  // Check every 5 seconds
                 checkTimedDeactivations()
                 checkTimedReactivations()
-                ScheduleAlarmReceiver.catchUpMissedStarts(context)
+                ScheduleAlarmReceiver.catchUpMissedTransitions(context)
             }
         }
     }
@@ -331,15 +332,13 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     fun handleNfcTag(tagId: String) {
         viewModelScope.launch {
             AppLogger.log("NFC", "handleNfcTag: tagId=$tagId, activeModes=${repo.current.activeModes}")
-            val calendar = java.util.Calendar.getInstance()
-            val currentDayOfWeek = NfcUnlockLogic.calendarDayToScheduleDay(calendar.get(java.util.Calendar.DAY_OF_WEEK))
-            val currentMinuteOfDay = calendar.get(java.util.Calendar.HOUR_OF_DAY) * 60 + calendar.get(java.util.Calendar.MINUTE)
+            val moment = ScheduleClock.momentOf(System.currentTimeMillis())
 
             val pending = NfcUnlockLogic.computePendingUnlock(
                 state = repo.current,
                 tagId = tagId,
-                currentDayOfWeek = currentDayOfWeek,
-                currentMinuteOfDay = currentMinuteOfDay
+                currentDayOfWeek = moment.day,
+                currentMinuteOfDay = moment.minuteOfDay
             ) ?: return@launch
 
             AppLogger.log("NFC", "Pending unlock: modes=${pending.modeIds}, schedules=${pending.schedulesToDeactivate}, limit=${pending.maxLimitMinutes}")
@@ -355,10 +354,8 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
 
         viewModelScope.launch {
             val currentState = repo.current
-            val calendar = java.util.Calendar.getInstance()
-            val currentDayOfWeek = NfcUnlockLogic.calendarDayToScheduleDay(calendar.get(java.util.Calendar.DAY_OF_WEEK))
-            val currentMinuteOfDay = calendar.get(java.util.Calendar.HOUR_OF_DAY) * 60 + calendar.get(java.util.Calendar.MINUTE)
             val now = System.currentTimeMillis()
+            val moment = ScheduleClock.momentOf(now)
 
             val result = NfcUnlockLogic.applyUnlock(
                 state = currentState,
@@ -366,8 +363,8 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                 selectedModeIds = selectedModeIds,
                 reactivateAtMillis = reactivateAtMillis,
                 now = now,
-                currentDayOfWeek = currentDayOfWeek,
-                currentMinuteOfDay = currentMinuteOfDay
+                currentDayOfWeek = moment.day,
+                currentMinuteOfDay = moment.minuteOfDay
             )
 
             AppLogger.log("NFC", "Confirming unlock: modes=${result.unlockedModeIds} (of ${pending.modeIds}), reactivate=${reactivateAtMillis != null}")
@@ -494,7 +491,7 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
      *  This activates the schedule's linked modes and marks the schedule as active,
      *  so the end-alarm will properly deactivate everything. */
     fun activateScheduleManually(scheduleId: String): ActivationResult {
-        val result = ModeActivationLogic.applyManualScheduleActivation(repo.current, scheduleId)
+        val result = ModeActivationLogic.applyManualScheduleActivation(repo.current, scheduleId, System.currentTimeMillis())
         return when (result) {
             is ModeActivationLogic.ManualScheduleActivationResult.ScheduleNotFound ->
                 ActivationResult.MODE_NOT_FOUND

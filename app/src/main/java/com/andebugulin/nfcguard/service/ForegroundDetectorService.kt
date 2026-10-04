@@ -49,7 +49,7 @@ class ForegroundDetectorService : AccessibilityService() {
         // system rebinds on its own, which makes this the only dependable
         // recovery hook. Restore enforcement from persisted state.
         try {
-            ScheduleAlarmReceiver.catchUpMissedStarts(this)
+            ScheduleAlarmReceiver.catchUpMissedTransitions(this)
             val state = AppStateRepository.getInstance(this).current
             StateSyncer.sync(this, state)
             ScheduleAlarmReceiver.scheduleWatchdog(this)
@@ -94,7 +94,7 @@ class ForegroundDetectorService : AccessibilityService() {
         if (now - lastHealAt < HEAL_INTERVAL_MS) return
         lastHealAt = now
         try {
-            ScheduleAlarmReceiver.catchUpMissedStarts(this)
+            ScheduleAlarmReceiver.catchUpMissedTransitions(this)
             val state = AppStateRepository.getInstance(this).current
             val hasWork = state.activeModes.isNotEmpty() || state.schedules.isNotEmpty()
             if (hasWork && !BlockerService.isRunning()) {

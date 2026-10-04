@@ -321,8 +321,9 @@ class ScheduleEditorEndToEndTest {
         val saved = schedules().single()
         assertFalse("hasEndTime should stay off", saved.hasEndTime)
         val day = saved.timeSlot.dayTimes.single()
-        assertEquals(23, day.endHour)
-        assertEquals(59, day.endMinute)
+        // Eight hours after the 09:00 default start, never 23:59.
+        assertEquals(17, day.endHour)
+        assertEquals(0, day.endMinute)
     }
 
     @Test fun customEndTimesRevealAnEndTimePerDay() {
@@ -337,22 +338,37 @@ class ScheduleEditorEndToEndTest {
         harness.launch()
 
         val editor = newSchedule().enableCustomEndTimes()
-        // The end time defaults to 23:59; move it to 17:00.
-        editor.openEndTime(MONDAY).pick("17").set()
+        // The end time defaults to 17:00; move it to 18:00.
+        editor.openEndTime(MONDAY).pick("18").set()
         editor.create()
 
         val saved = schedules().single()
         assertTrue("the toggle should be recorded", saved.hasEndTime)
-        assertEquals(17, saved.timeSlot.dayTimes.single().endHour)
+        assertEquals(18, saved.timeSlot.dayTimes.single().endHour)
     }
 
-    /** An end before the start would describe a window that never opens. */
-    @Test fun anEndTimeBeforeTheStartIsRejected() {
+    /** An end before the start runs overnight into the next day. */
+    @Test fun anEndTimeBeforeTheStartRunsOvernight() {
         seedMode()
         harness.launch()
 
         val editor = newSchedule().enableCustomEndTimes()
         editor.openEndTime(MONDAY).pick("7").set()   // 07:00, before the 09:00 start
+        editor.assertTimeShown("UNTIL (NEXT DAY)")
+
+        editor.create()
+        val saved = schedules().single().timeSlot.dayTimes.single()
+        assertEquals(9, saved.startHour)
+        assertEquals(7, saved.endHour)
+    }
+
+    /** An end equal to the start describes a window that never opens. */
+    @Test fun anEndTimeEqualToTheStartIsRejected() {
+        seedMode()
+        harness.launch()
+
+        val editor = newSchedule().enableCustomEndTimes()
+        editor.openEndTime(MONDAY).pick("9").set()   // 09:00, same as the start
 
         editor.create()
         editor.assertEndTimeRejected()

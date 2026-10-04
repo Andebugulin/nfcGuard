@@ -401,7 +401,7 @@ class SchedulesRobot(compose: ComposeTestRule) : Robot(compose) {
     }
 
     fun assertTimeShown(shown: String) = apply { assertVisible(shown) }
-    fun assertEndTimeRejected() = apply { assertVisible("End time must be after start time") }
+    fun assertEndTimeRejected() = apply { assertVisible("End time must differ from start time") }
 }
 
 /**

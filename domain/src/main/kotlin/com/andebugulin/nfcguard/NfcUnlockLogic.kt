@@ -1,7 +1,5 @@
 package com.andebugulin.nfcguard
 
-import java.util.Calendar
-
 /**
  * Pure transformation logic for the NFC unlock state machine.
  *
@@ -10,18 +8,6 @@ import java.util.Calendar
  * unit-tested without Android.
  */
 object NfcUnlockLogic {
-
-    /** Schedule's day-of-week format: 1=Monday .. 7=Sunday. */
-    fun calendarDayToScheduleDay(calendarDay: Int): Int = when (calendarDay) {
-        Calendar.MONDAY -> 1
-        Calendar.TUESDAY -> 2
-        Calendar.WEDNESDAY -> 3
-        Calendar.THURSDAY -> 4
-        Calendar.FRIDAY -> 5
-        Calendar.SATURDAY -> 6
-        Calendar.SUNDAY -> 7
-        else -> 1
-    }
 
     /**
      * Decide which active modes a scanned tag can unlock and which active
@@ -69,9 +55,7 @@ object NfcUnlockLogic {
             state.schedules.forEach inner@{ schedule ->
                 if (!schedule.linkedModeIds.contains(modeId)) return@inner
                 if (!state.activeSchedules.contains(schedule.id)) return@inner
-                val dayTime = schedule.timeSlot.getTimeForDay(currentDayOfWeek) ?: return@inner
-                val startTime = dayTime.startHour * 60 + dayTime.startMinute
-                if (currentMinuteOfDay >= startTime) {
+                if (ScheduleClock.isRunning(schedule, currentDayOfWeek, currentMinuteOfDay)) {
                     schedulesToDeactivate.add(schedule.id)
                 }
             }
@@ -124,9 +108,7 @@ object NfcUnlockLogic {
             state.schedules.forEach inner@{ schedule ->
                 if (!schedule.linkedModeIds.contains(modeId)) return@inner
                 if (!state.activeSchedules.contains(schedule.id)) return@inner
-                val dayTime = schedule.timeSlot.getTimeForDay(currentDayOfWeek) ?: return@inner
-                val startTime = dayTime.startHour * 60 + dayTime.startMinute
-                if (currentMinuteOfDay < startTime) return@inner
+                if (!ScheduleClock.isRunning(schedule, currentDayOfWeek, currentMinuteOfDay)) return@inner
                 val allLinkedWillBeInactive = schedule.linkedModeIds.all { linkedId ->
                     modeIdsToUnlock.contains(linkedId) || !state.activeModes.contains(linkedId)
                 }

@@ -1,5 +1,6 @@
 package com.andebugulin.nfcguard.ui.modes
 
+import com.andebugulin.nfcguard.ScheduleClock
 import com.andebugulin.nfcguard.ActivationResult
 import com.andebugulin.nfcguard.BlockMode
 import com.andebugulin.nfcguard.Mode
@@ -104,19 +105,9 @@ fun ModesScreen(
                     ) {
                         items(appState.modes, key = { it.id }) { mode ->
                             // Compute schedule end time for this mode
-                            val cal = java.util.Calendar.getInstance()
-                            val currentDay = when (cal.get(java.util.Calendar.DAY_OF_WEEK)) {
-                                java.util.Calendar.MONDAY -> 1; java.util.Calendar.TUESDAY -> 2
-                                java.util.Calendar.WEDNESDAY -> 3; java.util.Calendar.THURSDAY -> 4
-                                java.util.Calendar.FRIDAY -> 5; java.util.Calendar.SATURDAY -> 6
-                                java.util.Calendar.SUNDAY -> 7; else -> 1
-                            }
-                            val scheduleEndStr = appState.schedules.firstOrNull { schedule ->
-                                schedule.linkedModeIds.contains(mode.id) &&
-                                        schedule.hasEndTime
-                            }?.timeSlot?.getTimeForDay(currentDay)?.let { dt ->
-                                String.format("%02d:%02d", dt.endHour, dt.endMinute)
-                            }
+                            val scheduleEndStr = ScheduleClock.modeHeldUntil(
+                                appState, mode.id, ScheduleClock.momentOf(now)
+                            )?.let(ScheduleClock::format)
 
                             ModeCard(
                                 mode = mode,
@@ -311,23 +302,11 @@ fun ModesScreen(
         ActivationOptionsDialog(
             mode = mode,
             hasLinkedSchedules = run {
-                val cal = java.util.Calendar.getInstance()
-                val currentDay = when (cal.get(java.util.Calendar.DAY_OF_WEEK)) {
-                    java.util.Calendar.MONDAY -> 1; java.util.Calendar.TUESDAY -> 2
-                    java.util.Calendar.WEDNESDAY -> 3; java.util.Calendar.THURSDAY -> 4
-                    java.util.Calendar.FRIDAY -> 5; java.util.Calendar.SATURDAY -> 6
-                    java.util.Calendar.SUNDAY -> 7; else -> 1
-                }
-                val currentTime = cal.get(java.util.Calendar.HOUR_OF_DAY) * 60 + cal.get(java.util.Calendar.MINUTE)
+                val moment = ScheduleClock.momentOf(System.currentTimeMillis())
+                // A schedule will deactivate this mode if one of its end
+                // alarms is still ahead today.
                 appState.schedules.any { schedule ->
-                    schedule.linkedModeIds.contains(mode.id) && schedule.hasEndTime &&
-                            schedule.timeSlot.getTimeForDay(currentDay)?.let { dt ->
-                                val end = dt.endHour * 60 + dt.endMinute
-                                // Schedule will deactivate this mode if:
-                                // - currently active (start <= now < end), OR
-                                // - upcoming today (now < start, so end alarm is still ahead)
-                                currentTime < end
-                            } == true
+                    mode.id in schedule.linkedModeIds && ScheduleClock.hasEndAhead(schedule, moment)
                 }
             },
             onDismiss = { showActivationOptionsDialog = null },

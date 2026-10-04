@@ -1,5 +1,6 @@
 package com.andebugulin.nfcguard.ui.schedules
 
+import com.andebugulin.nfcguard.ScheduleClock
 import com.andebugulin.nfcguard.ActivationResult
 import com.andebugulin.nfcguard.AppState
 import com.andebugulin.nfcguard.DayTime
@@ -59,60 +60,19 @@ enum class ScheduleState {
     DEACTIVATED  // User deactivated during schedule time
 }
 
-// Convert Calendar.DAY_OF_WEEK to schedule day format (1=Monday..7=Sunday)
-private fun calendarDayToScheduleDay(): Int {
-    val calendar = Calendar.getInstance()
-    return when (calendar.get(Calendar.DAY_OF_WEEK)) {
-        Calendar.MONDAY -> 1
-        Calendar.TUESDAY -> 2
-        Calendar.WEDNESDAY -> 3
-        Calendar.THURSDAY -> 4
-        Calendar.FRIDAY -> 5
-        Calendar.SATURDAY -> 6
-        Calendar.SUNDAY -> 7
-        else -> 1
-    }
+/** Default end for a start time: eight hours later, so 09:00 gives 17:00. */
+private fun defaultEndFor(start: Pair<Int, Int>): Pair<Int, Int> {
+    val end = (start.first * 60 + start.second + 8 * 60) % ScheduleClock.MINUTES_PER_DAY
+    return end / 60 to end % 60
 }
 
-// Get current schedule state
 private fun isInScheduleTime(schedule: Schedule): Boolean {
-    val calendar = Calendar.getInstance()
-    val currentDay = calendarDayToScheduleDay()
-    val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
-    val currentMinute = calendar.get(Calendar.MINUTE)
-    val currentTimeInMinutes = currentHour * 60 + currentMinute
-
-    val dayTime = schedule.timeSlot.getTimeForDay(currentDay) ?: return false
-    val startTimeInMinutes = dayTime.startHour * 60 + dayTime.startMinute
-
-    return if (schedule.hasEndTime) {
-        val endTimeInMinutes = dayTime.endHour * 60 + dayTime.endMinute
-        // Exclusive end: at exactly the end minute the schedule is over (alarm fires at xx:00)
-        currentTimeInMinutes in startTimeInMinutes until endTimeInMinutes
-    } else {
-        currentTimeInMinutes >= startTimeInMinutes
-    }
+    val moment = ScheduleClock.momentOf(System.currentTimeMillis())
+    return ScheduleClock.isRunning(schedule, moment.day, moment.minuteOfDay)
 }
-
 
 private fun getScheduleState(schedule: Schedule, appState: AppState): ScheduleState {
-    val calendar = Calendar.getInstance()
-    val currentDay = calendarDayToScheduleDay()
-    val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
-    val currentMinute = calendar.get(Calendar.MINUTE)
-    val currentTimeInMinutes = currentHour * 60 + currentMinute
-
-    val dayTime = schedule.timeSlot.getTimeForDay(currentDay) ?: return ScheduleState.NONE
-    val startTimeInMinutes = dayTime.startHour * 60 + dayTime.startMinute
-
-    // Check if we're in schedule time
-    val inScheduleTime = if (schedule.hasEndTime) {
-        val endTimeInMinutes = dayTime.endHour * 60 + dayTime.endMinute
-        // Exclusive end: at exactly the end minute the schedule is over (alarm fires at xx:00)
-        currentTimeInMinutes in startTimeInMinutes until endTimeInMinutes
-    } else {
-        currentTimeInMinutes >= startTimeInMinutes
-    }
+    val inScheduleTime = isInScheduleTime(schedule)
 
     if (!inScheduleTime) {
         return ScheduleState.NONE
@@ -844,9 +804,9 @@ fun ScheduleEditorDialog(
                     // FIX #4: Validate end times before saving
                     if (hasEndTime) {
                         val hasInvalidEndTime = selectedDays.any { day ->
-                            val (startH, startM) = dayTimes[day] ?: (9 to 0)
-                            val (endH, endM) = dayEndTimes[day] ?: (23 to 59)
-                            (endH * 60 + endM) <= (startH * 60 + startM)
+                            val start = dayTimes[day] ?: (9 to 0)
+                            val end = dayEndTimes[day] ?: defaultEndFor(start)
+                            end == start
                         }
                         if (hasInvalidEndTime) {
                             endTimeError = true
@@ -858,7 +818,7 @@ fun ScheduleEditorDialog(
                     if (name.isNotBlank() && selectedDays.isNotEmpty() && selectedModeIds.isNotEmpty() && !nameExists) {
                         val dayTimesList = selectedDays.sorted().map { day ->
                             val (startH, startM) = dayTimes[day] ?: (9 to 0)
-                            val (endH, endM) = dayEndTimes[day] ?: (23 to 59)
+                            val (endH, endM) = dayEndTimes[day] ?: defaultEndFor(startH to startM)
                             DayTime(day, startH, startM, endH, endM)
                         }
                         val timeSlot = TimeSlot(dayTimesList)
@@ -969,7 +929,7 @@ fun ScheduleEditorDialog(
                                                 this[day] = Pair(9, 0)
                                             }
                                             dayEndTimes = dayEndTimes.toMutableMap().apply {
-                                                this[day] = Pair(23, 59)
+                                                this[day] = defaultEndFor(9 to 0)
                                             }
                                         }
                                         endTimeError = false  // Reset error on change
@@ -1014,16 +974,17 @@ fun ScheduleEditorDialog(
                                             Spacer(Modifier.height(4.dp))
 
                                             // FIX #4: Show per-day end time error
-                                            val (startH, startM) = dayTimes[day] ?: (9 to 0)
-                                            val (endH, endM) = dayEndTimes[day] ?: (23 to 59)
-                                            val endBeforeStart = (endH * 60 + endM) <= (startH * 60 + startM)
+                                            val start = dayTimes[day] ?: (9 to 0)
+                                            val (endH, endM) = dayEndTimes[day] ?: defaultEndFor(start)
+                                            val endBeforeStart = (endH to endM) == start
+                                            val overnight = endH * 60 + endM < start.first * 60 + start.second
 
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
                                                 Text(
-                                                    "UNTIL",
+                                                    if (overnight) "UNTIL (NEXT DAY)" else "UNTIL",
                                                     fontSize = 10.sp,
                                                     color = if (endBeforeStart && endTimeError) GuardianTheme.ErrorTextEmphasized else GuardianTheme.TextTertiary,
                                                     letterSpacing = 1.sp,
@@ -1048,7 +1009,7 @@ fun ScheduleEditorDialog(
                                             // FIX #4: Inline error
                                             if (endBeforeStart && endTimeError) {
                                                 Text(
-                                                    "End time must be after start time",
+                                                    "End time must differ from start time",
                                                     fontSize = 9.sp,
                                                     color = GuardianTheme.ErrorTextEmphasized,
                                                     letterSpacing = 0.5.sp
@@ -1083,7 +1044,7 @@ fun ScheduleEditorDialog(
                                         dayEndTimes = dayEndTimes.toMutableMap().apply {
                                             selectedDays.forEach { day ->
                                                 if (!this.containsKey(day)) {
-                                                    this[day] = Pair(23, 59)
+                                                    this[day] = defaultEndFor(dayTimes[day] ?: (9 to 0))
                                                 }
                                             }
                                         }
@@ -1126,7 +1087,7 @@ fun ScheduleEditorDialog(
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Text(
-                                        "Fix end times that are before start times",
+                                        "Start and end times cannot be the same",
                                         fontSize = 11.sp,
                                         color = GuardianTheme.ErrorText,
                                         letterSpacing = 0.5.sp
@@ -1244,7 +1205,7 @@ fun ScheduleEditorDialog(
     }
 
     showEndTimePickerForDay?.let { day ->
-        val (currentH, currentM) = dayEndTimes[day] ?: (23 to 59)
+        val (currentH, currentM) = dayEndTimes[day] ?: defaultEndFor(dayTimes[day] ?: (9 to 0))
         ModernTimePickerDialog(
             initialHour = currentH,
             initialMinute = currentM,

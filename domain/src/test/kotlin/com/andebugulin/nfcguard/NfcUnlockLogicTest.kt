@@ -423,4 +423,17 @@ class NfcUnlockLogicTest {
         assertTrue(result.newState.activeSchedules.contains("s1"))
         assertFalse(result.newState.deactivatedSchedules.contains("s1"))
     }
+
+    @Test
+    fun computePendingUnlock_overnightScheduleMorning_marksScheduleDeactivated() {
+        // 22:00 - 07:00 every day; tag scanned at 03:00, in the morning half.
+        val state = AppState(
+            modes = listOf(mode("m1", nfcTagIds = listOf("tag-1"))),
+            schedules = listOf(dailySchedule("s1", listOf("m1"), startHour = 22, endHour = 7)),
+            activeModes = setOf("m1"),
+            activeSchedules = setOf("s1")
+        )
+        val pending = NfcUnlockLogic.computePendingUnlock(state, "tag-1", 2, 3 * 60)
+        assertEquals(setOf("s1"), pending!!.schedulesToDeactivate)
+    }
 }

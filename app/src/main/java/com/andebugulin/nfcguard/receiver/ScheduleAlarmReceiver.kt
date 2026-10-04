@@ -6,6 +6,7 @@ import com.andebugulin.nfcguard.data.AppStateRepository
 import com.andebugulin.nfcguard.Mode
 import com.andebugulin.nfcguard.NfcUnlockLogic
 import com.andebugulin.nfcguard.Schedule
+import com.andebugulin.nfcguard.ScheduleClock
 import com.andebugulin.nfcguard.ScheduleTransitions
 import com.andebugulin.nfcguard.service.BlockerService
 import com.andebugulin.nfcguard.sync.StateSyncer
@@ -17,7 +18,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import kotlinx.coroutines.runBlocking
-import java.util.Calendar
 
 class ScheduleAlarmReceiver : BroadcastReceiver() {
 
@@ -44,7 +44,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
         when (intent.action) {
             ACTION_CHECK_SCHEDULE -> {
                 AppLogger.log("ALARM", "Watchdog CHECK fired")
-                catchUpMissedStarts(context)
+                catchUpMissedTransitions(context)
                 ensureServiceRunning(context)
                 // Self-chain: schedule the next watchdog
                 scheduleWatchdog(context)
@@ -54,7 +54,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 val day = intent.getIntExtra(EXTRA_DAY, -1)
                 if (day != -1) {
                     activateSpecificSchedule(context, scheduleId, day)
-                    scheduleAlarmForSchedule(context, scheduleId, day, isStart = true, forNextWeek = true)
+                    scheduleAlarmForSchedule(context, scheduleId, day, isStart = true)
                 }
             }
             ACTION_DEACTIVATE_SCHEDULE -> {
@@ -62,7 +62,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 val day = intent.getIntExtra(EXTRA_DAY, -1)
                 if (day != -1) {
                     deactivateSpecificSchedule(context, scheduleId)
-                    scheduleAlarmForSchedule(context, scheduleId, day, isStart = false, forNextWeek = true)
+                    scheduleAlarmForSchedule(context, scheduleId, day, isStart = false)
                 }
             }
             ACTION_TIMED_DEACTIVATE_MODE -> {
@@ -226,39 +226,46 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
         }
 
         /**
-         * Start any schedule whose start alarm should have fired today but
-         * did not. HyperOS and similar drop an app's alarms when they kill it,
-         * so the alarm alone is not enough; callers run this whenever the app
-         * gets a chance to. Cheap when there is nothing to do: one read of
-         * the current state, no write.
+         * Start every schedule whose start alarm should have fired but did
+         * not, and end every one whose end alarm was missed. HyperOS and
+         * similar drop an app's alarms when they kill it, so the alarms alone
+         * are not enough; callers run this whenever the app gets a chance
+         * to. Cheap when there is nothing to do: one read of the current
+         * state, no write.
          */
-        fun catchUpMissedStarts(context: Context) {
+        fun catchUpMissedTransitions(context: Context) {
             val repo = AppStateRepository.getInstance(context)
             val now = System.currentTimeMillis()
-            val calendar = Calendar.getInstance().apply { timeInMillis = now }
-            val day = NfcUnlockLogic.calendarDayToScheduleDay(calendar.get(Calendar.DAY_OF_WEEK))
-            val minuteOfDay = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+            val moment = ScheduleClock.momentOf(now)
 
-            fun missed(state: AppState) =
-                ScheduleTransitions.missedScheduleStarts(state, day, minuteOfDay, now)
+            fun missedEnds(state: AppState) =
+                ScheduleTransitions.missedScheduleEnds(state, moment.day, moment.minuteOfDay, now)
+            fun missedStarts(state: AppState) =
+                ScheduleTransitions.missedScheduleStarts(state, moment.day, moment.minuteOfDay, now)
 
-            if (missed(repo.current).isEmpty()) return
+            val current = repo.current
+            if (missedEnds(current).isEmpty() && missedStarts(current).isEmpty()) return
             try {
-                val started = runBlocking {
+                val (ended, started) = runBlocking {
                     repo.updateWith { state ->
-                        // Re-check inside the lock: the alarm may have just run.
-                        val ids = missed(state)
-                        val next = ids.fold(state) { s, id ->
+                        // Re-check inside the lock: an alarm may have just run.
+                        // Ends first, so a schedule ending and another starting
+                        // over the same modes leaves the new one in charge.
+                        val endIds = missedEnds(state)
+                        val afterEnds = endIds.fold(state) { s, id ->
+                            ScheduleTransitions.applyScheduleDeactivation(s, id).newState
+                        }
+                        val startIds = missedStarts(afterEnds)
+                        val next = startIds.fold(afterEnds) { s, id ->
                             ScheduleTransitions.applyScheduleActivation(s, id, now).newState
                         }
-                        next to ids
+                        next to (endIds to startIds)
                     }
                 }
-                if (started.isNotEmpty()) {
-                    AppLogger.log("ALARM", "Caught up missed schedule starts: $started")
-                }
+                if (ended.isNotEmpty()) AppLogger.log("ALARM", "Caught up missed schedule ends: $ended")
+                if (started.isNotEmpty()) AppLogger.log("ALARM", "Caught up missed schedule starts: $started")
             } catch (e: Exception) {
-                AppLogger.log("ALARM", "Error catching up missed starts: ${e.message}")
+                AppLogger.log("ALARM", "Error catching up missed schedule transitions: ${e.message}")
             }
         }
 
@@ -280,37 +287,18 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             context: Context,
             scheduleId: String,
             day: Int,
-            isStart: Boolean,
-            forNextWeek: Boolean = false
+            isStart: Boolean
         ) {
             val appState = AppStateRepository.getInstance(context).current
 
             try {
                 val schedule = appState.schedules.find { it.id == scheduleId } ?: return
                 val dayTime = schedule.timeSlot.getTimeForDay(day) ?: return
-
-                val calendarDay = when (day) {
-                    1 -> Calendar.MONDAY
-                    2 -> Calendar.TUESDAY
-                    3 -> Calendar.WEDNESDAY
-                    4 -> Calendar.THURSDAY
-                    5 -> Calendar.FRIDAY
-                    6 -> Calendar.SATURDAY
-                    7 -> Calendar.SUNDAY
-                    else -> return
-                }
-
-                val calendar = Calendar.getInstance().apply {
-                    set(Calendar.DAY_OF_WEEK, calendarDay)
-                    set(Calendar.HOUR_OF_DAY, if (isStart) dayTime.startHour else dayTime.endHour)
-                    set(Calendar.MINUTE, if (isStart) dayTime.startMinute else dayTime.endMinute)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-
-                    if (timeInMillis <= System.currentTimeMillis() || forNextWeek) {
-                        add(Calendar.WEEK_OF_YEAR, 1)
-                    }
-                }
+                // Strictly after now, so rescheduling from inside the alarm
+                // that just fired lands on next week's occurrence.
+                val triggerAt = ScheduleClock.nextTrigger(
+                    dayTime, end = !isStart, nowMillis = System.currentTimeMillis()
+                )
 
                 val intent = Intent(context, ScheduleAlarmReceiver::class.java).apply {
                     action = if (isStart) ACTION_ACTIVATE_SCHEDULE else ACTION_DEACTIVATE_SCHEDULE
@@ -330,24 +318,19 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     alarmManager.setExactAndAllowWhileIdle(
                         AlarmManager.RTC_WAKEUP,
-                        calendar.timeInMillis,
+                        triggerAt,
                         pendingIntent
                     )
                 } else {
                     alarmManager.setExact(
                         AlarmManager.RTC_WAKEUP,
-                        calendar.timeInMillis,
+                        triggerAt,
                         pendingIntent
                     )
                 }
 
-                val timeStr = String.format("%02d:%02d",
-                    if (isStart) dayTime.startHour else dayTime.endHour,
-                    if (isStart) dayTime.startMinute else dayTime.endMinute
-                )
-                android.util.Log.d("SCHEDULE_ALARM", "- Scheduled ${if (isStart) "START" else "END"} for ${getDayName(day)} $timeStr")
-                android.util.Log.d("SCHEDULE_ALARM", "   Will fire at: ${java.util.Date(calendar.timeInMillis)}")
-                AppLogger.log("ALARM", "Scheduled ${if (isStart) "START" else "END"} for ${getDayName(day)} $timeStr at ${java.util.Date(calendar.timeInMillis)}")
+                val kind = if (isStart) "START" else "END"
+                AppLogger.log("ALARM", "Scheduled $kind for ${getDayName(day)} at ${java.util.Date(triggerAt)}")
             } catch (e: Exception) {
                 android.util.Log.e("SCHEDULE_ALARM", "Error scheduling alarm: ${e.message}", e)
             }

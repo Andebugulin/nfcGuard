@@ -186,7 +186,7 @@ class ModeActivationLogicTest {
     @Test
     fun applyManualScheduleActivation_scheduleNotFound() {
         val state = AppState()
-        val result = ModeActivationLogic.applyManualScheduleActivation(state, "ghost")
+        val result = ModeActivationLogic.applyManualScheduleActivation(state, "ghost", 0L)
         assertTrue(result is ModeActivationLogic.ManualScheduleActivationResult.ScheduleNotFound)
         assertSame(state, result.newState)
     }
@@ -198,7 +198,7 @@ class ModeActivationLogicTest {
         val s = dailySchedule("s1", listOf("m1", "m2"))
         val state = AppState(modes = listOf(m1, m2), schedules = listOf(s))
 
-        val result = ModeActivationLogic.applyManualScheduleActivation(state, "s1")
+        val result = ModeActivationLogic.applyManualScheduleActivation(state, "s1", 0L)
         assertTrue(result is ModeActivationLogic.ManualScheduleActivationResult.Activated)
         assertEquals(setOf("m1", "m2"), result.newState.activeModes)
         assertEquals(setOf("s1"), result.newState.activeSchedules)
@@ -220,7 +220,7 @@ class ModeActivationLogicTest {
             activeModes = setOf("m1")
         )
 
-        val result = ModeActivationLogic.applyManualScheduleActivation(state, "s1")
+        val result = ModeActivationLogic.applyManualScheduleActivation(state, "s1", 0L)
         assertTrue(result is ModeActivationLogic.ManualScheduleActivationResult.Conflict)
         assertSame(state, result.newState)
     }
@@ -237,7 +237,7 @@ class ModeActivationLogicTest {
             pausedModeRemainingMs = mapOf("m1" to 600_000L)
         )
 
-        val result = ModeActivationLogic.applyManualScheduleActivation(state, "s1")
+        val result = ModeActivationLogic.applyManualScheduleActivation(state, "s1", 0L)
         assertTrue(result is ModeActivationLogic.ManualScheduleActivationResult.Activated)
         assertFalse(result.newState.deactivatedSchedules.contains("s1"))
         assertFalse(result.newState.timedModeReactivations.containsKey("m1"))
@@ -251,7 +251,7 @@ class ModeActivationLogicTest {
         val s = dailySchedule("s1", linkedModeIds = emptyList())
         val state = AppState(schedules = listOf(s))
 
-        val result = ModeActivationLogic.applyManualScheduleActivation(state, "s1")
+        val result = ModeActivationLogic.applyManualScheduleActivation(state, "s1", 0L)
         assertTrue(result is ModeActivationLogic.ManualScheduleActivationResult.Activated)
         assertTrue(result.newState.activeModes.isEmpty())
         assertTrue(result.newState.activeSchedules.contains("s1"))

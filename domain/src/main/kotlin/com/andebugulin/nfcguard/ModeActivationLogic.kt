@@ -135,10 +135,14 @@ object ModeActivationLogic {
      * schedule is marked active and its `deactivatedSchedules` entry
      * cleared. Pending reactivation timers and paused-remaining for
      * the linked modes are cleared.
+     *
+     * [now] is recorded as the schedule's last start, so a missed end alarm
+     * is measured from this tap (see [ScheduleTransitions.missedScheduleEnds]).
      */
     fun applyManualScheduleActivation(
         state: AppState,
-        scheduleId: String
+        scheduleId: String,
+        now: Long
     ): ManualScheduleActivationResult {
         val schedule = state.schedules.find { it.id == scheduleId }
             ?: return ManualScheduleActivationResult.ScheduleNotFound(state)
@@ -160,7 +164,8 @@ object ModeActivationLogic {
             activeSchedules = state.activeSchedules + scheduleId,
             deactivatedSchedules = state.deactivatedSchedules - scheduleId,
             timedModeReactivations = state.timedModeReactivations - linkedModeIdSet,
-            pausedModeRemainingMs = state.pausedModeRemainingMs - linkedModeIdSet
+            pausedModeRemainingMs = state.pausedModeRemainingMs - linkedModeIdSet,
+            scheduleLastStartedAt = state.scheduleLastStartedAt + (scheduleId to now)
         )
         return ManualScheduleActivationResult.Activated(newState)
     }
