@@ -7,7 +7,6 @@ import com.andebugulin.nfcguard.BlockMode
 import com.andebugulin.nfcguard.data.ConfigManager
 import com.andebugulin.nfcguard.NfcTag
 import com.andebugulin.nfcguard.Schedule
-import com.andebugulin.nfcguard.service.ForegroundDetectorService
 import com.andebugulin.nfcguard.ui.GuardianTheme
 import com.andebugulin.nfcguard.ui.onboarding.PermissionsPage
 import com.andebugulin.nfcguard.ui.GuardianViewModel
@@ -18,7 +17,6 @@ import com.andebugulin.nfcguard.ui.TestTags
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -41,8 +39,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 
 
 
-import android.os.PowerManager
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.rememberScrollState
@@ -103,18 +99,7 @@ fun HomeScreen(
     }
 
     val permissionsGranted = remember(permissionCheckTrigger) {
-        val usageStatsOk = Permissions.hasUsageStats(context)
-        val overlayOk = Settings.canDrawOverlays(context)
-        val batteryOk = try {
-            val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-            pm.isIgnoringBatteryOptimizations(context.packageName)
-        } catch (_: Exception) { false }
-        val accessibilityRequired = Build.MANUFACTURER.equals("Google", ignoreCase = true) ||
-                Build.MANUFACTURER.equals("Samsung", ignoreCase = true)
-        val accessibilityOk = if (accessibilityRequired) {
-            ForegroundDetectorService.isEnabled(context)
-        } else true
-        usageStatsOk && overlayOk && batteryOk && accessibilityOk
+        Permissions.allEssentialGranted(context)
     }
 
     Column(

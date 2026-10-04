@@ -84,12 +84,16 @@ object Permissions {
         Build.MANUFACTURER.equals("Google", ignoreCase = true) ||
             Build.MANUFACTURER.equals("Samsung", ignoreCase = true)
 
-    /** Every permission nfcGuard needs before blocking is dependable. */
+    /**
+     * Every permission nfcGuard needs before blocking is dependable. Autostart
+     * only counts where it can be read (Xiaomi); elsewhere it is unknowable.
+     */
     fun allEssentialGranted(context: Context): Boolean =
         hasUsageStats(context) &&
             hasOverlay(context) &&
             hasBatteryExemption(context) &&
-            (!accessibilityIsRequired() || hasAccessibility(context))
+            (!accessibilityIsRequired() || hasAccessibility(context)) &&
+            hasAutostart(context) != false
 
     // ─── How the user grants each one ──────────────────────────────────────
 
