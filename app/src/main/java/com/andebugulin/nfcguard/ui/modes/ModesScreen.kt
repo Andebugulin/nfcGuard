@@ -1,5 +1,10 @@
 package com.andebugulin.nfcguard.ui.modes
 
+import com.andebugulin.nfcguard.ui.formatDuration
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.platform.LocalContext
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import com.andebugulin.nfcguard.ScheduleClock
 import com.andebugulin.nfcguard.ActivationResult
 import com.andebugulin.nfcguard.BlockMode
@@ -46,6 +51,7 @@ fun ModesScreen(
     scannedNfcTagId: MutableState<String?>? = null,
     nfcRegistrationMode: MutableState<Boolean>? = null
 ) {
+    val context = LocalContext.current
     val appState by viewModel.appState.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var selectedMode by remember { mutableStateOf<Mode?>(null) }
@@ -86,13 +92,13 @@ fun ModesScreen(
                 .background(GuardianTheme.BackgroundPrimary)
         ) {
             Column(Modifier.fillMaxSize()) {
-                ScreenHeader(title = "MODES", onBack = onBack)
+                ScreenHeader(title = stringResource(R.string.home_modes), onBack = onBack)
 
                 // Modes list
                 if (appState.modes.isEmpty()) {
-                    EmptyState(label = "NO MODES") {
+                    EmptyState(label = stringResource(R.string.modes_no_modes)) {
                         GuardianButton(
-                            label = "CREATE MODE",
+                            label = stringResource(R.string.modes_create_mode),
                             onClick = { showAddDialog = true },
                             modifier = Modifier.testTag(TestTags.Modes.ADD)
                         )
@@ -142,7 +148,7 @@ fun ModesScreen(
                                     .testTag(TestTags.Modes.ADD)
                             ) {
                                 Text(
-                                    "+ NEW MODE",
+                                    stringResource(R.string.modes_new_mode_2),
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.sp
                                 )
@@ -190,7 +196,7 @@ fun ModesScreen(
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
-                        "DELETE MODE?",
+                        stringResource(R.string.modes_delete_mode),
                         fontWeight = FontWeight.Black,
                         letterSpacing = 2.sp,
                         color = GuardianTheme.TextPrimary
@@ -213,7 +219,7 @@ fun ModesScreen(
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "${mode.blockedApps.size} app${if (mode.blockedApps.size != 1) "s" else ""}",
+                                pluralStringResource(R.plurals.modes_app_count, mode.blockedApps.size, mode.blockedApps.size),
                                 fontSize = 11.sp,
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.5.sp
@@ -230,7 +236,7 @@ fun ModesScreen(
                         ) {
                             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(
-                                    "LINKED SCHEDULES AFFECTED:",
+                                    stringResource(R.string.modes_linked_schedules_affected),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Black,
                                     color = GuardianTheme.Warning,
@@ -239,7 +245,7 @@ fun ModesScreen(
                                 linkedSchedules.forEach { sched ->
                                     val remainingModes = sched.linkedModeIds.count { it != mode.id }
                                     Text(
-                                        "\u2022 ${sched.name.uppercase()} ($remainingModes mode${if (remainingModes != 1) "s" else ""} remaining)",
+                                        pluralStringResource(R.plurals.modes_schedule_remaining_modes, remainingModes, sched.name.uppercase(), remainingModes),
                                         fontSize = 11.sp,
                                         color = GuardianTheme.Warning,
                                         letterSpacing = 0.5.sp
@@ -255,7 +261,7 @@ fun ModesScreen(
                         color = GuardianTheme.ErrorDark
                     ) {
                         Text(
-                            "This action cannot be undone",
+                            stringResource(R.string.modes_this_action_cannot_be_undone),
                             fontSize = 12.sp,
                             color = GuardianTheme.ErrorText,
                             letterSpacing = 0.5.sp,
@@ -278,7 +284,7 @@ fun ModesScreen(
                     modifier = Modifier.testTag(TestTags.Modes.DELETE_CONFIRM)
                 ) {
                     Text(
-                        "DELETE",
+                        stringResource(R.string.modes_delete),
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.sp
                     )
@@ -291,7 +297,7 @@ fun ModesScreen(
                         contentColor = GuardianTheme.TextSecondary
                     )
                 ) {
-                    Text("CANCEL", letterSpacing = 1.sp)
+                    Text(stringResource(R.string.home_cancel), letterSpacing = 1.sp)
                 }
             },
         )
@@ -316,7 +322,7 @@ fun ModesScreen(
                 if (result == ActivationResult.BLOCK_MODE_CONFLICT) {
                     scope.launch {
                         snackbarHostState.showSnackbar(
-                            BLOCK_MODE_CONFLICT_MESSAGE
+                            context.getString(BLOCK_MODE_CONFLICT_MESSAGE)
                         )
                     }
                 }
@@ -384,7 +390,7 @@ fun ModeCard(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "${mode.blockedApps.size} APPS \u00B7 ${if (mode.blockMode == BlockMode.BLOCK_SELECTED) "BLOCK" else "ALLOW ONLY"}",
+                        stringResource(R.string.modes_card_summary, mode.blockedApps.size, stringResource(if (mode.blockMode == BlockMode.BLOCK_SELECTED) R.string.modes_block else R.string.modes_allow_only)),
                         fontSize = 10.sp,
                         color = if (isPaused) GuardianTheme.WarningAccentDim else GuardianTheme.TextTertiary,
                         letterSpacing = 1.sp
@@ -401,7 +407,7 @@ fun ModeCard(
                                 tint = if (isPaused) GuardianTheme.WarningAccentDim else GuardianTheme.TextTertiary
                             )
                             Text(
-                                "LINKED TO: ${nfcTags.joinToString(", ") { it.name.uppercase() }}",
+                                stringResource(R.string.modes_linked_to, nfcTags.joinToString(", ") { it.name.uppercase() }),
                                 fontSize = 10.sp,
                                 color = if (isPaused) GuardianTheme.WarningAccentDim else GuardianTheme.TextTertiary,
                                 letterSpacing = 1.sp
@@ -420,14 +426,14 @@ fun ModeCard(
                                     val endCal = java.util.Calendar.getInstance().apply {
                                         timeInMillis = timedUntil ?: 0
                                     }
-                                    val endStr = String.format("%02d:%02d", endCal.get(java.util.Calendar.HOUR_OF_DAY), endCal.get(java.util.Calendar.MINUTE))
-                                    val prefix = if (isManual) "MANUAL" else "ACTIVE"
-                                    "$prefix \u00B7 ${remaining.coerceAtLeast(0)}M LEFT \u00B7 UNTIL $endStr"
+                                    val endStr = ScheduleClock.format(endCal.get(java.util.Calendar.HOUR_OF_DAY) * 60 + endCal.get(java.util.Calendar.MINUTE))
+                                    val prefix = if (isManual) stringResource(R.string.home_manual) else stringResource(R.string.home_active)
+                                    stringResource(R.string.home_timed_label, prefix, formatDuration(remaining), endStr)
                                 }
-                                isManual -> "MANUAL \u00B7 NFC TO UNLOCK"
+                                isManual -> stringResource(R.string.modes_manual_u00b7_nfc_to_unlock)
                                 else -> {
-                                    if (scheduleEndTime != null) "BY SCHEDULE \u00B7 UNTIL $scheduleEndTime"
-                                    else "ACTIVATED BY SCHEDULE"
+                                    if (scheduleEndTime != null) stringResource(R.string.home_by_schedule_until, scheduleEndTime)
+                                    else stringResource(R.string.modes_activated_by_schedule)
                                 }
                             }
                             val sourceIcon = when {
@@ -466,7 +472,7 @@ fun ModeCard(
                                     tint = Color.Black
                                 )
                                 Text(
-                                    if (remaining != null) "PAUSED \u00B7 RE-ENABLES IN ${remaining.coerceAtLeast(0)}M" else "PAUSED \u00B7 PERMANENTLY",
+                                    if (remaining != null) stringResource(R.string.modes_paused_reenables_in, formatDuration(remaining)) else stringResource(R.string.modes_paused_permanently),
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = GuardianTheme.WarningAccentDim,
@@ -488,11 +494,11 @@ fun ModeCard(
                         shape = RoundedCornerShape(0.dp),
                         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
                     ) {
-                        Text("ACTIVATE", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text(stringResource(R.string.modes_activate), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     }
                 } else if (isActive) {
                     Text(
-                        "ACTIVE",
+                        stringResource(R.string.home_active),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = GuardianTheme.BackgroundSurface,
@@ -500,7 +506,7 @@ fun ModeCard(
                     )
                 } else if (isPaused) {
                     Text(
-                        "PAUSED",
+                        stringResource(R.string.modes_paused),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = GuardianTheme.WarningAccentDim,
@@ -525,7 +531,7 @@ fun ModeCard(
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                "RE-ENABLE",
+                                stringResource(R.string.home_re_enable),
                                 fontSize = 11.sp,
                                 color = Color.Black,
                                 fontWeight = FontWeight.Bold,
@@ -537,13 +543,13 @@ fun ModeCard(
                             onClick = onEdit,
                             modifier = Modifier.testTag(TestTags.Modes.edit(mode.id))
                         ) {
-                            Text("EDIT", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
+                            Text(stringResource(R.string.modes_edit), fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
                         }
                         TextButton(
                             onClick = onDelete,
                             modifier = Modifier.testTag(TestTags.Modes.delete(mode.id))
                         ) {
-                            Text("DELETE", fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                            Text(stringResource(R.string.modes_delete), fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                         }
                     }
                 }

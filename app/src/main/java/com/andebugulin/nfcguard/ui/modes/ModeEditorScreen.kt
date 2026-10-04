@@ -1,5 +1,9 @@
 package com.andebugulin.nfcguard.ui.modes
 
+import com.andebugulin.nfcguard.ui.formatDuration
+import androidx.compose.ui.res.pluralStringResource
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import com.andebugulin.nfcguard.BlockDecider
 import com.andebugulin.nfcguard.BlockMode
 import com.andebugulin.nfcguard.Mode
@@ -171,7 +175,7 @@ fun ModeEditorScreen(
                     ),
                     shape = RoundedCornerShape(0.dp)
                 ) {
-                    Text("SAVE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text(stringResource(R.string.modes_save), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 }
             }
 
@@ -196,7 +200,7 @@ fun ModeEditorScreen(
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            "Select at least one app to save this mode",
+                            stringResource(R.string.modes_select_at_least_one_app),
                             fontSize = 11.sp,
                             color = GuardianTheme.Warning,
                             letterSpacing = 0.5.sp
@@ -222,7 +226,7 @@ fun ModeEditorScreen(
                     shape = RoundedCornerShape(0.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("BLOCK", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text(stringResource(R.string.modes_block), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 }
                 Button(
                     onClick = { blockMode = BlockMode.ALLOW_SELECTED },
@@ -233,7 +237,7 @@ fun ModeEditorScreen(
                     shape = RoundedCornerShape(0.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("ALLOW ONLY", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text(stringResource(R.string.modes_allow_only), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 }
             }
 
@@ -259,13 +263,13 @@ fun ModeEditorScreen(
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            "NFC TAG LOCK",
+                            stringResource(R.string.modes_nfc_tag_lock),
                             style = GuardianType.Title,
                             fontSize = 12.sp,
                             color = GuardianTheme.TextPrimary
                         )
                         Text(
-                            "OPTIONAL",
+                            stringResource(R.string.modes_optional),
                             style = GuardianType.Meta,
                             color = GuardianTheme.TextTertiary
                         )
@@ -283,7 +287,7 @@ fun ModeEditorScreen(
                         // "Any other tag" option (ID is now "ANY")
                         val isAnySelected = selectedNfcTagIds.contains("ANY")
                         TagLimitItem(
-                            name = "ANY OTHER NFC TAG",
+                            name = stringResource(R.string.modes_any_other_nfc_tag),
                             tagId = "ANY",
                             isSelected = isAnySelected,
                             limitMinutes = tagUnlockLimits["ANY"],
@@ -337,7 +341,7 @@ fun ModeEditorScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                "REGISTER NEW TAG",
+                                stringResource(R.string.modes_register_new_tag),
                                 style = GuardianType.Label,
                                 color = GuardianTheme.TextPrimary
                             )
@@ -352,7 +356,7 @@ fun ModeEditorScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("SEARCH APPS...", fontSize = 12.sp, letterSpacing = 1.sp) },
+                placeholder = { Text(stringResource(R.string.modes_search_apps), fontSize = 12.sp, letterSpacing = 1.sp) },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = GuardianTheme.BackgroundSurface,
@@ -375,7 +379,7 @@ fun ModeEditorScreen(
             // Apps list
             if (isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("LOADING...", color = GuardianTheme.TextDisabled, letterSpacing = 2.sp)
+                    Text(stringResource(R.string.modes_loading), color = GuardianTheme.TextDisabled, letterSpacing = 2.sp)
                 }
             } else {
                 LazyColumn(
@@ -388,7 +392,7 @@ fun ModeEditorScreen(
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
-                                    "SELECTED (${selectedApps.size})",
+                                    stringResource(R.string.editor_selected_count, selectedApps.size),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = GuardianTheme.TextSecondary,
@@ -419,7 +423,7 @@ fun ModeEditorScreen(
                                     shape = RoundedCornerShape(0.dp)
                                 ) {
                                     Text(
-                                        "ALL APPS",
+                                        stringResource(R.string.modes_all_apps),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = GuardianTheme.TextTertiary,
@@ -499,7 +503,7 @@ fun ModeEditorScreen(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Warning, null, tint = GuardianTheme.Warning)
                     Text(
-                        "NO PERMANENT UNLOCK",
+                        stringResource(R.string.modes_no_permanent_unlock),
                         fontWeight = FontWeight.Black,
                         letterSpacing = 2.sp,
                         fontSize = 14.sp
@@ -513,7 +517,7 @@ fun ModeEditorScreen(
                         shape = RoundedCornerShape(0.dp)
                     ) {
                         Text(
-                            "DANGER: All selected NFC tags have a time limit. Once this mode activates, you will NOT be able to turn it off permanently until the schedule ends.",
+                            stringResource(R.string.modes_danger_all_selected_nfc_tags),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = GuardianTheme.Warning,
@@ -522,7 +526,7 @@ fun ModeEditorScreen(
                         )
                     }
                     Text(
-                        "You will only be able to take temporary breaks. Are you sure you want to save this 'inescapable' mode?",
+                        stringResource(R.string.modes_you_will_only_be_able),
                         fontSize = 11.sp,
                         color = GuardianTheme.TextSecondary,
                         letterSpacing = 0.5.sp
@@ -542,12 +546,12 @@ fun ModeEditorScreen(
                     ),
                     shape = RoundedCornerShape(0.dp)
                 ) {
-                    Text("SAVE ANYWAY", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text(stringResource(R.string.modes_save_anyway), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showPermanentUnlockWarning = false }) {
-                    Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                    Text(stringResource(R.string.home_cancel), color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                 }
             },
         )
@@ -598,7 +602,7 @@ fun TagLimitItem(
                     )
                     if (usageCount > 0) {
                         Text(
-                            "USED BY $usageCount OTHER MODE${if (usageCount > 1) "S" else ""}",
+                            pluralStringResource(R.plurals.editor_used_by_other_modes, usageCount, usageCount),
                             fontSize = 9.sp,
                             color = if (isSelected) GuardianTheme.HighlightAccentEmphasized else GuardianTheme.HighlightAccent,
                             letterSpacing = 0.5.sp
@@ -626,7 +630,7 @@ fun TagLimitItem(
                         tint = Color.White
                     )
                     Text(
-                        if (limitMinutes == null) "PERMANENT" else "${limitMinutes / 60}H ${limitMinutes % 60}M",
+                        if (limitMinutes == null) stringResource(R.string.modes_permanent) else formatDuration(limitMinutes),
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -655,28 +659,26 @@ fun TagLimitConfigDialog(
     }
 
     GuardianDialog(
-        title = "MAX UNLOCK",
-        detail = "Caps how long a tap on this tag can unlock the mode for. " +
-            "Permanent places no cap; a time limit means the unlock dialog will " +
-            "not offer anything longer.",
-        confirmLabel = "APPLY",
+        title = stringResource(R.string.modes_max_unlock),
+        detail = stringResource(R.string.modes_caps_how_long_a_tap),
+        confirmLabel = stringResource(R.string.home_apply),
         onConfirm = { onConfirm(if (selectedOption == 0) null else totalMinutes) },
         confirmEnabled = selectedOption == 0 || totalMinutes > 0,
         confirmModifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_APPLY),
-        dismissLabel = "CANCEL",
+        dismissLabel = stringResource(R.string.home_cancel),
         onDismiss = onDismiss,
         dismissModifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_CANCEL)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SelectableOption(
-                label = "PERMANENT",
+                label = stringResource(R.string.modes_permanent),
                 selected = selectedOption == 0,
                 onSelect = { selectedOption = 0 },
                 modifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_PERMANENT)
             )
 
             SelectableOption(
-                label = "TIME LIMIT",
+                label = stringResource(R.string.modes_time_limit),
                 selected = selectedOption == 1,
                 onSelect = { selectedOption = 1 },
                 modifier = Modifier.testTag(TestTags.ModeEditor.LIMIT_TIMED)
@@ -689,13 +691,13 @@ fun TagLimitConfigDialog(
                     LimitField(
                         value = timedHours,
                         onValueChange = { timedHours = it.filter { c -> c.isDigit() }.take(2) },
-                        label = "HOURS",
+                        label = stringResource(R.string.modes_hours),
                         modifier = Modifier.weight(1f).testTag(TestTags.ModeEditor.LIMIT_HOURS)
                     )
                     LimitField(
                         value = timedMinutes,
                         onValueChange = { timedMinutes = it.filter { c -> c.isDigit() }.take(3) },
-                        label = "MINUTES",
+                        label = stringResource(R.string.modes_minutes),
                         modifier = Modifier.weight(1f).testTag(TestTags.ModeEditor.LIMIT_MINUTES)
                     )
                 }

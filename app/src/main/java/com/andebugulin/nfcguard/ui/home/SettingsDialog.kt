@@ -1,5 +1,8 @@
 package com.andebugulin.nfcguard.ui.home
 
+import androidx.compose.ui.res.pluralStringResource
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import com.andebugulin.nfcguard.AppState
 import com.andebugulin.nfcguard.data.ConfigManager
 import com.andebugulin.nfcguard.ui.GuardianTheme
@@ -75,7 +78,7 @@ fun SettingsDialog(
 
     // Export launchers
     val exportJsonLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
+        ActivityResultContracts.CreateDocument(stringResource(R.string.home_application_json))
     ) { uri ->
         uri?.let {
             try {
@@ -83,15 +86,15 @@ fun SettingsDialog(
                 context.contentResolver.openOutputStream(it)?.use { stream ->
                     stream.write(jsonContent.toByteArray())
                 }
-                importMessage = "Exported JSON successfully"
+                importMessage = context.getString(R.string.home_exported_json_successfully)
             } catch (e: Exception) {
-                importMessage = "Export failed: ${e.message}"
+                importMessage = context.getString(R.string.settings_export_failed, e.message)
             }
         }
     }
 
     val exportYamlLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/x-yaml")
+        ActivityResultContracts.CreateDocument(stringResource(R.string.home_application_x_yaml))
     ) { uri ->
         uri?.let {
             try {
@@ -99,9 +102,9 @@ fun SettingsDialog(
                 context.contentResolver.openOutputStream(it)?.use { stream ->
                     stream.write(yamlContent.toByteArray())
                 }
-                importMessage = "Exported YAML successfully"
+                importMessage = context.getString(R.string.home_exported_yaml_successfully)
             } catch (e: Exception) {
-                importMessage = "Export failed: ${e.message}"
+                importMessage = context.getString(R.string.settings_export_failed, e.message)
             }
         }
     }
@@ -116,8 +119,8 @@ fun SettingsDialog(
                 val fileName = it.lastPathSegment ?: ""
 
                 val data = if (fileName.endsWith(".yaml") || fileName.endsWith(".yml") ||
-                    content.trimStart().startsWith("#") || content.trimStart().startsWith("version:") ||
-                    content.trimStart().startsWith("modes:")) {
+                    content.trimStart().startsWith("#") || content.trimStart().startsWith(context.getString(R.string.home_version)) ||
+                    content.trimStart().startsWith(context.getString(R.string.home_modes_2))) {
                     ConfigManager.importFromYaml(content)
                 } else {
                     ConfigManager.importFromJson(content)
@@ -126,7 +129,7 @@ fun SettingsDialog(
                 pendingImportData = data
                 showImportConfirm = true
             } catch (e: Exception) {
-                importMessage = "Import failed: ${e.message}"
+                importMessage = context.getString(R.string.settings_import_failed, e.message)
             }
         }
     }
@@ -153,7 +156,7 @@ fun SettingsDialog(
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
-                    "SETTINGS",
+                    stringResource(R.string.home_settings),
                     fontWeight = FontWeight.Black,
                     letterSpacing = 2.sp,
                     color = GuardianTheme.TextPrimary
@@ -167,7 +170,7 @@ fun SettingsDialog(
             ) {
                 // ===== PERMISSIONS SECTION =====
                 Text(
-                    "PERMISSIONS",
+                    stringResource(R.string.home_permissions),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
                     color = GuardianTheme.TextSecondary,
@@ -187,7 +190,7 @@ fun SettingsDialog(
 
                 // ===== SAFE REGIME SECTION =====
                 Text(
-                    "SAFE REGIME",
+                    stringResource(R.string.home_safe_regime),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
                     color = GuardianTheme.TextSecondary,
@@ -209,20 +212,18 @@ fun SettingsDialog(
                         // The list of protected actions used to be a second card
                         // below this row; it is the same information, one tap away.
                         InfoDisclosure(
-                            detail = "Protected: linking a schedule to an active mode, " +
-                                "editing or deleting an active schedule, and switching " +
-                                "this setting off.",
+                            detail = stringResource(R.string.home_protected_linking_a_schedule_to),
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                "ANTI-BYPASS PROTECTION",
+                                stringResource(R.string.home_anti_bypass_protection),
                                 style = GuardianType.Label,
                                 color = GuardianTheme.TextPrimary
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                if (safeRegimeEnabled) "Risky actions need a timed challenge."
-                                else "Off. Nothing is protected.",
+                                if (safeRegimeEnabled) stringResource(R.string.home_risky_actions_need_a_timed)
+                                else stringResource(R.string.home_off_nothing_is_protected),
                                 style = GuardianType.Meta,
                                 fontWeight = FontWeight.Normal,
                                 color = GuardianTheme.TextTertiary
@@ -268,7 +269,7 @@ fun SettingsDialog(
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text(
-                                "CHALLENGE DURATION",
+                                stringResource(R.string.home_challenge_duration),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = GuardianTheme.TextPrimary,
@@ -276,7 +277,7 @@ fun SettingsDialog(
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                "Minimum 1:00.",
+                                stringResource(R.string.home_minimum_1_00),
                                 fontSize = 9.sp,
                                 color = GuardianTheme.TextTertiary,
                                 letterSpacing = 0.3.sp
@@ -308,13 +309,13 @@ fun SettingsDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.Shield, null, modifier = Modifier.size(16.dp))
-                        Text("TEST CHALLENGE", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text(stringResource(R.string.home_test_challenge), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     }
                 }
 
                 if (showSafeRegimeChallenge) {
                     SafeRegimeChallengeDialog(
-                        actionDescription = "You are trying to disable Safe Regime while modes are active. This could allow bypassing the blocker.",
+                        actionDescription = stringResource(R.string.home_you_are_trying_to_disable),
                         totalDurationSeconds = challengeDuration,
                         onComplete = {
                             viewModel.setSafeRegimeEnabled(false)
@@ -330,7 +331,7 @@ fun SettingsDialog(
 
                 // ===== BLOCKING METHOD SECTION =====
                 Text(
-                    "BLOCKING METHOD",
+                    stringResource(R.string.home_blocking_method),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
                     color = GuardianTheme.TextSecondary,
@@ -352,7 +353,7 @@ fun SettingsDialog(
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text(
-                                if (accessibilityOn) "FORCE-CLOSE MODE" else "OVERLAY MODE",
+                                if (accessibilityOn) stringResource(R.string.home_force_close_mode) else stringResource(R.string.home_overlay_mode),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = GuardianTheme.TextPrimary,
@@ -360,8 +361,8 @@ fun SettingsDialog(
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                if (accessibilityOn) "Blocked apps are force-closed instantly"
-                                else "Blocked apps show a full-screen overlay",
+                                if (accessibilityOn) stringResource(R.string.home_blocked_apps_are_force_closed)
+                                else stringResource(R.string.home_blocked_apps_show_a_full),
                                 fontSize = 9.sp,
                                 color = GuardianTheme.TextTertiary,
                                 letterSpacing = 0.3.sp
@@ -369,7 +370,7 @@ fun SettingsDialog(
                         }
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "AUTO",
+                            stringResource(R.string.home_auto),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color = GuardianTheme.TextSecondary,
@@ -390,8 +391,8 @@ fun SettingsDialog(
                     ) {
                         Icon(Icons.Default.Info, null, tint = GuardianTheme.Warning, modifier = Modifier.size(14.dp))
                         Text(
-                            if (accessibilityOn) "Accessibility ON - force-close avoids overlay conflicts on Samsung/Pixel"
-                            else "Accessibility OFF - overlay mode active. Enable accessibility for force-close",
+                            if (accessibilityOn) stringResource(R.string.home_accessibility_on_force_close_avoids)
+                            else stringResource(R.string.home_accessibility_off_overlay_mode_active),
                             fontSize = 9.sp,
                             color = GuardianTheme.WarningTextMuted,
                             letterSpacing = 0.3.sp
@@ -403,7 +404,7 @@ fun SettingsDialog(
 
                 // ===== DATA SECTION =====
                 Text(
-                    "DATA",
+                    stringResource(R.string.home_data),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
                     color = GuardianTheme.TextSecondary,
@@ -425,7 +426,7 @@ fun SettingsDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.FileDownload, null, modifier = Modifier.size(16.dp))
-                        Text("EXPORT CONFIG", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text(stringResource(R.string.home_export_config), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     }
                 }
 
@@ -435,7 +436,7 @@ fun SettingsDialog(
                         if (appState.activeModes.isNotEmpty()) {
                             showImportChallenge = true
                         } else {
-                            importLauncher.launch(arrayOf("application/json", "application/x-yaml", "*/*"))
+                            importLauncher.launch(arrayOf(context.getString(R.string.home_application_json), context.getString(R.string.home_application_x_yaml), "*/*"))
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -450,7 +451,7 @@ fun SettingsDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.FileUpload, null, modifier = Modifier.size(16.dp))
-                        Text("IMPORT CONFIG", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text(stringResource(R.string.home_import_config), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     }
                 }
 
@@ -462,7 +463,12 @@ fun SettingsDialog(
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            "${appState.modes.size} modes  -  ${appState.schedules.size} schedules  -  ${appState.nfcTags.size} tags",
+                            stringResource(
+                            R.string.settings_config_summary,
+                            pluralStringResource(R.plurals.settings_mode_count, appState.modes.size, appState.modes.size),
+                            pluralStringResource(R.plurals.settings_schedule_count, appState.schedules.size, appState.schedules.size),
+                            pluralStringResource(R.plurals.settings_tag_count, appState.nfcTags.size, appState.nfcTags.size)
+                        ),
                             fontSize = 10.sp,
                             color = GuardianTheme.TextSecondary,
                             letterSpacing = 0.5.sp
@@ -495,7 +501,7 @@ fun SettingsDialog(
                 modifier = Modifier.testTag(TestTags.Settings.DONE),
                 colors = ButtonDefaults.textButtonColors(contentColor = GuardianTheme.TextPrimary)
             ) {
-                Text("DONE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(stringResource(R.string.home_done), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         },
     )
@@ -513,7 +519,7 @@ fun SettingsDialog(
                 shape = RoundedCornerShape(0.dp)
             ),
             title = {
-                Text("EXPORT FORMAT", fontWeight = FontWeight.Black, letterSpacing = 2.sp, color = GuardianTheme.TextPrimary)
+                Text(stringResource(R.string.home_export_format), fontWeight = FontWeight.Black, letterSpacing = 2.sp, color = GuardianTheme.TextPrimary)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -528,14 +534,14 @@ fun SettingsDialog(
                     ) {
                         Column(Modifier.padding(16.dp)) {
                             Text(
-                                "JSON",
+                                stringResource(R.string.home_json),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = GuardianTheme.TextPrimary,
                                 letterSpacing = 1.sp
                             )
                             Text(
-                                "Works with most tools.",
+                                stringResource(R.string.home_works_with_most_tools),
                                 fontSize = 10.sp,
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.3.sp
@@ -553,14 +559,14 @@ fun SettingsDialog(
                     ) {
                         Column(Modifier.padding(16.dp)) {
                             Text(
-                                "YAML",
+                                stringResource(R.string.home_yaml),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = GuardianTheme.TextPrimary,
                                 letterSpacing = 1.sp
                             )
                             Text(
-                                "Easy to edit by hand.",
+                                stringResource(R.string.home_easy_to_edit_by_hand),
                                 fontSize = 10.sp,
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.3.sp
@@ -575,7 +581,7 @@ fun SettingsDialog(
                     onClick = { showExportFormatChooser = false },
                     colors = ButtonDefaults.textButtonColors(contentColor = GuardianTheme.TextSecondary)
                 ) {
-                    Text("CANCEL", letterSpacing = 1.sp)
+                    Text(stringResource(R.string.home_cancel), letterSpacing = 1.sp)
                 }
             },
         )
@@ -584,11 +590,11 @@ fun SettingsDialog(
     // Import safety gate - SafeRegime challenge when modes are active
     if (showImportChallenge) {
         SafeRegimeChallengeDialog(
-            actionDescription = "Importing a config while modes are active could be used to bypass blocking. Verify your intent.",
+            actionDescription = stringResource(R.string.home_importing_a_config_while_modes),
             totalDurationSeconds = challengeDuration,
             onComplete = {
                 showImportChallenge = false
-                importLauncher.launch(arrayOf("application/json", "application/x-yaml", "*/*"))
+                importLauncher.launch(arrayOf(context.getString(R.string.home_application_json), context.getString(R.string.home_application_x_yaml), "*/*"))
             },
             onCancel = {
                 showImportChallenge = false
@@ -599,7 +605,7 @@ fun SettingsDialog(
     // Let users feel the anti-bypass challenge without an active mode
     if (showTestChallenge) {
         SafeRegimeChallengeDialog(
-            actionDescription = "This is a practice run of the anti-bypass challenge. It's how NFCGUARD protects sensitive actions while modes are active.",
+            actionDescription = stringResource(R.string.home_this_is_a_practice_run),
             totalDurationSeconds = challengeDuration,
             onComplete = { showTestChallenge = false },
             onCancel = { showTestChallenge = false }
@@ -631,7 +637,7 @@ fun SettingsDialog(
                 shape = RoundedCornerShape(0.dp)
             ),
             title = {
-                Text("IMPORT CONFIG", fontWeight = FontWeight.Black, letterSpacing = 2.sp, color = GuardianTheme.TextPrimary)
+                Text(stringResource(R.string.home_import_config), fontWeight = FontWeight.Black, letterSpacing = 2.sp, color = GuardianTheme.TextPrimary)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -641,9 +647,9 @@ fun SettingsDialog(
                         color = GuardianTheme.BackgroundSurface
                     ) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("${data.modes.size} modes", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 0.5.sp)
-                            Text("${data.schedules.size} schedules", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 0.5.sp)
-                            Text("${data.nfcTags.size} NFC tags", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 0.5.sp)
+                            Text(pluralStringResource(R.plurals.settings_mode_count, data.modes.size, data.modes.size), fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 0.5.sp)
+                            Text(pluralStringResource(R.plurals.settings_schedule_count, data.schedules.size, data.schedules.size), fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 0.5.sp)
+                            Text(pluralStringResource(R.plurals.settings_nfc_tag_count, data.nfcTags.size, data.nfcTags.size), fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 0.5.sp)
                         }
                     }
                     Surface(
@@ -652,7 +658,7 @@ fun SettingsDialog(
                         color = GuardianTheme.WarningBackground
                     ) {
                         Text(
-                            "REPLACE will overwrite all current config. MERGE will add non-duplicate items.",
+                            stringResource(R.string.home_replace_will_overwrite_all_current),
                             fontSize = 10.sp,
                             color = GuardianTheme.Warning,
                             letterSpacing = 0.5.sp,
@@ -666,26 +672,26 @@ fun SettingsDialog(
                     TextButton(
                         onClick = {
                             viewModel.importConfig(data, mergeMode = true)
-                            importMessage = "Imported (merged) successfully"
+                            importMessage = context.getString(R.string.home_imported_merged_successfully)
                             showImportConfirm = false
                             pendingImportData = null
                         },
                         modifier = Modifier.testTag(TestTags.Settings.IMPORT_MERGE),
                         colors = ButtonDefaults.textButtonColors(contentColor = GuardianTheme.TextPrimary)
                     ) {
-                        Text("MERGE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text(stringResource(R.string.home_merge), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     }
                     TextButton(
                         onClick = {
                             viewModel.importConfig(data, mergeMode = false)
-                            importMessage = "Imported (replaced) successfully"
+                            importMessage = context.getString(R.string.home_imported_replaced_successfully)
                             showImportConfirm = false
                             pendingImportData = null
                         },
                         modifier = Modifier.testTag(TestTags.Settings.IMPORT_REPLACE),
                         colors = ButtonDefaults.textButtonColors(contentColor = GuardianTheme.Error)
                     ) {
-                        Text("REPLACE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text(stringResource(R.string.home_replace), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     }
                 }
             },
@@ -694,7 +700,7 @@ fun SettingsDialog(
                     onClick = { showImportConfirm = false; pendingImportData = null },
                     colors = ButtonDefaults.textButtonColors(contentColor = GuardianTheme.TextSecondary)
                 ) {
-                    Text("CANCEL", letterSpacing = 1.sp)
+                    Text(stringResource(R.string.home_cancel), letterSpacing = 1.sp)
                 }
             },
         )
@@ -735,7 +741,7 @@ private fun ChallengeDurationDialog(
         ),
         title = {
             Text(
-                "CHALLENGE DURATION",
+                stringResource(R.string.home_challenge_duration),
                 fontWeight = FontWeight.Black,
                 letterSpacing = 2.sp,
                 color = GuardianTheme.TextPrimary,
@@ -745,7 +751,7 @@ private fun ChallengeDurationDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "How long you must stay attentive before a bypass-risky action goes through. The minimum is 1:00 - you can make it longer, never shorter.",
+                    stringResource(R.string.home_how_long_you_must_stay),
                     fontSize = 10.sp,
                     color = GuardianTheme.TextSecondary,
                     letterSpacing = 0.3.sp
@@ -757,7 +763,7 @@ private fun ChallengeDurationDialog(
                     OutlinedTextField(
                         value = mins,
                         onValueChange = { mins = it.filter { c -> c.isDigit() }.take(2) },
-                        label = { Text("MIN", fontSize = 9.sp, letterSpacing = 1.sp) },
+                        label = { Text(stringResource(R.string.home_min), fontSize = 9.sp, letterSpacing = 1.sp) },
                         singleLine = true,
                         modifier = Modifier.weight(1f).testTag(TestTags.Settings.DURATION_MINUTES),
                         colors = fieldColors,
@@ -767,7 +773,7 @@ private fun ChallengeDurationDialog(
                     OutlinedTextField(
                         value = secs,
                         onValueChange = { secs = it.filter { c -> c.isDigit() }.take(2) },
-                        label = { Text("SEC", fontSize = 9.sp, letterSpacing = 1.sp) },
+                        label = { Text(stringResource(R.string.home_sec), fontSize = 9.sp, letterSpacing = 1.sp) },
                         singleLine = true,
                         modifier = Modifier.weight(1f).testTag(TestTags.Settings.DURATION_SECONDS),
                         colors = fieldColors,
@@ -776,7 +782,7 @@ private fun ChallengeDurationDialog(
                 }
                 if (belowMin) {
                     Text(
-                        "Minimum is 1:00",
+                        stringResource(R.string.home_minimum_is_1_00),
                         fontSize = 10.sp,
                         color = GuardianTheme.Error,
                         letterSpacing = 0.5.sp
@@ -790,7 +796,7 @@ private fun ChallengeDurationDialog(
                 enabled = !belowMin,
                 modifier = Modifier.testTag(TestTags.Settings.DURATION_APPLY)
             ) {
-                Text("APPLY", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(stringResource(R.string.home_apply), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         },
         dismissButton = {
@@ -798,7 +804,7 @@ private fun ChallengeDurationDialog(
                 onClick = onDismiss,
                 colors = ButtonDefaults.textButtonColors(contentColor = GuardianTheme.TextSecondary)
             ) {
-                Text("CANCEL", letterSpacing = 1.sp)
+                Text(stringResource(R.string.home_cancel), letterSpacing = 1.sp)
             }
         }
     )

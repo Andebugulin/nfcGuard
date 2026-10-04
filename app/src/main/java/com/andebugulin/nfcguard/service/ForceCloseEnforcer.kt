@@ -1,5 +1,6 @@
 package com.andebugulin.nfcguard.service
 
+import com.andebugulin.nfcguard.R
 import com.andebugulin.nfcguard.BlockDecider
 import com.andebugulin.nfcguard.data.AppLogger
 
@@ -100,7 +101,7 @@ class ForceCloseEnforcer(private val context: Context) : Enforcer {
             try {
                 android.widget.Toast.makeText(
                     context,
-                    "BLOCKED - open NFCGUARD & tap your NFC tag",
+                    context.getString(R.string.toast_blocked),
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
             } catch (e: Exception) {

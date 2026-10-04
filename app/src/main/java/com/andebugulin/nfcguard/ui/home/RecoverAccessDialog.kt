@@ -1,5 +1,9 @@
 package com.andebugulin.nfcguard.ui.home
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.pluralStringResource
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import com.andebugulin.nfcguard.NfcTag
 import com.andebugulin.nfcguard.ui.GuardianTheme
 import com.andebugulin.nfcguard.ui.GuardianViewModel
@@ -22,25 +26,21 @@ import com.andebugulin.nfcguard.ui.components.DialogKind
 import com.andebugulin.nfcguard.ui.components.GuardianDialog
 
 /** Plain-language summary of exactly what recovery is about to do. */
+@Composable
 internal fun recoveryOutcome(activeModes: Int, lostTags: Int): String {
-    val modes = when (activeModes) {
-        0 -> "No modes are active"
-        1 -> "Turns off 1 active mode"
-        else -> "Turns off $activeModes active modes"
-    }
-    val tags = when (lostTags) {
-        0 -> ""
-        1 -> ", forgets 1 tag"
-        else -> ", forgets $lostTags tags"
-    }
-    return "$modes$tags."
+    val modes = if (activeModes == 0) stringResource(R.string.home_no_modes_are_active)
+    else pluralStringResource(R.plurals.home_recovery_turns_off_modes, activeModes, activeModes)
+    if (lostTags == 0) return modes
+    return modes + " " + pluralStringResource(R.plurals.home_recovery_forgets_tags, lostTags, lostTags)
 }
 
 /** The confirm button says what it does, not "continue". */
-internal fun recoveryConfirmLabel(activeModes: Int, lostTags: Int): String {
-    val modes = if (activeModes > 0) "TURN OFF MODES" else "DONE"
-    if (lostTags == 0) return modes
-    return "$modes & FORGET $lostTags TAG" + if (lostTags == 1) "" else "S"
+@Composable
+internal fun recoveryConfirmLabel(activeModes: Int, lostTags: Int): String = when {
+    lostTags == 0 && activeModes > 0 -> stringResource(R.string.home_turn_off_modes)
+    lostTags == 0 -> stringResource(R.string.home_done)
+    activeModes > 0 -> pluralStringResource(R.plurals.home_recovery_confirm_modes_and_tags, lostTags, lostTags)
+    else -> pluralStringResource(R.plurals.home_recovery_confirm_tags, lostTags, lostTags)
 }
 
 internal fun applyRecovery(
@@ -76,25 +76,23 @@ fun RecoverAccessDialog(
     onConfirm: () -> Unit
 ) {
     GuardianDialog(
-        title = "RECOVER ACCESS",
+        title = stringResource(R.string.home_recover_access_2),
         message = recoveryOutcome(activeModeCount, selectedTags.size),
-        detail = "Your modes, schedules and settings are kept. Only the tags you " +
-            "tick are forgotten." + if (activeModeCount > 0) {
-                " Because this switches blocking off, it runs behind the " +
-                    "attention challenge."
+        detail = stringResource(R.string.home_your_modes_schedules_and_settings) + if (activeModeCount > 0) {
+                " " + stringResource(R.string.home_because_this_switches_blocking_off)
             } else "",
         kind = DialogKind.Warning,
         confirmLabel = recoveryConfirmLabel(activeModeCount, selectedTags.size),
         onConfirm = onConfirm,
         confirmColor = GuardianTheme.ErrorTextEmphasized,
         confirmModifier = Modifier.testTag(TestTags.Emergency.TAG_SELECTION_CONFIRM),
-        dismissLabel = "CANCEL",
+        dismissLabel = stringResource(R.string.home_cancel),
         onDismiss = onDismiss,
         dismissModifier = Modifier.testTag(TestTags.Emergency.TAG_SELECTION_CANCEL)
     ) {
         if (nfcTags.isNotEmpty()) {
             Text(
-                "LOST A TAG? TICK IT TO FORGET IT",
+                stringResource(R.string.home_lost_a_tag_tick_it),
                 style = GuardianType.Meta,
                 color = GuardianTheme.TextTertiary
             )

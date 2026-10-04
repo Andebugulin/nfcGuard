@@ -1,5 +1,7 @@
 package com.andebugulin.nfcguard.ui.schedules
 
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import com.andebugulin.nfcguard.ScheduleClock
 import com.andebugulin.nfcguard.DayTime
 import com.andebugulin.nfcguard.Mode
@@ -116,17 +118,17 @@ fun ScheduleEditorDialog(
                 enabled = name.isNotBlank() && selectedDays.isNotEmpty() && selectedModeIds.isNotEmpty() && !nameExists,
                 modifier = Modifier.testTag(TestTags.Schedules.EDITOR_CONFIRM)
             ) {
-                Text(if (existingSchedule != null) "SAVE" else "CREATE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(if (existingSchedule != null) stringResource(R.string.modes_save) else stringResource(R.string.modes_create), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                Text(stringResource(R.string.home_cancel), color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
         title = {
             Text(
-                if (existingSchedule != null) "EDIT SCHEDULE" else "NEW SCHEDULE",
+                if (existingSchedule != null) stringResource(R.string.sched_edit_schedule) else stringResource(R.string.sched_new_schedule),
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp
             )
@@ -146,14 +148,14 @@ fun ScheduleEditorDialog(
                             ) {
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(
-                                        "NOTICE:",
+                                        stringResource(R.string.sched_notice),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Black,
                                         color = GuardianTheme.Warning,
                                         letterSpacing = 1.sp
                                     )
                                     Text(
-                                        "This schedule is within its active time window. Changes will take effect immediately.",
+                                        stringResource(R.string.sched_this_schedule_is_within_its),
                                         fontSize = 11.sp,
                                         color = GuardianTheme.Warning,
                                         letterSpacing = 0.5.sp
@@ -167,7 +169,7 @@ fun ScheduleEditorDialog(
                         OutlinedTextField(
                             value = name,
                             onValueChange = { if (it.length <= 30) name = it },  // FIX #7: Max length
-                            placeholder = { Text("SCHEDULE NAME", fontSize = 12.sp, letterSpacing = 1.sp) },
+                            placeholder = { Text(stringResource(R.string.sched_schedule_name), fontSize = 12.sp, letterSpacing = 1.sp) },
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = GuardianTheme.InputBackground,
                                 unfocusedContainerColor = GuardianTheme.InputBackground,
@@ -183,14 +185,14 @@ fun ScheduleEditorDialog(
                                 // FIX #6: Duplicate name feedback
                                 if (nameExists) {
                                     Text(
-                                        "A schedule with this name already exists",
+                                        stringResource(R.string.sched_a_schedule_with_this_name),
                                         fontSize = 10.sp,
                                         color = GuardianTheme.Error,
                                         letterSpacing = 0.5.sp
                                     )
                                 } else {
                                     Text(
-                                        "${name.length}/30",
+                                        stringResource(R.string.modes_name_length, name.length, 30),
                                         fontSize = 10.sp,
                                         color = GuardianTheme.TextTertiary,
                                         letterSpacing = 0.5.sp
@@ -202,7 +204,7 @@ fun ScheduleEditorDialog(
 
                     item {
                         Column {
-                            Text("DAYS & TIMES", fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                            Text(stringResource(R.string.sched_days_times), fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                             Spacer(Modifier.height(8.dp))
                             (1..7).forEach { day ->
                                 Surface(
@@ -272,7 +274,7 @@ fun ScheduleEditorDialog(
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
                                                 Text(
-                                                    if (overnight) "UNTIL (NEXT DAY)" else "UNTIL",
+                                                    if (overnight) stringResource(R.string.sched_until_next_day) else stringResource(R.string.sched_until),
                                                     fontSize = 10.sp,
                                                     color = if (endBeforeStart && endTimeError) GuardianTheme.ErrorTextEmphasized else GuardianTheme.TextTertiary,
                                                     letterSpacing = 1.sp,
@@ -297,7 +299,7 @@ fun ScheduleEditorDialog(
                                             // FIX #4: Inline error
                                             if (endBeforeStart && endTimeError) {
                                                 Text(
-                                                    "End time must differ from start time",
+                                                    stringResource(R.string.sched_end_time_must_differ_from),
                                                     fontSize = 9.sp,
                                                     color = GuardianTheme.ErrorTextEmphasized,
                                                     letterSpacing = 0.5.sp
@@ -316,7 +318,7 @@ fun ScheduleEditorDialog(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                "CUSTOM END TIMES",
+                                stringResource(R.string.sched_custom_end_times),
                                 fontSize = 11.sp,
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 1.sp,
@@ -347,7 +349,7 @@ fun ScheduleEditorDialog(
                         if (hasEndTime) {
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "Set custom end time for each day above",
+                                stringResource(R.string.sched_set_custom_end_time_for),
                                 fontSize = 10.sp,
                                 color = GuardianTheme.TextTertiary,
                                 letterSpacing = 0.5.sp
@@ -375,7 +377,7 @@ fun ScheduleEditorDialog(
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Text(
-                                        "Start and end times cannot be the same",
+                                        stringResource(R.string.sched_start_and_end_times_cannot),
                                         fontSize = 11.sp,
                                         color = GuardianTheme.ErrorText,
                                         letterSpacing = 0.5.sp
@@ -387,7 +389,7 @@ fun ScheduleEditorDialog(
 
                     item {
                         Column {
-                            Text("LINKED MODES", fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                            Text(stringResource(R.string.sched_linked_modes), fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                             Spacer(Modifier.height(8.dp))
 
                             // Warning when active modes are selected and safe regime is on
@@ -405,7 +407,7 @@ fun ScheduleEditorDialog(
                                     ) {
                                         Icon(Icons.Default.Shield, null, tint = GuardianTheme.Warning, modifier = Modifier.size(14.dp))
                                         Text(
-                                            "Safe regime: saving will require a 1.5-min challenge",
+                                            stringResource(R.string.sched_safe_regime_saving_will_require),
                                             fontSize = 9.sp,
                                             color = GuardianTheme.Warning,
                                             letterSpacing = 0.3.sp
@@ -416,7 +418,7 @@ fun ScheduleEditorDialog(
 
                             if (modes.isEmpty()) {
                                 Text(
-                                    "No modes created yet",
+                                    stringResource(R.string.sched_no_modes_created_yet),
                                     fontSize = 10.sp,
                                     color = GuardianTheme.TextTertiary,
                                     letterSpacing = 1.sp
@@ -451,7 +453,7 @@ fun ScheduleEditorDialog(
                                                 )
                                                 if (isActive) {
                                                     Text(
-                                                        "CURRENTLY ACTIVE",
+                                                        stringResource(R.string.sched_currently_active),
                                                         fontSize = 8.sp,
                                                         fontWeight = FontWeight.Black,
                                                         color = if (selectedModeIds.contains(mode.id)) GuardianTheme.ButtonDisabledText else GuardianTheme.WarningAccent,

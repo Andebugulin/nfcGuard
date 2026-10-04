@@ -1,5 +1,6 @@
 package com.andebugulin.nfcguard.service
 
+import com.andebugulin.nfcguard.R
 import com.andebugulin.nfcguard.data.AppLogger
 import com.andebugulin.nfcguard.ui.MainActivity
 
@@ -279,13 +280,13 @@ class OverlayEnforcer(
                 // The instruction is "open nfcGuard", because that is what
                 // actually works: NFC dispatch is an Activity API, so nothing
                 // is listening for a tag while this overlay is what you see.
-                addView(label("BLOCKED", size = 48f, white = true, letterSpacing = 0.2f))
+                addView(label(context.getString(R.string.overlay_blocked), size = 48f, white = true, letterSpacing = 0.2f))
                 addView(arrow(32f, marginV = 16))
-                addView(label("TO UNLOCK:", size = 14f, white = false))
+                addView(label(context.getString(R.string.overlay_to_unlock), size = 14f, white = false))
                 addView(arrow(24f, marginV = 12))
                 addView(openGuardianRow())
                 addView(arrow(24f, marginV = 12))
-                addView(label("THEN TAP YOUR NFC TAG", size = 14f, white = false))
+                addView(label(context.getString(R.string.overlay_then_tap_tag), size = 14f, white = false))
             }
             addView(content)
         }
@@ -328,7 +329,7 @@ class OverlayEnforcer(
         )
 
         addView(TextView(context).apply {
-            text = "OPEN "
+            text = context.getString(R.string.overlay_open) + " "
             textSize = 16f
             setTextColor(0xFFFFFFFF.toInt())
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)

@@ -1,5 +1,9 @@
 package com.andebugulin.nfcguard.ui.home
 
+import com.andebugulin.nfcguard.ui.formatDuration
+import androidx.compose.ui.res.pluralStringResource
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import com.andebugulin.nfcguard.ScheduleClock
 import com.andebugulin.nfcguard.BlockDecider
 import com.andebugulin.nfcguard.BlockMode
@@ -97,7 +101,7 @@ fun HomeScreen(
         ) {
             Column {
                 Text(
-                    "NFCGUARD",
+                    stringResource(R.string.home_nfcguard),
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Black,
                     color = GuardianTheme.TextPrimary,
@@ -109,13 +113,17 @@ fun HomeScreen(
                     val scheduleCount = appState.activeModes.size - manualCount
                     val timedCount = appState.activeModes.count { appState.timedModeDeactivations.containsKey(it) }
 
-                    val sourceText = buildString {
-                        append("${appState.activeModes.size} MODE${if (appState.activeModes.size > 1) "S" else ""} ACTIVE")
-                        val parts = mutableListOf<String>()
-                        if (manualCount > 0) parts.add("$manualCount MANUAL")
-                        if (scheduleCount > 0) parts.add("$scheduleCount SCHEDULED")
-                        if (parts.size > 1) append(" (${parts.joinToString(" · ")})")
-                    }
+                    val activeCount = appState.activeModes.size
+                    val activeText = pluralStringResource(R.plurals.home_modes_active, activeCount, activeCount)
+                    // The breakdown only adds information when both kinds are on.
+                    val sourceText = if (manualCount > 0 && scheduleCount > 0) {
+                        stringResource(
+                            R.string.home_modes_active_breakdown,
+                            activeText,
+                            pluralStringResource(R.plurals.home_manual_count, manualCount, manualCount),
+                            pluralStringResource(R.plurals.home_scheduled_count, scheduleCount, scheduleCount)
+                        )
+                    } else activeText
 
                     Text(
                         sourceText,
@@ -143,7 +151,7 @@ fun HomeScreen(
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Text(
-                                    "${remaining}M REMAINING",
+                                    stringResource(R.string.home_remaining, formatDuration(remaining)),
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = GuardianTheme.TextSecondary,
@@ -167,7 +175,7 @@ fun HomeScreen(
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
-                                "TAP NFC TO UNLOCK",
+                                stringResource(R.string.home_tap_nfc_to_unlock),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = GuardianTheme.TextSecondary,
@@ -188,7 +196,7 @@ fun HomeScreen(
                 // tick a tag to forget.
                 Icon(
                     imageVector = Icons.Default.LockOpen,
-                    contentDescription = "Recover access",
+                    contentDescription = stringResource(R.string.home_recover_access),
                     tint = GuardianTheme.IconPrimary,
                     modifier = Modifier
                         .testTag(TestTags.Home.EMERGENCY_RESET)
@@ -203,7 +211,7 @@ fun HomeScreen(
 
                 Icon(
                     imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings & Permissions",
+                    contentDescription = stringResource(R.string.home_settings_permissions),
                     tint = if (permissionsGranted) GuardianTheme.IconPrimary else GuardianTheme.Error,
                     modifier = Modifier
                         .testTag(TestTags.Home.SETTINGS)
@@ -219,7 +227,7 @@ fun HomeScreen(
 
                 Icon(
                     imageVector = Icons.Outlined.Info,
-                    contentDescription = "Info",
+                    contentDescription = stringResource(R.string.home_info),
                     tint = GuardianTheme.IconPrimary,
                     modifier = Modifier
                         .size(20.dp)
@@ -238,24 +246,24 @@ fun HomeScreen(
 
         // Navigation Cards
         NavigationCard(
-            title = "MODES",
-            subtitle = "${appState.modes.size} CREATED",
+            title = stringResource(R.string.home_modes),
+            subtitle = pluralStringResource(R.plurals.home_modes_created, appState.modes.size, appState.modes.size),
             icon = Icons.Default.Block,
             testTag = TestTags.Home.NAV_MODES,
             onClick = { onNavigate(Screen.MODES) }
         )
 
         NavigationCard(
-            title = "SCHEDULES",
-            subtitle = "${appState.schedules.size} CONFIGURED",
+            title = stringResource(R.string.home_schedules),
+            subtitle = pluralStringResource(R.plurals.home_schedules_configured, appState.schedules.size, appState.schedules.size),
             icon = Icons.Default.Schedule,
             testTag = TestTags.Home.NAV_SCHEDULES,
             onClick = { onNavigate(Screen.SCHEDULES) }
         )
 
         NavigationCard(
-            title = "NFC TAGS",
-            subtitle = "${appState.nfcTags.size} REGISTERED",
+            title = stringResource(R.string.home_nfc_tags),
+            subtitle = pluralStringResource(R.plurals.home_tags_registered, appState.nfcTags.size, appState.nfcTags.size),
             icon = Icons.Default.Nfc,
             testTag = TestTags.Home.NAV_NFC_TAGS,
             onClick = { onNavigate(Screen.NFC_TAGS) }
@@ -279,7 +287,7 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "ACTIVE NOW",
+                            stringResource(R.string.home_active_now),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = GuardianTheme.BackgroundSurface,
@@ -288,10 +296,10 @@ fun HomeScreen(
                         val count = rule.apps.size
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                when {
-                                    rule.blockMode == BlockMode.ALLOW_SELECTED -> "$count ALLOWED"
-                                    count == 1 -> "1 APP BLOCKED"
-                                    else -> "$count APPS BLOCKED"
+                                if (rule.blockMode == BlockMode.ALLOW_SELECTED) {
+                                    pluralStringResource(R.plurals.home_apps_allowed, count, count)
+                                } else {
+                                    pluralStringResource(R.plurals.home_apps_blocked, count, count)
                                 },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -300,7 +308,7 @@ fun HomeScreen(
                             )
                             Icon(
                                 Icons.Default.ChevronRight,
-                                contentDescription = "Show apps",
+                                contentDescription = stringResource(R.string.home_show_apps),
                                 tint = GuardianTheme.OnLightSurfaceSecondaryText,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -338,17 +346,17 @@ fun HomeScreen(
                                         val endCal = java.util.Calendar.getInstance().apply {
                                             timeInMillis = appState.timedModeDeactivations[mode.id] ?: 0
                                         }
-                                        val endStr = String.format("%02d:%02d", endCal.get(java.util.Calendar.HOUR_OF_DAY), endCal.get(java.util.Calendar.MINUTE))
-                                        val prefix = if (isManual) "MANUAL" else "ACTIVE"
-                                        "$prefix · ${remaining.coerceAtLeast(0)}M LEFT · UNTIL $endStr"
+                                        val endStr = ScheduleClock.format(endCal.get(java.util.Calendar.HOUR_OF_DAY) * 60 + endCal.get(java.util.Calendar.MINUTE))
+                                        val prefix = if (isManual) stringResource(R.string.home_manual) else stringResource(R.string.home_active)
+                                        stringResource(R.string.home_timed_label, prefix, formatDuration(remaining), endStr)
                                     }
-                                    isManual -> "MANUAL · NFC TO UNLOCK"
+                                    isManual -> stringResource(R.string.home_manual_nfc_to_unlock)
                                     else -> {
                                         val until = ScheduleClock.modeHeldUntil(
                                             appState, mode.id, ScheduleClock.momentOf(now)
                                         )
-                                        if (until != null) "BY SCHEDULE · UNTIL ${ScheduleClock.format(until)}"
-                                        else "BY SCHEDULE"
+                                        if (until != null) stringResource(R.string.home_by_schedule_until, ScheduleClock.format(until))
+                                        else stringResource(R.string.home_by_schedule)
                                     }
                                 }
                                 Text(
@@ -374,7 +382,7 @@ fun HomeScreen(
             ) {
                 Column(Modifier.padding(20.dp)) {
                     Text(
-                        "TEMPORARILY UNLOCKED",
+                        stringResource(R.string.home_temporarily_unlocked),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
@@ -385,9 +393,7 @@ fun HomeScreen(
                         val mode = appState.modes.find { it.id == modeId }
                         if (mode != null) {
                             val remaining = ((reactivateAt - now) / 60000).coerceAtLeast(0)
-                            val remainH = remaining / 60
-                            val remainM = remaining % 60
-                            val remainText = if (remainH > 0) "${remainH}H ${remainM}M" else "${remainM}M"
+                            val remainText = formatDuration(remaining)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -410,7 +416,7 @@ fun HomeScreen(
                                         letterSpacing = 1.sp
                                     )
                                     Text(
-                                        "RE-ENABLES IN $remainText",
+                                        stringResource(R.string.home_reenables_in, remainText),
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = GuardianTheme.WarningAccentDim,
@@ -424,7 +430,7 @@ fun HomeScreen(
                                     shape = RoundedCornerShape(0.dp)
                                 ) {
                                     Text(
-                                        "RE-ENABLE",
+                                        stringResource(R.string.home_re_enable),
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,

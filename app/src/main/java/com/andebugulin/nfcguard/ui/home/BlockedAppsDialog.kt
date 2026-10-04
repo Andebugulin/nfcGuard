@@ -1,5 +1,7 @@
 package com.andebugulin.nfcguard.ui.home
 
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,14 +58,14 @@ fun BlockedAppsDialog(rule: BlockDecider.Rule, onDismiss: () -> Unit) {
 
     val allow = rule.blockMode == BlockMode.ALLOW_SELECTED
     GuardianDialog(
-        title = if (allow) "ALLOWED APPS" else "BLOCKED APPS",
+        title = if (allow) stringResource(R.string.home_allowed_apps) else stringResource(R.string.home_blocked_apps),
         message = when {
-            allow && rule.apps.isEmpty() -> "Every app is blocked."
-            allow -> "Everything else is blocked."
-            rule.apps.isEmpty() -> "No apps are blocked."
+            allow && rule.apps.isEmpty() -> stringResource(R.string.home_every_app_is_blocked)
+            allow -> stringResource(R.string.home_everything_else_is_blocked)
+            rule.apps.isEmpty() -> stringResource(R.string.home_no_apps_are_blocked)
             else -> null
         },
-        confirmLabel = "CLOSE",
+        confirmLabel = stringResource(R.string.home_close),
         onConfirm = onDismiss
     ) {
         val list = apps
@@ -76,7 +78,7 @@ fun BlockedAppsDialog(rule: BlockDecider.Rule, onDismiss: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (list == null) {
-                    Text("Loading...", style = GuardianType.Meta, color = GuardianTheme.TextTertiary)
+                    Text(stringResource(R.string.home_loading), style = GuardianType.Meta, color = GuardianTheme.TextTertiary)
                 } else {
                     list.forEach { app -> AppRow(app) }
                 }

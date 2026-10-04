@@ -1,5 +1,7 @@
 package com.andebugulin.nfcguard.ui.onboarding
 
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -92,8 +94,7 @@ fun SafetyPreview(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SafeRegimeChallengeBody(
-            actionDescription = "Turning blocking off without your tag. " +
-                "Stay on this screen and tap whenever it asks.",
+            actionDescription = stringResource(R.string.onb_turning_blocking_off_without_your),
             totalSecondsLeft = totalLeft,
             totalDurationSeconds = seconds,
             cycleSecondsLeft = cycleLeft,
@@ -109,7 +110,7 @@ fun SafetyPreview(
             },
             onFailedAction = { restart() },
             onCancel = {},
-            failedActionLabel = "TRY AGAIN",
+            failedActionLabel = stringResource(R.string.onb_try_again),
             // Nothing to abandon here, so no bail-out button.
             cancelLabel = null,
             modifier = Modifier.fillMaxWidth()
@@ -117,9 +118,9 @@ fun SafetyPreview(
 
         Text(
             if (failed) {
-                "That is what happens if you walk away. It restarts from the top."
+                stringResource(R.string.onb_that_is_what_happens_if)
             } else {
-                "Try ignoring a prompt - see what happens."
+                stringResource(R.string.onb_try_ignoring_a_prompt_see)
             },
             style = GuardianType.EmptyHint,
             color = if (failed) GuardianTheme.ErrorText else GuardianTheme.TextTertiary,

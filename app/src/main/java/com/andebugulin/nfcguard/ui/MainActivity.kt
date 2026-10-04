@@ -1,5 +1,7 @@
 package com.andebugulin.nfcguard.ui
 
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import com.andebugulin.nfcguard.data.AppLogger
 import com.andebugulin.nfcguard.data.AppStateRepository
 import com.andebugulin.nfcguard.Schedule
@@ -301,14 +303,14 @@ fun WrongTagFeedback() {
                     modifier = Modifier.size(64.dp)
                 )
                 Text(
-                    "WRONG TAG",
+                    stringResource(R.string.common_wrong_tag),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = GuardianTheme.TextPrimary,
                     letterSpacing = 2.sp
                 )
                 Text(
-                    "This mode requires\na specific NFC tag",
+                    stringResource(R.string.common_this_mode_requires_a_specific),
                     fontSize = 14.sp,
                     color = Color(0xFFFFCCCC),
                     textAlign = TextAlign.Center,

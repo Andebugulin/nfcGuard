@@ -1,5 +1,7 @@
 package com.andebugulin.nfcguard.ui.onboarding
 
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -128,18 +130,17 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
     ) {
         PermissionRow(
             icon = Icons.Default.Visibility,
-            name = "USAGE ACCESS",
-            why = "See which app is open.",
-            detail = "nfcGuard needs to know which app is in the foreground to " +
-                "block the right one. It cannot see anything inside your apps.",
+            name = stringResource(R.string.onb_usage_access),
+            why = stringResource(R.string.onb_see_which_app_is_open),
+            detail = stringResource(R.string.onb_nfcguard_needs_to_know_which),
             granted = usage,
             onGrant = { context.launch(Permissions.usageAccessIntent()) }
         )
         PermissionRow(
             icon = Icons.Default.Fullscreen,
-            name = "DISPLAY OVER APPS",
-            why = "Show the block screen.",
-            detail = "Draws the blocker on top of an app you chose to block.",
+            name = stringResource(R.string.onb_display_over_apps),
+            why = stringResource(R.string.onb_show_the_block_screen),
+            detail = stringResource(R.string.onb_draws_the_blocker_on_top),
             granted = overlay,
             onGrant = { context.launch(Permissions.overlayIntent(context)) }
         )
@@ -151,16 +152,11 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
         // repeating itself: the per-app dialog first, then the full list.
         PermissionRow(
             icon = Icons.Default.BatteryFull,
-            name = "BATTERY",
-            why = "Keep running in the background.",
-            detail = "Stops Android shutting nfcGuard down, so blocking keeps " +
-                "working hours later.\n\nStill says GRANT after you allowed it? " +
-                "Some phones (Xiaomi, Samsung) have a second power-saving " +
-                "setting of their own that Android does not report. Tap again " +
-                "for the full battery list, set nfcGuard to Unrestricted, then " +
-                "come back here.",
+            name = stringResource(R.string.onb_battery),
+            why = stringResource(R.string.onb_keep_running_in_the_background),
+            detail = stringResource(R.string.onb_stops_android_shutting_nfcguard_down),
             granted = battery,
-            grantLabel = if (batteryAttempted) "SETTINGS" else "GRANT",
+            grantLabel = if (batteryAttempted) stringResource(R.string.home_settings) else stringResource(R.string.onb_grant),
             onGrant = {
                 val intent = if (batteryAttempted) {
                     Permissions.batteryFallbackIntent()
@@ -173,20 +169,16 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
         )
         PermissionRow(
             icon = Icons.Default.Accessibility,
-            name = "ACCESSIBILITY",
+            name = stringResource(R.string.onb_accessibility),
             why = if (accessibilityRequired) {
-                "Required on this device."
+                stringResource(R.string.onb_required_on_this_device)
             } else {
-                "Faster, more reliable blocking."
+                stringResource(R.string.onb_faster_more_reliable_blocking)
             },
             detail = if (accessibilityRequired) {
-                "Your device has a detection bug that makes blocking unreliable " +
-                    "without this. nfcGuard only reads which app is in front - " +
-                    "never screen content."
+                stringResource(R.string.onb_your_device_has_a_detection)
             } else {
-                "Lets nfcGuard close a blocked app instantly instead of covering " +
-                    "it. nfcGuard only reads which app is in front - never screen " +
-                    "content."
+                stringResource(R.string.onb_lets_nfcguard_close_a_blocked)
             },
             granted = accessibility,
             onGrant = { showAccessibilityConsent = true }
@@ -198,29 +190,25 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
         if (autostart != null) {
             PermissionRow(
                 icon = Icons.Default.RestartAlt,
-                name = "AUTOSTART",
-                why = "Keep schedules on time.",
-                detail = "Your phone keeps a list of apps allowed to start on " +
-                    "their own. nfcGuard is off it by default, so your phone " +
-                    "can shut it down, which makes schedules start late and " +
-                    "stops blocking after a restart." +
+                name = stringResource(R.string.onb_autostart),
+                why = stringResource(R.string.onb_keep_schedules_on_time),
+                detail = stringResource(R.string.onb_your_phone_keeps_a_list) +
                     if (autostartGranted == null) {
-                        "\n\nYour phone gives no way to read this list, so " +
-                            "this row cannot show whether it worked."
+                        "\n\n" + stringResource(R.string.onb_your_phone_gives_no_way)
                     } else "",
                 granted = autostartGranted == true,
-                grantLabel = "OPEN",
+                grantLabel = stringResource(R.string.onb_open),
                 onGrant = { context.launch(autostart) }
             )
         }
 
-        SectionDivider("OPTIONAL")
+        SectionDivider(stringResource(R.string.modes_optional))
 
         PermissionRow(
             icon = Icons.Default.Notifications,
-            name = "NOTIFICATIONS",
-            why = "Show which modes are on.",
-            detail = "Blocking works fine without this.",
+            name = stringResource(R.string.onb_notifications),
+            why = stringResource(R.string.onb_show_which_modes_are_on),
+            detail = stringResource(R.string.onb_blocking_works_fine_without_this),
             granted = notifications,
             onGrant = {
                 notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -230,37 +218,31 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
         // Not a permission Android will tell us about, so it can never show
         // GRANTED. A heading that says so is the honest alternative to a row
         // that looks permanently un-granted.
-        SectionDivider("SYSTEM SETTINGS")
+        SectionDivider(stringResource(R.string.onb_system_settings))
 
         PermissionRow(
             icon = Icons.Default.OpenInNew,
-            name = "PAUSE IF UNUSED",
-            why = "Turn it off in app settings.",
-            detail = "Android hibernates apps it thinks are idle. nfcGuard cannot " +
-                "read or change this setting itself, so the button opens the page " +
-                "where you can.",
+            name = stringResource(R.string.onb_pause_if_unused),
+            why = stringResource(R.string.onb_turn_it_off_in_app),
+            detail = stringResource(R.string.onb_android_hibernates_apps_it_thinks),
             // Not a permission — nothing to query, so it never reports granted.
             granted = false,
-            grantLabel = "OPEN",
+            grantLabel = stringResource(R.string.onb_open),
             onGrant = { context.launch(Permissions.appDetailsIntent(context)) }
         )
     }
 
     if (showAccessibilityConsent) {
         GuardianDialog(
-            title = "ACCESSIBILITY ACCESS",
-            message = "nfcGuard uses Android's Accessibility API only to see " +
-                "which app is in the foreground, so it can close a blocked " +
-                "app instantly instead of covering it.\n\nIt never reads, " +
-                "records, or sends screen content, typed text, or any other " +
-                "personal data - on this device or anywhere else.",
+            title = stringResource(R.string.onb_accessibility_access),
+            message = stringResource(R.string.onb_nfcguard_uses_androids_accessibility_api),
             kind = DialogKind.Warning,
-            confirmLabel = "ALLOW",
+            confirmLabel = stringResource(R.string.onb_allow),
             onConfirm = {
                 showAccessibilityConsent = false
                 context.launch(Permissions.accessibilityIntent())
             },
-            dismissLabel = "DON'T ALLOW",
+            dismissLabel = stringResource(R.string.onb_dont_allow),
             // Tapping away or pressing back must decline, never grant —
             // onDismiss is explicit here so GuardianDialog's onDismissRequest
             // never falls back to onConfirm.
@@ -285,7 +267,7 @@ private fun PermissionRow(
     detail: String,
     granted: Boolean,
     onGrant: () -> Unit,
-    grantLabel: String = "GRANT"
+    grantLabel: String = stringResource(R.string.onb_grant)
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -324,12 +306,12 @@ private fun PermissionRow(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Default.CheckCircle,
-                            contentDescription = "Granted",
+                            contentDescription = stringResource(R.string.onb_granted),
                             tint = GuardianTheme.Success,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(Modifier.size(5.dp))
-                        Text("GRANTED", style = GuardianType.Meta, color = GuardianTheme.Success)
+                        Text(stringResource(R.string.onb_granted_2), style = GuardianType.Meta, color = GuardianTheme.Success)
                     }
                 } else {
                     GuardianButton(

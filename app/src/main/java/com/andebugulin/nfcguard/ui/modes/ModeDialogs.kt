@@ -1,5 +1,9 @@
 package com.andebugulin.nfcguard.ui.modes
 
+import com.andebugulin.nfcguard.ui.formatDuration
+import androidx.compose.ui.res.pluralStringResource
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import com.andebugulin.nfcguard.Mode
 import com.andebugulin.nfcguard.ui.GuardianTheme
 import com.andebugulin.nfcguard.ui.TestTags
@@ -42,7 +46,7 @@ fun ModeNameDialog(
         ),
         title = {
             Text(
-                "NEW MODE",
+                stringResource(R.string.modes_new_mode),
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp
             )
@@ -53,7 +57,7 @@ fun ModeNameDialog(
                     value = name,
                     modifier = Modifier.testTag(TestTags.Modes.NAME_INPUT),
                     onValueChange = { if (it.length <= 30) name = it },  // FIX #7: Max length
-                    placeholder = { Text("MODE NAME", fontSize = 12.sp, letterSpacing = 1.sp) },
+                    placeholder = { Text(stringResource(R.string.modes_mode_name), fontSize = 12.sp, letterSpacing = 1.sp) },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = GuardianTheme.InputBackground,
                         unfocusedContainerColor = GuardianTheme.InputBackground,
@@ -68,14 +72,14 @@ fun ModeNameDialog(
                         // FIX #6: Duplicate name feedback
                         if (nameExists && name.isNotBlank()) {
                             Text(
-                                "A mode with this name already exists",
+                                stringResource(R.string.modes_a_mode_with_this_name),
                                 fontSize = 10.sp,
                                 color = GuardianTheme.Error,
                                 letterSpacing = 0.5.sp
                             )
                         } else {
                             Text(
-                                "${name.length}/30",
+                                stringResource(R.string.modes_name_length, name.length, 30),
                                 fontSize = 10.sp,
                                 color = GuardianTheme.TextTertiary,
                                 letterSpacing = 0.5.sp
@@ -91,12 +95,12 @@ fun ModeNameDialog(
                 enabled = name.isNotBlank() && !nameExists,  // FIX #6
                 modifier = Modifier.testTag(TestTags.Modes.NAME_CONFIRM)
             ) {
-                Text("CREATE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(stringResource(R.string.modes_create), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                Text(stringResource(R.string.home_cancel), color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
     )
@@ -135,7 +139,7 @@ fun ActivationOptionsDialog(
         ),
         title = {
             Text(
-                "ACTIVATE ${mode.name.uppercase()}",
+                stringResource(R.string.modes_activate_named, mode.name.uppercase()),
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp,
                 fontSize = 14.sp
@@ -144,7 +148,7 @@ fun ActivationOptionsDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "HOW SHOULD THIS MODE END?",
+                    stringResource(R.string.modes_how_should_this_mode_end),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = GuardianTheme.TextSecondary,
@@ -160,7 +164,7 @@ fun ActivationOptionsDialog(
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text(
-                            if (hasLinkedSchedules) "UNTIL SCHEDULE ENDS / NFC TAG" else "UNTIL NFC TAG",
+                            if (hasLinkedSchedules) stringResource(R.string.modes_until_schedule_ends_nfc_tag) else stringResource(R.string.modes_until_nfc_tag),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (selectedOption == 0) Color.Black else Color.White,
@@ -169,9 +173,9 @@ fun ActivationOptionsDialog(
                         Spacer(Modifier.height(4.dp))
                         Text(
                             if (hasLinkedSchedules)
-                                "Mode will deactivate when a linked schedule ends, or when you tap an NFC tag"
+                                stringResource(R.string.modes_mode_will_deactivate_when_a)
                             else
-                                "Mode stays active until you tap an NFC tag to unlock",
+                                stringResource(R.string.modes_mode_stays_active_until_you),
                             fontSize = 10.sp,
                             color = if (selectedOption == 0) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
                             letterSpacing = 0.5.sp
@@ -188,7 +192,7 @@ fun ActivationOptionsDialog(
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text(
-                            "FOR A SET DURATION",
+                            stringResource(R.string.modes_for_a_set_duration),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (selectedOption == 1) Color.Black else Color.White,
@@ -197,9 +201,9 @@ fun ActivationOptionsDialog(
                         Spacer(Modifier.height(4.dp))
                         Text(
                             if (hasLinkedSchedules)
-                                "Mode will stay active for this duration even if a schedule ends sooner"
+                                stringResource(R.string.modes_mode_will_stay_active_for)
                             else
-                                "Mode will automatically deactivate after the time expires",
+                                stringResource(R.string.modes_mode_will_automatically_deactivate_after),
                             fontSize = 10.sp,
                             color = if (selectedOption == 1) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
                             letterSpacing = 0.5.sp
@@ -252,7 +256,7 @@ fun ActivationOptionsDialog(
                                         }
                                     },
                                     placeholder = { Text("0", fontSize = 11.sp) },
-                                    label = { Text("HOURS", fontSize = 8.sp, letterSpacing = 1.sp) },
+                                    label = { Text(stringResource(R.string.modes_hours), fontSize = 8.sp, letterSpacing = 1.sp) },
                                     colors = TextFieldDefaults.colors(
                                         focusedContainerColor = Color.White,
                                         unfocusedContainerColor = Color(0xFFF0F0F0),
@@ -282,7 +286,7 @@ fun ActivationOptionsDialog(
                                         }
                                     },
                                     placeholder = { Text("30", fontSize = 11.sp) },
-                                    label = { Text("MINUTES", fontSize = 8.sp, letterSpacing = 1.sp) },
+                                    label = { Text(stringResource(R.string.modes_minutes), fontSize = 8.sp, letterSpacing = 1.sp) },
                                     colors = TextFieldDefaults.colors(
                                         focusedContainerColor = Color.White,
                                         unfocusedContainerColor = Color(0xFFF0F0F0),
@@ -304,7 +308,7 @@ fun ActivationOptionsDialog(
                             if (totalMinutes > 0 && ((timedMinutes.toLongOrNull() ?: 0) >= 60)) {
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    "= ${normalizedH}H ${normalizedM}M",
+                                    stringResource(R.string.modes_equals_duration, formatDuration(totalMinutes.toLong())),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = GuardianTheme.OnLightSurfaceSecondaryText,
@@ -329,12 +333,12 @@ fun ActivationOptionsDialog(
                 enabled = selectedOption == 0 || totalMinutes > 0,
                 modifier = Modifier.testTag(TestTags.Modes.ACTIVATE_CONFIRM)
             ) {
-                Text("ACTIVATE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(stringResource(R.string.modes_activate), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                Text(stringResource(R.string.home_cancel), color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
     )
@@ -393,7 +397,7 @@ fun UnlockDurationDialog(
         ),
         title = {
             Text(
-                "UNLOCK MODE${if (modes.size > 1) "S" else ""}",
+                pluralStringResource(R.plurals.modes_unlock_modes_title, modes.size),
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp,
                 fontSize = 14.sp
@@ -404,7 +408,7 @@ fun UnlockDurationDialog(
                 // Mode selection (only show if more than 1 mode)
                 if (modes.size > 1) {
                     Text(
-                        "SELECT MODES TO UNLOCK",
+                        stringResource(R.string.modes_select_modes_to_unlock),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = GuardianTheme.TextSecondary,
@@ -446,7 +450,7 @@ fun UnlockDurationDialog(
                                     modifier = Modifier.weight(1f)
                                 )
                                 Text(
-                                    if (mode.limitMinutes == null) "PERMANENT" else "${mode.limitMinutes}M MAX",
+                                    if (mode.limitMinutes == null) stringResource(R.string.modes_permanent) else stringResource(R.string.modes_limit_max, formatDuration(mode.limitMinutes)),
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isSelected) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
@@ -466,7 +470,7 @@ fun UnlockDurationDialog(
                 }
 
                 Text(
-                    "HOW LONG SHOULD IT STAY UNLOCKED?",
+                    stringResource(R.string.modes_how_long_should_it_stay),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = GuardianTheme.TextSecondary,
@@ -483,7 +487,7 @@ fun UnlockDurationDialog(
                     ) {
                         Column(Modifier.padding(16.dp)) {
                             Text(
-                                "PERMANENTLY",
+                                stringResource(R.string.modes_permanently),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (selectedOption == 0) Color.Black else Color.White,
@@ -491,7 +495,7 @@ fun UnlockDurationDialog(
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "Mode stays off until re-enabled by schedule or manually",
+                                stringResource(R.string.modes_mode_stays_off_until_re),
                                 fontSize = 10.sp,
                                 color = if (selectedOption == 0) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
                                 letterSpacing = 0.5.sp
@@ -516,8 +520,8 @@ fun UnlockDurationDialog(
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                if (modes.size > 1) "PERMANENT DISABLED - SELECTED MODES HAVE A ${effectiveLimit}M LIMIT"
-                                else "PERMANENT UNLOCK DISABLED\nTHIS TAG HAS A ${effectiveLimit}M LIMIT SET ON THIS MODE",
+                                if (modes.size > 1) stringResource(R.string.modes_permanent_disabled_multi, formatDuration(effectiveLimit ?: 0))
+                                else stringResource(R.string.modes_permanent_disabled_single, formatDuration(effectiveLimit ?: 0)),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
                                 color = GuardianTheme.Warning,
@@ -537,7 +541,7 @@ fun UnlockDurationDialog(
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text(
-                            "TEMPORARY BREAK",
+                            stringResource(R.string.modes_temporary_break),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (selectedOption == 1) Color.Black else Color.White,
@@ -545,8 +549,8 @@ fun UnlockDurationDialog(
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            if (effectiveLimit != null) "Unlocks for a limited time (max ${effectiveLimit / 60}H ${effectiveLimit % 60}M)"
-                            else "Mode will automatically re-enable after the time expires",
+                            if (effectiveLimit != null) stringResource(R.string.modes_unlocks_limited_max, formatDuration(effectiveLimit))
+                            else stringResource(R.string.modes_mode_will_automatically_re_enable),
                             fontSize = 10.sp,
                             color = if (selectedOption == 1) GuardianTheme.OnLightSurfaceSecondaryText else GuardianTheme.TextTertiary,
                             letterSpacing = 0.5.sp
@@ -595,7 +599,7 @@ fun UnlockDurationDialog(
                                 OutlinedTextField(
                                     value = timedHours,
                                     onValueChange = { timedHours = it.filter { c -> c.isDigit() }.take(2) },
-                                    label = { Text("HOURS", fontSize = 9.sp, letterSpacing = 1.sp) },
+                                    label = { Text(stringResource(R.string.modes_hours), fontSize = 9.sp, letterSpacing = 1.sp) },
                                     modifier = Modifier.weight(1f).testTag(TestTags.Unlock.HOURS),
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
@@ -611,7 +615,7 @@ fun UnlockDurationDialog(
                                 OutlinedTextField(
                                     value = timedMinutes,
                                     onValueChange = { timedMinutes = it.filter { c -> c.isDigit() }.take(3) },
-                                    label = { Text("MINUTES", fontSize = 9.sp, letterSpacing = 1.sp) },
+                                    label = { Text(stringResource(R.string.modes_minutes), fontSize = 9.sp, letterSpacing = 1.sp) },
                                     modifier = Modifier.weight(1f).testTag(TestTags.Unlock.MINUTES),
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
@@ -627,12 +631,15 @@ fun UnlockDurationDialog(
                             }
 
                             if (cappedMinutes > 0) {
-                                val limitWarning = if (effectiveLimit != null && totalMinutes > effectiveLimit) " (CAPPED BY TAG LIMIT)" else ""
+                                val capped = effectiveLimit != null && totalMinutes > effectiveLimit
                                 Text(
-                                    "WILL RE-ENABLE IN ${normalizedH}H ${normalizedM}M$limitWarning",
+                                    stringResource(
+                                        if (capped) R.string.modes_will_reenable_in_capped else R.string.modes_will_reenable_in,
+                                        formatDuration(cappedMinutes.toLong())
+                                    ),
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (limitWarning.isNotEmpty()) GuardianTheme.Warning else GuardianTheme.OnLightSurfaceSecondaryText,
+                                    color = if (capped) GuardianTheme.Warning else GuardianTheme.OnLightSurfaceSecondaryText,
                                     letterSpacing = 1.sp,
                                     modifier = Modifier.padding(top = 4.dp)
                                 )
@@ -655,12 +662,12 @@ fun UnlockDurationDialog(
                 enabled = selectedModeIds.isNotEmpty() && ((selectedOption == 0 && effectiveLimit == null) || (selectedOption == 1 && cappedMinutes > 0)),
                 modifier = Modifier.testTag(TestTags.Unlock.CONFIRM)
             ) {
-                Text("UNLOCK", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(stringResource(R.string.modes_unlock), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                Text(stringResource(R.string.home_cancel), color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
     )

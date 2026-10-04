@@ -1,5 +1,7 @@
 package com.andebugulin.nfcguard.ui.onboarding
 
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -85,9 +87,9 @@ fun PurposePreview(modifier: Modifier = Modifier) {
         modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        PurposeLine(Icons.Default.Block, "BLOCK", "the apps that pull you in")
-        PurposeLine(Icons.Default.Nfc, "LOCK", "it behind a physical tag")
-        PurposeLine(Icons.Default.LockOpen, "TAP", "the tag when you really need it")
+        PurposeLine(Icons.Default.Block, stringResource(R.string.modes_block), stringResource(R.string.onb_the_apps_that_pull_you))
+        PurposeLine(Icons.Default.Nfc, stringResource(R.string.onb_lock), stringResource(R.string.onb_it_behind_a_physical_tag))
+        PurposeLine(Icons.Default.LockOpen, stringResource(R.string.onb_tap), stringResource(R.string.onb_the_tag_when_you_really))
     }
 }
 
@@ -124,16 +126,18 @@ private fun PurposeLine(
 @Composable
 fun ModesPreview(modifier: Modifier = Modifier) {
     val now = remember { System.currentTimeMillis() }
-    val mode = remember {
+    val deepWork = stringResource(R.string.onb_deep_work)
+    val kitchenTag = stringResource(R.string.onb_kitchen_tag)
+    val mode = remember(deepWork) {
         Mode(
             id = "preview",
-            name = "Deep work",
+            name = deepWork,
             blockedApps = List(7) { "app.$it" },
             blockMode = BlockMode.BLOCK_SELECTED,
             nfcTagIds = listOf("tag")
         )
     }
-    val tags = remember { listOf(NfcTag(id = "tag", name = "Kitchen tag")) }
+    val tags = remember(kitchenTag) { listOf(NfcTag(id = "tag", name = kitchenTag)) }
 
     ScaledDown(scale = CARD_SCALE, modifier = modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -165,17 +169,19 @@ fun ModesPreview(modifier: Modifier = Modifier) {
  */
 @Composable
 fun SchedulesPreview(modifier: Modifier = Modifier) {
-    val schedule = remember {
+    val workHours = stringResource(R.string.onb_work_hours)
+    val deepWork = stringResource(R.string.onb_deep_work)
+    val schedule = remember(workHours) {
         Schedule(
             id = "preview",
-            name = "Work hours",
+            name = workHours,
             timeSlot = TimeSlot((1..5).map { DayTime(it, 9, 0, 17, 0) }),
             linkedModeIds = listOf("m"),
             hasEndTime = true
         )
     }
-    val modes = remember {
-        listOf(Mode(id = "m", name = "Deep work", blockedApps = listOf("a")))
+    val modes = remember(deepWork) {
+        listOf(Mode(id = "m", name = deepWork, blockedApps = listOf("a")))
     }
 
     ScaledDown(scale = CARD_SCALE, modifier = modifier.fillMaxWidth()) {
@@ -260,7 +266,7 @@ fun NfcPreview(modifier: Modifier = Modifier) {
         }
 
         Text(
-            if (unlocked) "UNLOCKED" else "HOLD THE TAG TO THE PHONE",
+            if (unlocked) stringResource(R.string.onb_unlocked) else stringResource(R.string.onb_hold_the_tag_to_the),
             style = GuardianType.Meta,
             color = if (unlocked) GuardianTheme.Success else GuardianTheme.TextTertiary,
             modifier = Modifier.fillMaxWidth(),

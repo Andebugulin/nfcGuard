@@ -1,5 +1,7 @@
 package com.andebugulin.nfcguard.ui.safety
 
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import com.andebugulin.nfcguard.ui.GuardianTheme
 import com.andebugulin.nfcguard.ui.TestTags
 
@@ -136,9 +138,9 @@ fun SafeRegimeChallengeBody(
     onFailedAction: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
-    failedActionLabel: String = "CLOSE",
+    failedActionLabel: String = stringResource(R.string.home_close),
     /** Null hides the bail-out entirely — onboarding has nothing to abandon. */
-    cancelLabel: String? = "GIVE UP"
+    cancelLabel: String? = stringResource(R.string.safety_give_up)
 ) {
     Surface(
         modifier = modifier
@@ -167,7 +169,7 @@ fun SafeRegimeChallengeBody(
                     modifier = Modifier.size(24.dp)
                 )
                 Text(
-                    "SAFE REGIME",
+                    stringResource(R.string.home_safe_regime),
                     fontWeight = FontWeight.Black,
                     letterSpacing = 2.sp,
                     fontSize = 18.sp,
@@ -210,7 +212,7 @@ fun SafeRegimeChallengeBody(
                             modifier = Modifier.size(48.dp)
                         )
                         Text(
-                            "CHALLENGE FAILED",
+                            stringResource(R.string.safety_challenge_failed),
                             modifier = Modifier.testTag(TestTags.Challenge.FAILED),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Black,
@@ -218,7 +220,7 @@ fun SafeRegimeChallengeBody(
                             letterSpacing = 2.sp
                         )
                         Text(
-                            "You didn't press in time. Action cancelled.",
+                            stringResource(R.string.safety_you_didnt_press_in_time),
                             fontSize = 11.sp,
                             color = GuardianTheme.ErrorText,
                             letterSpacing = 0.5.sp,
@@ -271,7 +273,7 @@ fun SafeRegimeChallengeBody(
                             trackColor = GuardianTheme.ButtonDisabledContainer
                         )
                         Text(
-                            "CHECKS PASSED: $checksPassed",
+                            stringResource(R.string.safety_checks_passed, checksPassed),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = GuardianTheme.TextSecondary,
@@ -293,7 +295,7 @@ fun SafeRegimeChallengeBody(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                "PRESS NOW - ${cycleSecondsLeft}s",
+                                stringResource(R.string.safety_press_now, cycleSecondsLeft),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Black,
                                 color = GuardianTheme.WarningAccent,
@@ -316,7 +318,7 @@ fun SafeRegimeChallengeBody(
                                 ) {
                                     Icon(Icons.Default.TouchApp, null, modifier = Modifier.size(24.dp))
                                     Text(
-                                        "I'M HERE",
+                                        stringResource(R.string.safety_im_here),
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Black,
                                         letterSpacing = 2.sp
@@ -337,14 +339,14 @@ fun SafeRegimeChallengeBody(
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
-                                "WAITING...",
+                                stringResource(R.string.safety_waiting),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 2.sp
                             )
                             Text(
-                                "Next check in ${cycleSecondsLeft}s",
+                                stringResource(R.string.safety_next_check_in, cycleSecondsLeft),
                                 fontSize = 10.sp,
                                 color = GuardianTheme.TextTertiary,
                                 letterSpacing = 0.5.sp

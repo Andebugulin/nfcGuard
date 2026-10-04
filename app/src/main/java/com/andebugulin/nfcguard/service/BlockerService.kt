@@ -1,5 +1,6 @@
 package com.andebugulin.nfcguard.service
 
+import com.andebugulin.nfcguard.R
 import com.andebugulin.nfcguard.ScheduleClock
 import com.andebugulin.nfcguard.AppState
 import com.andebugulin.nfcguard.BlockDecider
@@ -296,28 +297,27 @@ class BlockerService : Service() {
         val timedReactivationCount = timedModeReactivations.size
 
         val titleText = when {
-            activeModeIds.isNotEmpty() -> "NFCGUARD ACTIVE"
-            timedReactivationCount > 0 -> "NFCGUARD PAUSED"
-            else -> "NFCGUARD MONITORING"
+            activeModeIds.isNotEmpty() -> getString(R.string.notif_title_active)
+            timedReactivationCount > 0 -> getString(R.string.notif_title_paused)
+            else -> getString(R.string.notif_title_monitoring)
         }
 
         val contentText = if (activeModeIds.isEmpty() && timedReactivationCount == 0) {
-            "Waiting for scheduled modes"
+            getString(R.string.notif_waiting)
         } else {
             val modeCount = activeModeIds.size + timedReactivationCount
             val manualCount = activeModeIds.count { manuallyActivatedModeIds.contains(it) }
             val scheduleCount = modeCount - manualCount - timedReactivationCount
 
-            buildString {
-                if (modeCount > 0) {
-                    append("$modeCount MODE${if (modeCount > 1) "S" else ""}")
-                    val parts = mutableListOf<String>()
-                    if (manualCount > 0) parts.add("${manualCount} manual")
-                    if (scheduleCount > 0) parts.add("${scheduleCount} scheduled")
-                    if (timedReactivationCount > 0) parts.add("${timedReactivationCount} paused")
-                    if (parts.isNotEmpty()) append(" (${parts.joinToString(", ")})")
-                }
-            }
+            fun count(id: Int, n: Int) = resources.getQuantityString(id, n, n)
+            val modes = count(R.plurals.notif_mode_count, modeCount)
+            val parts = listOfNotNull(
+                count(R.plurals.notif_manual_count, manualCount).takeIf { manualCount > 0 },
+                count(R.plurals.notif_scheduled_count, scheduleCount).takeIf { scheduleCount > 0 },
+                count(R.plurals.notif_paused_count, timedReactivationCount).takeIf { timedReactivationCount > 0 }
+            )
+            if (parts.isEmpty()) modes
+            else getString(R.string.notif_modes_breakdown, modes, parts.joinToString(", "))
         }
 
         val bigTextStyle = NotificationCompat.BigTextStyle()
@@ -351,22 +351,20 @@ class BlockerService : Service() {
                         val name = resolvedNames[modeId]?.uppercase() ?: modeId.take(8)
                         val isManual = manuallyActivatedModeIds.contains(modeId)
                         val isTimed = timedModeDeactivations.containsKey(modeId)
-                        append("• $name")
-                        if (isTimed) {
-                            val endTime = timedModeDeactivations[modeId] ?: 0
-                            val prefix = if (isManual) "manual" else "active"
-                            append(" - $prefix, until ${formatNotificationTime(endTime)}")
+                        val line = if (isTimed) {
+                            val endTime = formatNotificationTime(timedModeDeactivations[modeId] ?: 0)
+                            getString(
+                                if (isManual) R.string.notif_mode_timed_manual else R.string.notif_mode_timed_active,
+                                name, endTime
+                            )
                         } else if (isManual) {
-                            append(" - manual")
+                            getString(R.string.notif_mode_manual, name)
                         } else {
                             val schedEnd = getScheduleEndTimeForMode(modeId)
-                            if (schedEnd != null) {
-                                append(" - by schedule, until $schedEnd")
-                            } else {
-                                append(" - by schedule")
-                            }
+                            if (schedEnd != null) getString(R.string.notif_mode_schedule_until, name, schedEnd)
+                            else getString(R.string.notif_mode_schedule, name)
                         }
-                        append("\n")
+                        append(line).append("\n")
                     }
                 }
 
@@ -374,7 +372,7 @@ class BlockerService : Service() {
                     if (isNotEmpty()) append("\n")
                     timedModeReactivations.forEach { (modeId, reactivateAt) ->
                         val name = resolvedNames[modeId]?.uppercase() ?: modeId.take(8)
-                        append("• $name - resumes at ${formatNotificationTime(reactivateAt)}\n")
+                        append(getString(R.string.notif_mode_resumes, name, formatNotificationTime(reactivateAt))).append("\n")
                     }
                 }
             }.trimEnd()
@@ -404,13 +402,13 @@ class BlockerService : Service() {
         return when (blockMode) {
             BlockMode.BLOCK_SELECTED -> when {
                 names.isEmpty() -> null
-                listed -> "Blocking: ${names.joinToString(", ")}"
-                else -> "Blocking ${names.size} apps. Open nfcGuard to see them."
+                listed -> getString(R.string.notif_blocking_list, names.joinToString(", "))
+                else -> resources.getQuantityString(R.plurals.notif_blocking_count, names.size, names.size)
             }
             BlockMode.ALLOW_SELECTED -> when {
-                names.isEmpty() -> "Blocking all apps"
-                listed -> "Only allowed: ${names.joinToString(", ")}"
-                else -> "Only ${names.size} apps allowed. Open nfcGuard to see them."
+                names.isEmpty() -> getString(R.string.notif_blocking_all)
+                listed -> getString(R.string.notif_only_allowed_list, names.joinToString(", "))
+                else -> resources.getQuantityString(R.plurals.notif_only_allowed_count, names.size, names.size)
             }
         }
     }
@@ -424,10 +422,10 @@ class BlockerService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "NFCGUARD Service",
+                getString(R.string.notif_channel_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Keeps NFCGUARD running"
+                description = getString(R.string.notif_channel_description)
             }
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)

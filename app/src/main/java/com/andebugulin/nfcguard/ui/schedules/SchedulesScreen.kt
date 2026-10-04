@@ -1,5 +1,12 @@
 package com.andebugulin.nfcguard.ui.schedules
 
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.platform.LocalContext
+import java.util.Locale
+import java.time.format.TextStyle
+import java.time.DayOfWeek
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import com.andebugulin.nfcguard.ScheduleClock
 import com.andebugulin.nfcguard.ActivationResult
 import com.andebugulin.nfcguard.AppState
@@ -84,6 +91,7 @@ fun SchedulesScreen(
     viewModel: GuardianViewModel,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val appState by viewModel.appState.collectAsState()
     val safeRegimeEnabled by viewModel.safeRegimeEnabled.collectAsState()
     val challengeDuration by viewModel.challengeDurationSeconds.collectAsState()
@@ -166,17 +174,17 @@ fun SchedulesScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues).background(GuardianTheme.BackgroundPrimary)) {
             Column(Modifier.fillMaxSize()) {
-                ScreenHeader(title = "SCHEDULES", onBack = onBack)
+                ScreenHeader(title = stringResource(R.string.home_schedules), onBack = onBack)
 
                 if (appState.schedules.isEmpty()) {
                     EmptyState(
-                        label = "NO SCHEDULES",
+                        label = stringResource(R.string.sched_no_schedules),
                         // FIX #12: a schedule with nothing to switch on is useless,
                         // so say what to do first rather than offering a dead button.
-                        secondary = "Create at least one mode first".takeIf { appState.modes.isEmpty() }
+                        secondary = stringResource(R.string.sched_create_at_least_one_mode).takeIf { appState.modes.isEmpty() }
                     ) {
                         GuardianButton(
-                            label = if (appState.modes.isNotEmpty()) "CREATE SCHEDULE" else "CREATE MODES FIRST",
+                            label = if (appState.modes.isNotEmpty()) stringResource(R.string.sched_create_schedule) else stringResource(R.string.sched_create_modes_first),
                             onClick = { showAddDialog = true },
                             enabled = appState.modes.isNotEmpty(),
                             modifier = Modifier.testTag(TestTags.Schedules.ADD)
@@ -200,7 +208,7 @@ fun SchedulesScreen(
                                     if (result == ActivationResult.BLOCK_MODE_CONFLICT) {
                                         scope.launch {
                                             snackbarHostState.showSnackbar(
-                                                BLOCK_MODE_CONFLICT_MESSAGE
+                                                context.getString(BLOCK_MODE_CONFLICT_MESSAGE)
                                             )
                                         }
                                     }
@@ -211,7 +219,7 @@ fun SchedulesScreen(
                                 onEdit = {
                                     val isActive = getScheduleState(schedule, appState) == ScheduleState.ACTIVE
                                     if (safeRegimeEnabled && isActive) {
-                                        requireChallengeOrRun("Editing an active schedule could be used to bypass the blocker.") {
+                                        requireChallengeOrRun(context.getString(R.string.sched_editing_an_active_schedule_could)) {
                                             editingSchedule = schedule
                                         }
                                     } else {
@@ -221,7 +229,7 @@ fun SchedulesScreen(
                                 onDelete = {
                                     val isActive = getScheduleState(schedule, appState) == ScheduleState.ACTIVE
                                     if (safeRegimeEnabled && isActive) {
-                                        requireChallengeOrRun("Deleting an active schedule could be used to bypass the blocker.") {
+                                        requireChallengeOrRun(context.getString(R.string.sched_deleting_an_active_schedule_could)) {
                                             showDeleteDialog = schedule
                                         }
                                     } else {
@@ -248,7 +256,7 @@ fun SchedulesScreen(
                                     .height(56.dp)
                             ) {
                                 Text(
-                                    if (appState.modes.isNotEmpty()) "+ NEW SCHEDULE" else "CREATE MODES FIRST",
+                                    if (appState.modes.isNotEmpty()) stringResource(R.string.sched_new_schedule_2) else stringResource(R.string.sched_create_modes_first),
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.sp
                                 )
@@ -289,7 +297,7 @@ fun SchedulesScreen(
                     pendingSaveLinkedModeIds = linkedModeIds
                     pendingSaveHasEndTime = hasEndTime
                     pendingSaveScheduleId = null
-                    challengeDescription = "Creating a schedule linked to active modes could be used to bypass the blocker."
+                    challengeDescription = context.getString(R.string.sched_creating_a_schedule_linked_to)
                     pendingChallengeAction = null
                     showSafeRegimeChallenge = true
                 } else {
@@ -317,7 +325,7 @@ fun SchedulesScreen(
                     pendingSaveLinkedModeIds = linkedModeIds
                     pendingSaveHasEndTime = hasEndTime
                     pendingSaveScheduleId = schedule.id
-                    challengeDescription = "Modifying this schedule while modes are active could be used to bypass the blocker."
+                    challengeDescription = context.getString(R.string.sched_modifying_this_schedule_while_modes)
                     pendingChallengeAction = null
                     showSafeRegimeChallenge = true
                 } else {
@@ -354,7 +362,7 @@ fun SchedulesScreen(
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
-                        "DELETE SCHEDULE?",
+                        stringResource(R.string.sched_delete_schedule),
                         fontWeight = FontWeight.Black,
                         letterSpacing = 2.sp,
                         color = GuardianTheme.TextPrimary
@@ -377,7 +385,7 @@ fun SchedulesScreen(
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "${schedule.linkedModeIds.size} linked mode${if (schedule.linkedModeIds.size != 1) "s" else ""}",
+                                pluralStringResource(R.plurals.common_linked_modes, schedule.linkedModeIds.size, schedule.linkedModeIds.size),
                                 fontSize = 11.sp,
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.5.sp
@@ -393,14 +401,14 @@ fun SchedulesScreen(
                         ) {
                             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(
-                                    "IMPORTANT:",
+                                    stringResource(R.string.sched_important),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Black,
                                     color = GuardianTheme.Warning,
                                     letterSpacing = 1.sp
                                 )
                                 Text(
-                                    "Linked modes will stay ACTIVE and switch to manual state",
+                                    stringResource(R.string.sched_linked_modes_will_stay_active),
                                     fontSize = 11.sp,
                                     color = GuardianTheme.Warning,
                                     letterSpacing = 0.5.sp
@@ -415,7 +423,7 @@ fun SchedulesScreen(
                         color = GuardianTheme.ErrorDark
                     ) {
                         Text(
-                            "This action cannot be undone",
+                            stringResource(R.string.modes_this_action_cannot_be_undone),
                             fontSize = 12.sp,
                             color = GuardianTheme.ErrorText,
                             letterSpacing = 0.5.sp,
@@ -438,7 +446,7 @@ fun SchedulesScreen(
                     modifier = Modifier.testTag(TestTags.Schedules.DELETE_CONFIRM)
                 ) {
                     Text(
-                        "DELETE",
+                        stringResource(R.string.modes_delete),
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.sp
                     )
@@ -451,7 +459,7 @@ fun SchedulesScreen(
                         contentColor = GuardianTheme.TextSecondary
                     )
                 ) {
-                    Text("CANCEL", letterSpacing = 1.sp)
+                    Text(stringResource(R.string.home_cancel), letterSpacing = 1.sp)
                 }
             }
         )
@@ -508,7 +516,7 @@ fun ScheduleCard(
                                         .background(GuardianTheme.BackgroundPrimary)
                                 )
                                 Text(
-                                    "ACTIVE",
+                                    stringResource(R.string.home_active),
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Black,
                                     color = GuardianTheme.BackgroundSurface,
@@ -535,7 +543,7 @@ fun ScheduleCard(
                                         .background(GuardianTheme.TextSecondary)
                                 )
                                 Text(
-                                    "DEACTIVATED",
+                                    stringResource(R.string.sched_deactivated),
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Black,
                                     color = GuardianTheme.TextSecondary,
@@ -566,7 +574,7 @@ fun ScheduleCard(
                     )
                     Text(
                         buildString {
-                            append("${getDayName(dayTime.day).take(3)} ")
+                            append("${getShortDayName(dayTime.day)} ")
                             append(String.format("%02d:%02d", dayTime.startHour, dayTime.startMinute))
                             if (schedule.hasEndTime) {
                                 append(" - ${String.format("%02d:%02d", dayTime.endHour, dayTime.endMinute)}")
@@ -607,7 +615,7 @@ fun ScheduleCard(
                 }
             } else {
                 Text(
-                    "NO MODES LINKED",
+                    stringResource(R.string.sched_no_modes_linked),
                     fontSize = 10.sp,
                     color = GuardianTheme.TextDisabled,
                     letterSpacing = 1.sp
@@ -632,7 +640,7 @@ fun ScheduleCard(
                         shape = RoundedCornerShape(0.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     ) {
-                        Text("ACTIVATE", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text(stringResource(R.string.modes_activate), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     }
                 }
 
@@ -641,20 +649,20 @@ fun ScheduleCard(
                         onClick = onLinkTags,
                         modifier = Modifier.testTag(TestTags.Schedules.linkTags(schedule.id))
                     ) {
-                        Text("TAGS", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
+                        Text(stringResource(R.string.sched_tags), fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
                     }
                 }
                 TextButton(
                     onClick = onEdit,
                     modifier = Modifier.testTag(TestTags.Schedules.edit(schedule.id))
                 ) {
-                    Text("EDIT", fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
+                    Text(stringResource(R.string.modes_edit), fontSize = 11.sp, color = GuardianTheme.TextPrimary, letterSpacing = 1.sp)
                 }
                 TextButton(
                     onClick = onDelete,
                     modifier = Modifier.testTag(TestTags.Schedules.delete(schedule.id))
                 ) {
-                    Text("DELETE", fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                    Text(stringResource(R.string.modes_delete), fontSize = 11.sp, color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                 }
             }
         }
@@ -683,21 +691,19 @@ private fun ScheduleTagsDialog(
     var selected by remember(schedule.id) { mutableStateOf(emptySet<String>()) }
 
     GuardianDialog(
-        title = "UNLOCK TAGS",
+        title = stringResource(R.string.sched_unlock_tags),
         message = if (linkedModes.isEmpty()) {
-            "This schedule has no modes yet."
+            stringResource(R.string.sched_this_schedule_has_no_modes)
         } else {
-            "Adds to: " + linkedModes.joinToString(", ") { it.name.uppercase() }
+            stringResource(R.string.sched_adds_to, linkedModes.joinToString(", ") { it.name.uppercase() })
         },
-        detail = "Tags are linked to modes, not to schedules. Picking tags here " +
-            "adds them to every mode this schedule turns on. Existing tags and " +
-            "their unlock limits are left alone.",
+        detail = stringResource(R.string.sched_tags_are_linked_to_modes),
         kind = DialogKind.Edit,
-        confirmLabel = "ADD",
+        confirmLabel = stringResource(R.string.sched_add),
         onConfirm = { onConfirm(selected) },
         confirmEnabled = selected.isNotEmpty() && linkedModes.isNotEmpty(),
         confirmModifier = Modifier.testTag(TestTags.Schedules.TAGS_SAVE),
-        dismissLabel = "CANCEL",
+        dismissLabel = stringResource(R.string.home_cancel),
         onDismiss = onDismiss,
         dismissModifier = Modifier.testTag(TestTags.Schedules.TAGS_CANCEL)
     ) {
@@ -724,13 +730,14 @@ private fun ScheduleTagsDialog(
     }
 }
 
-fun getDayName(day: Int): String = when (day) {
-    1 -> "MONDAY"
-    2 -> "TUESDAY"
-    3 -> "WEDNESDAY"
-    4 -> "THURSDAY"
-    5 -> "FRIDAY"
-    6 -> "SATURDAY"
-    7 -> "SUNDAY"
-    else -> "UNKNOWN"
+/** Full weekday name in the user's language, upper-cased to match the UI. */
+fun getDayName(day: Int): String {
+    val locale = Locale.getDefault()
+    return DayOfWeek.of(day).getDisplayName(TextStyle.FULL, locale).uppercase(locale)
+}
+
+/** Short weekday name ("MON", "LUN", "月") in the user's language. */
+fun getShortDayName(day: Int): String {
+    val locale = Locale.getDefault()
+    return DayOfWeek.of(day).getDisplayName(TextStyle.SHORT, locale).uppercase(locale)
 }

@@ -1,5 +1,8 @@
 package com.andebugulin.nfcguard.ui.info
 
+import androidx.compose.ui.res.pluralStringResource
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import com.andebugulin.nfcguard.data.AppLogger
 import com.andebugulin.nfcguard.ui.GuardianTheme
 
@@ -94,7 +97,7 @@ fun InfoScreen(
             ) {
                 item {
                     ScreenHeader(
-                        title = "ABOUT",
+                        title = stringResource(R.string.info_about),
                         onBack = onBack,
                         fillTitleWidth = false,
                         contentPadding = PaddingValues(0.dp)
@@ -111,14 +114,14 @@ fun InfoScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
-                                "NFCGUARD",
+                                stringResource(R.string.home_nfcguard),
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Black,
                                 color = GuardianTheme.TextPrimary,
                                 letterSpacing = 2.sp
                             )
                             Text(
-                                "NFC-powered app blocker for digital wellbeing",
+                                stringResource(R.string.info_nfc_powered_app_blocker_for),
                                 fontSize = 12.sp,
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 1.sp
@@ -153,14 +156,14 @@ fun InfoScreen(
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "STAR ON GITHUB",
+                                    stringResource(R.string.info_star_on_github),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = GuardianTheme.TextPrimary,
                                     letterSpacing = 1.sp
                                 )
                                 Text(
-                                    "Support the project",
+                                    stringResource(R.string.info_support_the_project),
                                     fontSize = 10.sp,
                                     color = GuardianTheme.TextSecondary,
                                     letterSpacing = 0.5.sp
@@ -220,14 +223,14 @@ fun InfoScreen(
                                 )
                                 Column {
                                     Text(
-                                        "REPORT A PROBLEM",
+                                        stringResource(R.string.info_report_a_problem),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = GuardianTheme.TextPrimary,
                                         letterSpacing = 1.sp
                                     )
                                     Text(
-                                        "Opens a GitHub issue with diagnostic info",
+                                        stringResource(R.string.info_opens_a_github_issue_with),
                                         fontSize = 10.sp,
                                         color = GuardianTheme.TextSecondary,
                                         letterSpacing = 0.5.sp
@@ -237,7 +240,7 @@ fun InfoScreen(
 
                             // Log count
                             Text(
-                                "$logCount events logged",
+                                pluralStringResource(R.plurals.info_events_logged, logCount, logCount),
                                 fontSize = 10.sp,
                                 color = GuardianTheme.TextTertiary,
                                 letterSpacing = 0.5.sp
@@ -260,7 +263,7 @@ fun InfoScreen(
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    "REPORT ON GITHUB",
+                                    stringResource(R.string.info_report_on_github),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.sp
@@ -288,7 +291,7 @@ fun InfoScreen(
                                     )
                                     Spacer(Modifier.width(6.dp))
                                     Text(
-                                        "SAVE LOG FILE",
+                                        stringResource(R.string.info_save_log_file),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp
@@ -305,7 +308,7 @@ fun InfoScreen(
                                     modifier = Modifier.height(40.dp)
                                 ) {
                                     Text(
-                                        "VIEW",
+                                        stringResource(R.string.info_view),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp
@@ -317,9 +320,9 @@ fun InfoScreen(
                             TextButton(
                                 onClick = {
                                     AppLogger.clear()
-                                    logCount = 1  // "Logs cleared" entry
+                                    logCount = 1  // stringResource(R.string.info_logs_cleared) entry
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("Logs cleared")
+                                        snackbarHostState.showSnackbar(context.getString(R.string.info_logs_cleared))
                                     }
                                 },
                                 colors = ButtonDefaults.textButtonColors(
@@ -333,7 +336,7 @@ fun InfoScreen(
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    "CLEAR LOGS",
+                                    stringResource(R.string.info_clear_logs),
                                     fontSize = 10.sp,
                                     letterSpacing = 1.sp
                                 )
@@ -350,7 +353,7 @@ fun InfoScreen(
                                     verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Text(
-                                        "Reproduce the bug first, then tap REPORT ON GITHUB.",
+                                        stringResource(R.string.info_reproduce_the_bug_first_then),
                                         style = GuardianType.EmptyHint,
                                         color = GuardianTheme.TextTertiary
                                     )
@@ -362,12 +365,12 @@ fun InfoScreen(
 
                 item {
                     InfoSection(
-                        title = "HOW IT WORKS",
+                        title = stringResource(R.string.info_how_it_works),
                         items = listOf(
-                            "1. MODES - pick apps to block, or apps to allow",
-                            "2. TAGS - register an NFC tag as the key",
-                            "3. SCHEDULES - turn modes on automatically",
-                            "4. TAP - unlock with the tag when you need to"
+                            stringResource(R.string.info_t_1_modes_pick_apps_to),
+                            stringResource(R.string.info_t_2_tags_register_an_nfc),
+                            stringResource(R.string.info_t_3_schedules_turn_modes_on),
+                            stringResource(R.string.info_t_4_tap_unlock_with_the)
                         )
                     )
                 }
@@ -382,32 +385,27 @@ fun InfoScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
-                                "HOW BLOCKING WORKS",
+                                stringResource(R.string.info_how_blocking_works),
                                 style = GuardianType.Label,
                                 color = GuardianTheme.TextSecondary
                             )
 
                             BlockingMethodRow(
                                 icon = Icons.Default.Shield,
-                                name = "FORCE-CLOSE MODE",
-                                summary = "Closes the app instantly. Needs Accessibility.",
-                                detail = "Opening a blocked app sends you straight home and kills " +
-                                    "it in the background. The most reliable method - it behaves " +
-                                    "consistently everywhere, including Samsung and Pixel, where the " +
-                                    "overlay can flicker or be dismissed."
+                                name = stringResource(R.string.home_force_close_mode),
+                                summary = stringResource(R.string.info_closes_the_app_instantly_needs),
+                                detail = stringResource(R.string.info_opening_a_blocked_app_sends)
                             )
 
                             BlockingMethodRow(
                                 icon = Icons.Default.Fullscreen,
-                                name = "OVERLAY MODE",
-                                summary = "Covers the screen. No extra permission.",
-                                detail = "A full-screen black panel covers the blocked app until you " +
-                                    "tap your tag. Used automatically whenever the Accessibility " +
-                                    "Service is off."
+                                name = stringResource(R.string.home_overlay_mode),
+                                summary = stringResource(R.string.info_covers_the_screen_no_extra),
+                                detail = stringResource(R.string.info_a_full_screen_black_panel)
                             )
 
                             Text(
-                                "Picked automatically. Settings shows which one is active.",
+                                stringResource(R.string.info_picked_automatically_settings_shows_which),
                                 style = GuardianType.EmptyHint,
                                 color = GuardianTheme.TextTertiary
                             )
@@ -417,11 +415,11 @@ fun InfoScreen(
 
                 item {
                     InfoSection(
-                        title = "NOT WORKING?",
+                        title = stringResource(R.string.info_not_working),
                         items = listOf(
-                            "\u2022 Enable Accessibility for the most reliable blocking",
-                            "\u2022 Turn off 'Pause app if unused' in app settings",
-                            "\u2022 Xiaomi/Samsung - enable Autostart, disable battery optimization"
+                            stringResource(R.string.info_u2022_enable_accessibility_for_the),
+                            stringResource(R.string.info_u2022_turn_off_pause_app),
+                            stringResource(R.string.info_u2022_xiaomi_samsung_enable_autostart)
                         )
                     )
                 }
@@ -436,14 +434,14 @@ fun InfoScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                "OPEN SOURCE",
+                                stringResource(R.string.info_open_source),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 1.sp
                             )
                             Text(
-                                "Free and open source. Contributions welcome.",
+                                stringResource(R.string.info_free_and_open_source_contributions),
                                 fontSize = 12.sp,
                                 color = GuardianTheme.TextPrimary,
                                 letterSpacing = 0.5.sp
@@ -489,7 +487,7 @@ fun LogViewerDialog(
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
-                    "EVENT LOG ($entryCount)",
+                    stringResource(R.string.info_event_log_count, entryCount),
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 2.sp,
                     fontSize = 14.sp
@@ -504,7 +502,7 @@ fun LogViewerDialog(
             ) {
                 if (logText.isBlank()) {
                     Text(
-                        "No events logged yet.\nUse the app normally and logs will be collected automatically.",
+                        stringResource(R.string.info_no_events_logged_yet_use),
                         fontSize = 11.sp,
                         color = GuardianTheme.TextSecondary,
                         letterSpacing = 0.5.sp
@@ -533,12 +531,12 @@ fun LogViewerDialog(
             ) {
                 Icon(Icons.Default.Save, null, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("SAVE FILE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp, fontSize = 12.sp)
+                Text(stringResource(R.string.info_save_file), fontWeight = FontWeight.Bold, letterSpacing = 1.sp, fontSize = 12.sp)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CLOSE", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                Text(stringResource(R.string.home_close), color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         }
     )

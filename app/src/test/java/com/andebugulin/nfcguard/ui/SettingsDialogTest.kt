@@ -278,7 +278,7 @@ class SettingsDialogTest {
         ))
         show()
 
-        assertVisible("2 modes  -  1 schedules  -  1 tags")
+        assertVisible("2 modes - 1 schedule - 1 tag")
     }
 
     @Test fun `exporting asks which format first`() {

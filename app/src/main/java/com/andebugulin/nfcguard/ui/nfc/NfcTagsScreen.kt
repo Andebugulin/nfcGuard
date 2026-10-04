@@ -1,5 +1,8 @@
 package com.andebugulin.nfcguard.ui.nfc
 
+import androidx.compose.ui.res.pluralStringResource
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import com.andebugulin.nfcguard.Mode
 import com.andebugulin.nfcguard.NfcTag
 import com.andebugulin.nfcguard.ui.GuardianTheme
@@ -77,15 +80,15 @@ fun NfcTagsScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary).windowInsetsPadding(WindowInsets.systemBars)) {
         Column(Modifier.fillMaxSize()) {
-            ScreenHeader(title = "NFC TAGS", onBack = onBack)
+            ScreenHeader(title = stringResource(R.string.home_nfc_tags), onBack = onBack)
 
             Spacer(Modifier.height(8.dp))
 
             if (appState.nfcTags.isEmpty()) {
                 EmptyState(
-                    label = "NO NFC TAGS",
+                    label = stringResource(R.string.tags_no_nfc_tags),
                     icon = Icons.Default.Nfc,
-                    secondary = "Register tags to create secure locks"
+                    secondary = stringResource(R.string.tags_register_tags_to_create_secure)
                 ) {
                     Button(
                         onClick = {
@@ -101,7 +104,7 @@ fun NfcTagsScreen(
                     ) {
                         Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("REGISTER TAG", style = GuardianType.Label)
+                        Text(stringResource(R.string.tags_register_tag), style = GuardianType.Label)
                     }
                 }
             } else {
@@ -140,7 +143,7 @@ fun NfcTagsScreen(
                             Icon(Icons.Default.Nfc, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                "+ REGISTER TAG",
+                                stringResource(R.string.tags_register_tag_2),
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp
                             )
@@ -222,7 +225,7 @@ fun NfcTagsScreen(
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
-                        "DELETE NFC TAG?",
+                        stringResource(R.string.tags_delete_nfc_tag),
                         fontWeight = FontWeight.Black,
                         letterSpacing = 2.sp,
                         color = GuardianTheme.TextPrimary
@@ -245,7 +248,7 @@ fun NfcTagsScreen(
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "${linkedModes.size} linked mode${if (linkedModes.size != 1) "s" else ""}",
+                                pluralStringResource(R.plurals.common_linked_modes, linkedModes.size, linkedModes.size),
                                 fontSize = 11.sp,
                                 color = GuardianTheme.TextSecondary,
                                 letterSpacing = 0.5.sp
@@ -261,14 +264,14 @@ fun NfcTagsScreen(
                         ) {
                             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(
-                                    "ANTI-BYPASS PROTECTION:",
+                                    stringResource(R.string.tags_anti_bypass_protection),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Black,
                                     color = GuardianTheme.Warning,
                                     letterSpacing = 1.sp
                                 )
                                 Text(
-                                    "This tag has active modes. Extra confirmation is required to prevent bypassing the blocker.",
+                                    stringResource(R.string.tags_this_tag_has_active_modes),
                                     fontSize = 11.sp,
                                     color = GuardianTheme.Warning,
                                     letterSpacing = 0.5.sp
@@ -284,20 +287,20 @@ fun NfcTagsScreen(
                     ) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                "This will:",
+                                stringResource(R.string.tags_this_will),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = GuardianTheme.ErrorText,
                                 letterSpacing = 0.5.sp
                             )
                             Text(
-                                "\u2022 Remove the NFC tag",
+                                stringResource(R.string.tags_u2022_remove_the_nfc_tag),
                                 fontSize = 11.sp,
                                 color = GuardianTheme.ErrorText,
                                 letterSpacing = 0.5.sp
                             )
                             Text(
-                                "\u2022 Unlink from all modes",
+                                stringResource(R.string.tags_u2022_unlink_from_all_modes),
                                 fontSize = 11.sp,
                                 color = GuardianTheme.ErrorText,
                                 letterSpacing = 0.5.sp
@@ -326,7 +329,7 @@ fun NfcTagsScreen(
                     modifier = Modifier.testTag(TestTags.NfcTags.DELETE_CONFIRM)
                 ) {
                     Text(
-                        if (hasActiveMode) "CONTINUE" else "DELETE",
+                        if (hasActiveMode) stringResource(R.string.tags_continue) else stringResource(R.string.modes_delete),
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.sp
                     )
@@ -339,7 +342,7 @@ fun NfcTagsScreen(
                         contentColor = GuardianTheme.TextSecondary
                     )
                 ) {
-                    Text("CANCEL", letterSpacing = 1.sp)
+                    Text(stringResource(R.string.home_cancel), letterSpacing = 1.sp)
                 }
             },
         )
@@ -348,7 +351,7 @@ fun NfcTagsScreen(
     // Safe Regime challenge for deleting tags linked to active modes
     if (showDeleteChallenge && pendingDeleteTag != null) {
         SafeRegimeChallengeDialog(
-            actionDescription = "Deleting NFC tag ${pendingDeleteTag!!.name} while modes are active could make it impossible to deactivate them normally.",
+            actionDescription = stringResource(R.string.tags_delete_challenge, pendingDeleteTag!!.name),
             totalDurationSeconds = challengeDuration,
             onComplete = {
                 pendingDeleteTag?.let { viewModel.deleteNfcTag(it.id) }
@@ -426,7 +429,7 @@ fun NfcTagCard(
                                     .background(Color.White)
                             )
                             Text(
-                                "ACTIVE",
+                                stringResource(R.string.home_active),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
                                 color = GuardianTheme.TextPrimary,
@@ -440,7 +443,7 @@ fun NfcTagCard(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                "ID: ${tag.id.take(16)}...",
+                stringResource(R.string.tags_id_prefix, tag.id.take(16)),
                 fontSize = 9.sp,
                 color = subtleColor,
                 letterSpacing = 0.5.sp,
@@ -453,7 +456,7 @@ fun NfcTagCard(
             if (linkedModes.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        "UNLOCKS:",
+                        stringResource(R.string.tags_unlocks),
                         fontSize = 10.sp,
                         color = subtleColor,
                         letterSpacing = 1.sp,
@@ -481,7 +484,7 @@ fun NfcTagCard(
                 }
             } else {
                 Text(
-                    "UNLOCKS NOTHING YET",
+                    stringResource(R.string.tags_unlocks_nothing_yet),
                     style = GuardianType.Meta,
                     color = GuardianTheme.TextDisabled
                 )
@@ -496,19 +499,19 @@ fun NfcTagCard(
                     onClick = onLinkModes,
                     modifier = Modifier.testTag(TestTags.NfcTags.linkModes(tag.id))
                 ) {
-                    Text("LINK MODES", fontSize = 11.sp, color = textColor, letterSpacing = 1.sp)
+                    Text(stringResource(R.string.tags_link_modes), fontSize = 11.sp, color = textColor, letterSpacing = 1.sp)
                 }
                 TextButton(
                     onClick = onEdit,
                     modifier = Modifier.testTag(TestTags.NfcTags.rename(tag.id))
                 ) {
-                    Text("RENAME", fontSize = 11.sp, color = textColor, letterSpacing = 1.sp)
+                    Text(stringResource(R.string.tags_rename), fontSize = 11.sp, color = textColor, letterSpacing = 1.sp)
                 }
                 TextButton(
                     onClick = onDelete,
                     modifier = Modifier.testTag(TestTags.NfcTags.delete(tag.id))
                 ) {
-                    Text("DELETE", fontSize = 11.sp, color = if (hasActiveMode) GuardianTheme.TextSecondary else GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                    Text(stringResource(R.string.modes_delete), fontSize = 11.sp, color = if (hasActiveMode) GuardianTheme.TextSecondary else GuardianTheme.TextSecondary, letterSpacing = 1.sp)
                 }
             }
         }
@@ -527,22 +530,20 @@ private fun LinkModesDialog(
     }
 
     GuardianDialog(
-        title = "UNLOCKS",
+        title = stringResource(R.string.tags_unlocks_2),
         message = tag.name.uppercase(),
-        detail = "Tapping this tag will offer to unlock the modes you pick here. " +
-            "Unlocking is permanent unless you set a time limit on the tag from " +
-            "inside the mode.",
+        detail = stringResource(R.string.tags_tapping_this_tag_will_offer),
         kind = DialogKind.Edit,
-        confirmLabel = "SAVE",
+        confirmLabel = stringResource(R.string.modes_save),
         onConfirm = { onConfirm(selected) },
         confirmModifier = Modifier.testTag(TestTags.NfcTags.LINK_SAVE),
-        dismissLabel = "CANCEL",
+        dismissLabel = stringResource(R.string.home_cancel),
         onDismiss = onDismiss,
         dismissModifier = Modifier.testTag(TestTags.NfcTags.LINK_CANCEL)
     ) {
         if (modes.isEmpty()) {
             Text(
-                "Create a mode first.",
+                stringResource(R.string.tags_create_a_mode_first),
                 style = GuardianType.Body,
                 color = GuardianTheme.TextSecondary
             )
@@ -605,7 +606,7 @@ fun NfcTagRegistrationDialog(
         ),
         title = {
             Text(
-                "REGISTER NFC TAG",
+                stringResource(R.string.tags_register_nfc_tag),
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp
             )
@@ -630,7 +631,7 @@ fun NfcTagRegistrationDialog(
                             )
                             Spacer(Modifier.height(16.dp))
                             Text(
-                                "TAP NFC TAG",
+                                stringResource(R.string.tags_tap_nfc_tag),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = GuardianTheme.TextSecondary,
@@ -638,7 +639,7 @@ fun NfcTagRegistrationDialog(
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "Hold your NFC tag near the device",
+                                stringResource(R.string.tags_hold_your_nfc_tag_near),
                                 fontSize = 11.sp,
                                 color = GuardianTheme.TextTertiary,
                                 letterSpacing = 0.5.sp
@@ -664,14 +665,14 @@ fun NfcTagRegistrationDialog(
                             )
                             Column {
                                 Text(
-                                    "TAG ALREADY REGISTERED",
+                                    stringResource(R.string.tags_tag_already_registered),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = GuardianTheme.Error,
                                     letterSpacing = 1.sp
                                 )
                                 Text(
-                                    "This NFC tag is already in your list. Try a different tag.",
+                                    stringResource(R.string.tags_this_nfc_tag_is_already),
                                     fontSize = 9.sp,
                                     color = GuardianTheme.ErrorText,
                                     letterSpacing = 0.5.sp
@@ -704,7 +705,7 @@ fun NfcTagRegistrationDialog(
                             )
                             Column {
                                 Text(
-                                    "TAG DETECTED",
+                                    stringResource(R.string.tags_tag_detected),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = GuardianTheme.Success,
@@ -723,7 +724,7 @@ fun NfcTagRegistrationDialog(
                     OutlinedTextField(
                         value = name,
                         onValueChange = { if (it.length <= 30) name = it },  // FIX #7: Max length
-                        placeholder = { Text("TAG NAME (e.g., 'OFFICE KEY')", fontSize = 12.sp, letterSpacing = 1.sp) },
+                        placeholder = { Text(stringResource(R.string.tags_tag_name_e_g_office), fontSize = 12.sp, letterSpacing = 1.sp) },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = GuardianTheme.InputBackground,
                             unfocusedContainerColor = GuardianTheme.InputBackground,
@@ -739,14 +740,14 @@ fun NfcTagRegistrationDialog(
                             // FIX #6: Duplicate name feedback
                             if (nameExists) {
                                 Text(
-                                    "A tag with this name already exists",
+                                    stringResource(R.string.tags_a_tag_with_this_name),
                                     fontSize = 10.sp,
                                     color = GuardianTheme.Error,
                                     letterSpacing = 0.5.sp
                                 )
                             } else {
                                 Text(
-                                    "${name.length}/30",
+                                    stringResource(R.string.modes_name_length, name.length, 30),
                                     fontSize = 10.sp,
                                     color = GuardianTheme.TextTertiary,
                                     letterSpacing = 0.5.sp
@@ -768,12 +769,12 @@ fun NfcTagRegistrationDialog(
                 enabled = name.isNotBlank() && tagId.isNotBlank() && !isDuplicate && !nameExists,
                 modifier = Modifier.testTag(TestTags.NfcTags.REGISTER_CONFIRM)
             ) {
-                Text("REGISTER", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(stringResource(R.string.tags_register), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                Text(stringResource(R.string.home_cancel), color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
     )
@@ -805,7 +806,7 @@ fun NfcTagEditDialog(
         ),
         title = {
             Text(
-                "RENAME NFC TAG",
+                stringResource(R.string.tags_rename_nfc_tag),
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp
             )
@@ -814,7 +815,7 @@ fun NfcTagEditDialog(
             OutlinedTextField(
                 value = name,
                 onValueChange = { if (it.length <= 30) name = it },  // FIX #7: Max length
-                placeholder = { Text("TAG NAME", fontSize = 12.sp, letterSpacing = 1.sp) },
+                placeholder = { Text(stringResource(R.string.tags_tag_name), fontSize = 12.sp, letterSpacing = 1.sp) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = GuardianTheme.InputBackground,
                     unfocusedContainerColor = GuardianTheme.InputBackground,
@@ -829,14 +830,14 @@ fun NfcTagEditDialog(
                 supportingText = {
                     if (nameExists) {
                         Text(
-                            "A tag with this name already exists",
+                            stringResource(R.string.tags_a_tag_with_this_name),
                             fontSize = 10.sp,
                             color = GuardianTheme.Error,
                             letterSpacing = 0.5.sp
                         )
                     } else {
                         Text(
-                            "${name.length}/30",
+                            stringResource(R.string.modes_name_length, name.length, 30),
                             fontSize = 10.sp,
                             color = GuardianTheme.TextTertiary,
                             letterSpacing = 0.5.sp
@@ -855,12 +856,12 @@ fun NfcTagEditDialog(
                 enabled = name.isNotBlank() && !nameExists,  // FIX #6
                 modifier = Modifier.testTag(TestTags.NfcTags.RENAME_SAVE)
             ) {
-                Text("SAVE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(stringResource(R.string.modes_save), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                Text(stringResource(R.string.home_cancel), color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
     )

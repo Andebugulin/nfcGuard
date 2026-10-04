@@ -71,12 +71,12 @@ class GuardianWidget : AppWidgetProvider() {
 
         val modes = appState.modes
         if (modes.isEmpty()) {
-            views.setTextViewText(R.id.tv_mode_name, "NO MODES")
+            views.setTextViewText(R.id.tv_mode_name, context.getString(R.string.widget_no_modes))
             views.setViewVisibility(R.id.btn_prev_mode, View.INVISIBLE)
             views.setViewVisibility(R.id.btn_next_mode, View.INVISIBLE)
-            views.setTextViewText(R.id.tv_status, "CREATE A MODE IN THE APP")
+            views.setTextViewText(R.id.tv_status, context.getString(R.string.widget_create_mode))
             views.setInt(R.id.tv_status, "setTextColor", COLOR_SUBTLE)
-            views.setTextViewText(R.id.btn_action, "OPEN APP")
+            views.setTextViewText(R.id.btn_action, context.getString(R.string.widget_open_app))
             views.setOnClickPendingIntent(R.id.btn_action, pending(context, widgetId, ACTION_OPEN_APP, 4))
             manager.updateAppWidget(widgetId, views)
             return
@@ -113,14 +113,14 @@ class GuardianWidget : AppWidgetProvider() {
         val isTimed = appState.timedModeDeactivations.containsKey(mode.id)
         val statusText = if (isTimed) {
             val endTime = appState.timedModeDeactivations[mode.id] ?: 0
-            "● ACTIVE · UNTIL ${formatTime(endTime)}"
+            context.getString(R.string.widget_active_until, formatTime(endTime))
         } else {
-            "● ACTIVE · NFC TO UNLOCK"
+            context.getString(R.string.widget_active_nfc)
         }
         views.setTextViewText(R.id.tv_status, statusText)
         views.setInt(R.id.tv_status, "setTextColor", COLOR_WHITE)
 
-        views.setTextViewText(R.id.btn_action, "OPEN APP")
+        views.setTextViewText(R.id.btn_action, context.getString(R.string.widget_open_app))
         views.setInt(R.id.btn_action, "setBackgroundColor", COLOR_WHITE)
         views.setInt(R.id.btn_action, "setTextColor", COLOR_BLACK)
         views.setOnClickPendingIntent(R.id.btn_action, pending(context, widgetId, ACTION_OPEN_APP, 4))
@@ -140,9 +140,9 @@ class GuardianWidget : AppWidgetProvider() {
         val wouldConflict = activeBlockModes.isNotEmpty() && !activeBlockModes.contains(mode.blockMode)
 
         if (wouldConflict) {
-            views.setTextViewText(R.id.tv_status, "CONFLICTS WITH ACTIVE MODE")
+            views.setTextViewText(R.id.tv_status, context.getString(R.string.widget_conflicts))
             views.setInt(R.id.tv_status, "setTextColor", COLOR_WARNING)
-            views.setTextViewText(R.id.btn_action, "OPEN APP")
+            views.setTextViewText(R.id.btn_action, context.getString(R.string.widget_open_app))
             views.setInt(R.id.btn_action, "setBackgroundColor", COLOR_SURFACE)
             views.setInt(R.id.btn_action, "setTextColor", COLOR_WHITE)
             views.setOnClickPendingIntent(R.id.btn_action, pending(context, widgetId, ACTION_OPEN_APP, 4))
@@ -168,11 +168,11 @@ class GuardianWidget : AppWidgetProvider() {
         wPrefs: android.content.SharedPreferences
     ) {
         val durationIndex = wPrefs.getInt("duration_$widgetId", 0).coerceIn(0, DURATIONS.lastIndex)
-        views.setTextViewText(R.id.tv_status, DURATION_LABELS[durationIndex])
+        views.setTextViewText(R.id.tv_status, context.getString(DURATION_LABELS[durationIndex]))
         views.setInt(R.id.tv_status, "setTextColor", COLOR_SUBTLE)
         views.setOnClickPendingIntent(R.id.tv_status, pending(context, widgetId, ACTION_CYCLE_DURATION, 2))
 
-        views.setTextViewText(R.id.btn_action, "ACTIVATE")
+        views.setTextViewText(R.id.btn_action, context.getString(R.string.widget_activate))
         views.setInt(R.id.btn_action, "setBackgroundColor", COLOR_WHITE)
         views.setInt(R.id.btn_action, "setTextColor", COLOR_BLACK)
         views.setOnClickPendingIntent(R.id.btn_action, pending(context, widgetId, ACTION_ACTIVATE, 3))
@@ -271,11 +271,11 @@ class GuardianWidget : AppWidgetProvider() {
         // Durations in minutes; 0 = unlimited (until NFC / schedule)
         private val DURATIONS = listOf(0L, 15L, 30L, 60L, 120L)
         private val DURATION_LABELS = listOf(
-            "UNTIL NFC / SCHEDULE",
-            "FOR 15 MINUTES",
-            "FOR 30 MINUTES",
-            "FOR 1 HOUR",
-            "FOR 2 HOURS"
+            R.string.widget_duration_unlimited,
+            R.string.widget_duration_15m,
+            R.string.widget_duration_30m,
+            R.string.widget_duration_1h,
+            R.string.widget_duration_2h
         )
 
         private const val COLOR_WHITE = 0xFFFFFFFF.toInt()

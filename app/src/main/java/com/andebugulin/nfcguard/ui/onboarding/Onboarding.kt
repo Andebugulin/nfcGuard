@@ -1,5 +1,7 @@
 package com.andebugulin.nfcguard.ui.onboarding
 
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import android.content.Context
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -100,14 +102,14 @@ fun OnboardingFlow(
 
     val pages = remember(challengeSeconds) {
         listOf(
-            Page("NFCGUARD", "APPS YOU CAN'T OPEN") { PurposePreview(it) },
-            Page("MODES", "PICK WHAT'S BLOCKED") { ModesPreview(it) },
-            Page("SCHEDULES", "TURN ON BY THEMSELVES") { SchedulesPreview(it) },
-            Page("NFC TAGS", "TAP TO UNLOCK") { NfcPreview(it) },
-            Page("LOST YOUR TAG?", "YOU CAN STILL GET BACK IN") {
+            Page(context.getString(R.string.home_nfcguard), context.getString(R.string.onb_apps_you_cant_open)) { PurposePreview(it) },
+            Page(context.getString(R.string.home_modes), context.getString(R.string.onb_pick_whats_blocked)) { ModesPreview(it) },
+            Page(context.getString(R.string.home_schedules), context.getString(R.string.onb_turn_on_by_themselves)) { SchedulesPreview(it) },
+            Page(context.getString(R.string.home_nfc_tags), context.getString(R.string.onb_tap_to_unlock)) { NfcPreview(it) },
+            Page(context.getString(R.string.onb_lost_your_tag), context.getString(R.string.onb_you_can_still_get_back)) {
                 SafetyPreview(modifier = it, seconds = challengeSeconds)
             },
-            Page("PERMISSIONS", "LET IT WORK") { PermissionsPage(it) }
+            Page(context.getString(R.string.home_permissions), context.getString(R.string.onb_let_it_work)) { PermissionsPage(it) }
         )
     }
 
@@ -183,14 +185,14 @@ fun OnboardingFlow(
             ) {
                 if (page > 0 && !startAtPermissions) {
                     TextButton(onClick = { goTo(page - 1) }) {
-                        Text("BACK", style = GuardianType.Label, color = GuardianTheme.TextSecondary)
+                        Text(stringResource(R.string.onb_back), style = GuardianType.Label, color = GuardianTheme.TextSecondary)
                     }
                 } else {
                     Spacer(Modifier.width(80.dp))
                 }
 
                 GuardianButton(
-                    label = if (page < lastIndex) "NEXT" else "GET STARTED",
+                    label = if (page < lastIndex) stringResource(R.string.onb_next) else stringResource(R.string.onb_get_started),
                     kind = ButtonKind.Primary,
                     onClick = {
                         if (page < lastIndex) {

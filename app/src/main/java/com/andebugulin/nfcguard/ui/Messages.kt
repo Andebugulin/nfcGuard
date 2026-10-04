@@ -1,5 +1,8 @@
 package com.andebugulin.nfcguard.ui
 
+import com.andebugulin.nfcguard.R
+import androidx.annotation.StringRes
+
 /**
  * UI copy for domain results that more than one screen has to report.
  *
@@ -8,5 +11,5 @@ package com.andebugulin.nfcguard.ui
  * schedules list can hit the same conflict, and they had drifted into holding
  * their own copies of the sentence.
  */
-const val BLOCK_MODE_CONFLICT_MESSAGE =
-    "Can't mix BLOCK and ALLOW ONLY. Turn off the active mode first."
+@StringRes
+val BLOCK_MODE_CONFLICT_MESSAGE = R.string.common_cant_mix_block_and_allow

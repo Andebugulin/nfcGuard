@@ -1,5 +1,7 @@
 package com.andebugulin.nfcguard.ui.components
 
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -44,7 +46,7 @@ fun InfoDot(
     expanded: Boolean,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
-    contentDescription: String = "More information",
+    contentDescription: String = stringResource(R.string.common_more_information),
     tint: Color = GuardianTheme.IconSecondary,
     activeTint: Color = GuardianTheme.IconPrimary
 ) {

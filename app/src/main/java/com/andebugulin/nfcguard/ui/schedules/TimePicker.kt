@@ -1,5 +1,7 @@
 package com.andebugulin.nfcguard.ui.schedules
 
+import com.andebugulin.nfcguard.R
+import androidx.compose.ui.res.stringResource
 import com.andebugulin.nfcguard.ui.GuardianTheme
 import com.andebugulin.nfcguard.ui.TestTags
 
@@ -47,18 +49,18 @@ fun ModernTimePickerDialog(
                 onClick = { onConfirm(hour, minute) },
                 modifier = Modifier.testTag(TestTags.TimePicker.SET)
             ) {
-                Text("SET", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(stringResource(R.string.sched_set), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         },
         dismissButton = {
             TextButton(
                 modifier = Modifier.testTag(TestTags.TimePicker.CANCEL),onClick = onDismiss) {
-                Text("CANCEL", color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
+                Text(stringResource(R.string.home_cancel), color = GuardianTheme.TextSecondary, letterSpacing = 1.sp)
             }
         },
         title = {
             Text(
-                if (selectingHour) "SELECT HOUR" else "SELECT MINUTE",
+                if (selectingHour) stringResource(R.string.sched_select_hour) else stringResource(R.string.sched_select_minute),
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp
             )
