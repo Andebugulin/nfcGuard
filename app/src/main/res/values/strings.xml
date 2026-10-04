@@ -362,10 +362,6 @@
     <string name="modes_name_length" translatable="false">%1$d/%2$d</string>
     <string name="modes_activate_named">ACTIVATE %s</string>
     <string name="modes_equals_duration">= %s</string>
-    <plurals name="modes_unlock_modes_title">
-        <item quantity="one">UNLOCK MODE</item>
-        <item quantity="other">UNLOCK MODES</item>
-    </plurals>
     <string name="modes_limit_max">%s MAX</string>
     <string name="modes_permanent_disabled_multi">PERMANENT DISABLED - SELECTED MODES HAVE A %s LIMIT</string>
     <string name="modes_permanent_disabled_single">PERMANENT UNLOCK DISABLED\nTHIS TAG HAS A %s LIMIT SET ON THIS MODE</string>
@@ -468,4 +464,6 @@
     <string name="widget_duration_1h">FOR 1 HOUR</string>
     <string name="widget_duration_2h">FOR 2 HOURS</string>
     <string name="widget_mode_placeholder">MODE</string>
+    <string name="modes_unlock_mode">UNLOCK MODE</string>
+    <string name="modes_unlock_modes">UNLOCK MODES</string>
 </resources>

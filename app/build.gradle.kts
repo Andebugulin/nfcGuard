@@ -74,6 +74,18 @@ android {
         jvmTarget = "11"
     }
 
+    // Lists the translated locales for Android 13+'s per-app language
+    // setting, so nfcGuard can run in a language other than the system's.
+    androidResources {
+        generateLocaleConfig = true
+        // Only the languages nfcGuard is translated into. Libraries ship
+        // dozens more, which would otherwise be offered in that picker
+        // while the app itself stayed in English.
+        localeFilters += listOf(
+            "en", "de", "es", "fr", "it", "ja", "ko", "nl", "pl", "pt-rBR", "ru", "tr", "uk", "zh-rCN"
+        )
+    }
+
     buildFeatures {
         compose = true
     }

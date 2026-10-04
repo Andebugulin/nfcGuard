@@ -397,7 +397,7 @@ fun UnlockDurationDialog(
         ),
         title = {
             Text(
-                pluralStringResource(R.plurals.modes_unlock_modes_title, modes.size),
+                stringResource(if (modes.size > 1) R.string.modes_unlock_modes else R.string.modes_unlock_mode),
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp,
                 fontSize = 14.sp
