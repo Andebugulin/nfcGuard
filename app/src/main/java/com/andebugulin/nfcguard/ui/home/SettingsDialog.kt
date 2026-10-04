@@ -78,7 +78,7 @@ fun SettingsDialog(
 
     // Export launchers
     val exportJsonLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument(stringResource(R.string.home_application_json))
+        ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         uri?.let {
             try {
@@ -94,7 +94,7 @@ fun SettingsDialog(
     }
 
     val exportYamlLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument(stringResource(R.string.home_application_x_yaml))
+        ActivityResultContracts.CreateDocument("application/x-yaml")
     ) { uri ->
         uri?.let {
             try {
@@ -119,8 +119,8 @@ fun SettingsDialog(
                 val fileName = it.lastPathSegment ?: ""
 
                 val data = if (fileName.endsWith(".yaml") || fileName.endsWith(".yml") ||
-                    content.trimStart().startsWith("#") || content.trimStart().startsWith(context.getString(R.string.home_version)) ||
-                    content.trimStart().startsWith(context.getString(R.string.home_modes_2))) {
+                    content.trimStart().startsWith("#") || content.trimStart().startsWith("version:") ||
+                    content.trimStart().startsWith("modes:")) {
                     ConfigManager.importFromYaml(content)
                 } else {
                     ConfigManager.importFromJson(content)
@@ -436,7 +436,7 @@ fun SettingsDialog(
                         if (appState.activeModes.isNotEmpty()) {
                             showImportChallenge = true
                         } else {
-                            importLauncher.launch(arrayOf(context.getString(R.string.home_application_json), context.getString(R.string.home_application_x_yaml), "*/*"))
+                            importLauncher.launch(arrayOf("application/json", "application/x-yaml", "*/*"))
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -594,7 +594,7 @@ fun SettingsDialog(
             totalDurationSeconds = challengeDuration,
             onComplete = {
                 showImportChallenge = false
-                importLauncher.launch(arrayOf(context.getString(R.string.home_application_json), context.getString(R.string.home_application_x_yaml), "*/*"))
+                importLauncher.launch(arrayOf("application/json", "application/x-yaml", "*/*"))
             },
             onCancel = {
                 showImportChallenge = false

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">nfcGuard</string>
+    <string name="app_name" translatable="false">nfcGuard</string>
     <string name="accessibility_service_description">NFCGUARD uses this to reliably detect which app is in the foreground. This is needed on some devices (like Pixel) where the standard detection method fails when returning from the recent apps screen. NFCGUARD does NOT read any screen content or user data.</string>
     <string name="widget_description">Quickly activate NFCGUARD modes from your home screen</string>
     <string name="common_cant_mix_block_and_allow">Can\'t mix BLOCK and ALLOW ONLY. Turn off the active mode first.</string>
@@ -12,8 +12,6 @@
     <string name="home_active_now">ACTIVE NOW</string>
     <string name="home_allowed_apps">ALLOWED APPS</string>
     <string name="home_anti_bypass_protection">ANTI-BYPASS PROTECTION</string>
-    <string name="home_application_json">application/json</string>
-    <string name="home_application_x_yaml">application/x-yaml</string>
     <string name="home_apply">APPLY</string>
     <string name="home_auto">AUTO</string>
     <string name="home_because_this_switches_blocking_off">Because this switches blocking off, it runs behind the attention challenge.</string>
@@ -41,7 +39,7 @@
     <string name="home_imported_replaced_successfully">Imported (replaced) successfully</string>
     <string name="home_importing_a_config_while_modes">Importing a config while modes are active could be used to bypass blocking. Verify your intent.</string>
     <string name="home_info">Info</string>
-    <string name="home_json">JSON</string>
+    <string name="home_json" translatable="false">JSON</string>
     <string name="home_loading">Loading...</string>
     <string name="home_lost_a_tag_tick_it">LOST A TAG? TICK IT TO FORGET IT</string>
     <string name="home_manual">MANUAL</string>
@@ -51,9 +49,8 @@
     <string name="home_minimum_1_00">Minimum 1:00.</string>
     <string name="home_minimum_is_1_00">Minimum is 1:00</string>
     <string name="home_modes">MODES</string>
-    <string name="home_modes_2">modes:</string>
     <string name="home_nfc_tags">NFC TAGS</string>
-    <string name="home_nfcguard">NFCGUARD</string>
+    <string name="home_nfcguard" translatable="false">NFCGUARD</string>
     <string name="home_no_apps_are_blocked">No apps are blocked.</string>
     <string name="home_no_modes_are_active">No modes are active.</string>
     <string name="home_off_nothing_is_protected">Off. Nothing is protected.</string>
@@ -77,9 +74,8 @@
     <string name="home_test_challenge">TEST CHALLENGE</string>
     <string name="home_this_is_a_practice_run">This is a practice run of the anti-bypass challenge. It\'s how NFCGUARD protects sensitive actions while modes are active.</string>
     <string name="home_turn_off_modes">TURN OFF MODES</string>
-    <string name="home_version">version:</string>
     <string name="home_works_with_most_tools">Works with most tools.</string>
-    <string name="home_yaml">YAML</string>
+    <string name="home_yaml" translatable="false">YAML</string>
     <string name="home_you_are_trying_to_disable">You are trying to disable Safe Regime while modes are active. This could allow bypassing the blocker.</string>
     <string name="home_your_modes_schedules_and_settings">Your modes, schedules and settings are kept. Only the tags you tick are forgotten.</string>
     <string name="info_a_full_screen_black_panel">A full-screen black panel covers the blocked app until you tap your tag. Used automatically whenever the Accessibility Service is off.</string>
@@ -363,7 +359,7 @@
     <string name="modes_linked_to">LINKED TO: %s</string>
     <string name="modes_paused_reenables_in">PAUSED · RE-ENABLES IN %s</string>
     <string name="modes_paused_permanently">PAUSED · PERMANENTLY</string>
-    <string name="modes_name_length">%1$d/%2$d</string>
+    <string name="modes_name_length" translatable="false">%1$d/%2$d</string>
     <string name="modes_activate_named">ACTIVATE %s</string>
     <string name="modes_equals_duration">= %s</string>
     <plurals name="modes_unlock_modes_title">
