@@ -1,0 +1,1 @@
+* Build fix so F-Droid can build nfcGuard from source. No changes in the app.

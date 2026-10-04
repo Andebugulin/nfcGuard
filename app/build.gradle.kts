@@ -16,8 +16,8 @@ android {
         applicationId = "com.andebugulin.nfcguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 23
-        versionName = "1.3.0"
+        versionCode = 24
+        versionName = "1.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
