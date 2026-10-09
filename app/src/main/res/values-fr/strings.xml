@@ -176,7 +176,12 @@
     <string name="onb_grant">ACCORDER</string>
     <string name="onb_granted">Accordée</string>
     <string name="onb_granted_2">ACCORDÉE</string>
-    <string name="onb_hold_the_tag_to_the">APPROCHEZ LE TAG DU TÉLÉPHONE</string>
+    <string name="onb_any_nfc_tag_works">La plupart des tags NFC fonctionnent : autocollants, porte-clés et cartes comme un pass de transport ou un badge de bureau.</string>
+    <string name="onb_hold_back_of_phone">POSEZ LE DOS DU TÉLÉPHONE SUR LE TAG</string>
+    <string name="onb_tag_card">CARTE</string>
+    <string name="onb_tag_key_fob">PORTE-CLÉS</string>
+    <string name="onb_tag_sticker">AUTOCOLLANT</string>
+    <string name="onb_tour_intro">Nous allons vous présenter chaque fonction, une à une.\nAppuyez sur %1$s pour continuer.</string>
     <string name="onb_it_behind_a_physical_tag">derrière un tag physique</string>
     <string name="onb_keep_running_in_the_background">Continuer en arrière-plan.</string>
     <string name="onb_keep_schedules_on_time">Plannings à l\'heure.</string>

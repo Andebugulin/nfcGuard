@@ -20,6 +20,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.TextStyle
+import com.andebugulin.nfcguard.ui.components.FitText
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -226,6 +228,7 @@ fun InfoScreen(
                                     contentColor = GuardianTheme.ButtonPrimaryText
                                 ),
                                 shape = RoundedCornerShape(0.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp),
                                 modifier = Modifier.fillMaxWidth().height(48.dp)
                             ) {
                                 Icon(
@@ -234,11 +237,10 @@ fun InfoScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(Modifier.width(8.dp))
-                                Text(
+                                FitText(
                                     stringResource(R.string.info_report_on_github),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
+                                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                                    maxLines = 1
                                 )
                             }
 
@@ -254,6 +256,7 @@ fun InfoScreen(
                                     colors = ButtonDefaults.outlinedButtonColors(
                                         contentColor = GuardianTheme.TextPrimary
                                     ),
+                                    contentPadding = PaddingValues(horizontal = 12.dp),
                                     modifier = Modifier.weight(1f).height(40.dp)
                                 ) {
                                     Icon(
@@ -262,11 +265,10 @@ fun InfoScreen(
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(Modifier.width(6.dp))
-                                    Text(
+                                    FitText(
                                         stringResource(R.string.info_save_log_file),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 0.5.sp
+                                        style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp),
+                                        maxLines = 1
                                     )
                                 }
 
@@ -277,13 +279,13 @@ fun InfoScreen(
                                     colors = ButtonDefaults.outlinedButtonColors(
                                         contentColor = GuardianTheme.TextPrimary
                                     ),
+                                    contentPadding = PaddingValues(horizontal = 12.dp),
                                     modifier = Modifier.height(40.dp)
                                 ) {
-                                    Text(
+                                    FitText(
                                         stringResource(R.string.info_view),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 0.5.sp
+                                        style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp),
+                                        maxLines = 1
                                     )
                                 }
                             }

@@ -176,7 +176,12 @@
     <string name="onb_grant">ERTEILEN</string>
     <string name="onb_granted">Erteilt</string>
     <string name="onb_granted_2">ERTEILT</string>
-    <string name="onb_hold_the_tag_to_the">HALTE DEN TAG ANS HANDY</string>
+    <string name="onb_any_nfc_tag_works">Die meisten NFC-Tags funktionieren: Sticker, Schlüsselanhänger und Karten wie ein Fahr- oder Firmenausweis.</string>
+    <string name="onb_hold_back_of_phone">HALTE DIE RÜCKSEITE DEINES HANDYS AN DEN TAG</string>
+    <string name="onb_tag_card">KARTE</string>
+    <string name="onb_tag_key_fob">SCHLÜSSELANHÄNGER</string>
+    <string name="onb_tag_sticker">STICKER</string>
+    <string name="onb_tour_intro">Wir zeigen dir alle Funktionen, eine nach der anderen.\nTippe auf %1$s, um fortzufahren.</string>
     <string name="onb_it_behind_a_physical_tag">sie hinter einen echten Tag</string>
     <string name="onb_keep_running_in_the_background">Im Hintergrund weiterlaufen.</string>
     <string name="onb_keep_schedules_on_time">Zeitpläne pünktlich halten.</string>

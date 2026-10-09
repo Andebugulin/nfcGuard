@@ -320,8 +320,11 @@ class OnboardingRobot(compose: ComposeTestRule) : Robot(compose) {
     fun assertOnFirstPage() = apply { assertVisible("APPS YOU CAN'T OPEN") }
     fun assertOnPermissions() = apply { assertVisible("PERMISSIONS") }
 
-    /** Tour pages before the permissions page — keep in step with `OnboardingFlow`. */
-    fun walkTour() = apply { repeat(TOUR_PAGES) { next() } }
+    /**
+     * Tour pages before the permissions page; keep in step with `OnboardingFlow`.
+     * The extra first NEXT dismisses the first-run hint without moving on.
+     */
+    fun walkTour() = apply { repeat(TOUR_PAGES + 1) { next() } }
 
     fun next() = apply { tap("NEXT") }
     fun getStarted() = apply { tap("GET STARTED") }

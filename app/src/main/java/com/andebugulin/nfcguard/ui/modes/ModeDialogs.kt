@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.TextStyle
+import com.andebugulin.nfcguard.ui.components.FitText
 
 @Composable
 fun ModeNameDialog(
@@ -256,7 +258,7 @@ fun ActivationOptionsDialog(
                                         }
                                     },
                                     placeholder = { Text("0", fontSize = 11.sp) },
-                                    label = { Text(stringResource(R.string.modes_hours), fontSize = 8.sp, letterSpacing = 1.sp) },
+                                    label = { FitText(stringResource(R.string.modes_hours), style = TextStyle(fontSize = 8.sp, letterSpacing = 1.sp), maxLines = 1) },
                                     colors = TextFieldDefaults.colors(
                                         focusedContainerColor = Color.White,
                                         unfocusedContainerColor = Color(0xFFF0F0F0),
@@ -286,7 +288,7 @@ fun ActivationOptionsDialog(
                                         }
                                     },
                                     placeholder = { Text("30", fontSize = 11.sp) },
-                                    label = { Text(stringResource(R.string.modes_minutes), fontSize = 8.sp, letterSpacing = 1.sp) },
+                                    label = { FitText(stringResource(R.string.modes_minutes), style = TextStyle(fontSize = 8.sp, letterSpacing = 1.sp), maxLines = 1) },
                                     colors = TextFieldDefaults.colors(
                                         focusedContainerColor = Color.White,
                                         unfocusedContainerColor = Color(0xFFF0F0F0),
@@ -599,7 +601,7 @@ fun UnlockDurationDialog(
                                 OutlinedTextField(
                                     value = timedHours,
                                     onValueChange = { timedHours = it.filter { c -> c.isDigit() }.take(2) },
-                                    label = { Text(stringResource(R.string.modes_hours), fontSize = 9.sp, letterSpacing = 1.sp) },
+                                    label = { FitText(stringResource(R.string.modes_hours), style = TextStyle(fontSize = 9.sp, letterSpacing = 1.sp), maxLines = 1) },
                                     modifier = Modifier.weight(1f).testTag(TestTags.Unlock.HOURS),
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
@@ -615,7 +617,7 @@ fun UnlockDurationDialog(
                                 OutlinedTextField(
                                     value = timedMinutes,
                                     onValueChange = { timedMinutes = it.filter { c -> c.isDigit() }.take(3) },
-                                    label = { Text(stringResource(R.string.modes_minutes), fontSize = 9.sp, letterSpacing = 1.sp) },
+                                    label = { FitText(stringResource(R.string.modes_minutes), style = TextStyle(fontSize = 9.sp, letterSpacing = 1.sp), maxLines = 1) },
                                     modifier = Modifier.weight(1f).testTag(TestTags.Unlock.MINUTES),
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(

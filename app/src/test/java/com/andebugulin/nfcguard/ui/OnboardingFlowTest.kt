@@ -51,7 +51,7 @@ class OnboardingFlowTest {
         completions = 0
     }
 
-    private fun show(startAtPermissions: Boolean = false) {
+    private fun show(startAtPermissions: Boolean = false, dismissHint: Boolean = true) {
         compose.setContent {
             MinimalistTheme {
                 OnboardingFlow(
@@ -60,6 +60,7 @@ class OnboardingFlowTest {
                 )
             }
         }
+        if (dismissHint && !startAtPermissions) tap("NEXT")
     }
 
     private fun tap(text: String) {
@@ -94,9 +95,34 @@ class OnboardingFlowTest {
     // ---------------- the tour ----------------
 
     @Test fun `opens on the first page`() {
-        show()
+        show(dismissHint = false)
         compose.onNodeWithText("NFCGUARD").assertIsDisplayed()
         compose.onNodeWithText("APPS YOU CAN'T OPEN").assertIsDisplayed()
+    }
+
+    /**
+     * People landed on the first page without realising it was a tour, or that
+     * NEXT moved it on. A first run now says so over a light dim with NEXT
+     * lit. The first NEXT only dismisses the hint, so the first page (which
+     * the dim was hiding) actually gets read; the next one moves on.
+     */
+    private val hint = "We'll show you every feature, one at a time.\nPress NEXT to continue."
+
+    @Test fun `a first run points at NEXT without getting in the way`() {
+        show(dismissHint = false)
+        assertTrue(nodeExists(hint))
+
+        tap("NEXT")
+        assertFalse("the first NEXT dismisses the hint", nodeExists(hint))
+        compose.onNodeWithText("APPS YOU CAN'T OPEN").assertIsDisplayed()
+
+        tap("NEXT")
+        compose.onNodeWithText("MODES").assertIsDisplayed()
+    }
+
+    @Test fun `resuming at permissions shows no hint`() {
+        show(startAtPermissions = true)
+        assertFalse(nodeExists(hint))
     }
 
     @Test fun `next walks the tour and ends on permissions`() {

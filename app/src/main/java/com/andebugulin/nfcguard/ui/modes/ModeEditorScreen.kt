@@ -43,10 +43,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.andebugulin.nfcguard.ui.components.FitText
+import com.andebugulin.nfcguard.ui.components.AdaptiveRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.andebugulin.nfcguard.ui.components.ScreenHeader
-import androidx.compose.ui.unit.TextUnit
 import com.andebugulin.nfcguard.ui.components.GuardianType
 import com.andebugulin.nfcguard.ui.components.SelectableOption
 import com.andebugulin.nfcguard.ui.components.GuardianDialog
@@ -149,12 +150,12 @@ fun ModeEditorScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(GuardianTheme.BackgroundPrimary).windowInsetsPadding(WindowInsets.systemBars)) {
         Column(Modifier.fillMaxSize()) {
-            // Top bar. The title keeps the ambient font size (unlike the other
-            // screens' explicit 24sp) because mode names can be long.
+            // Top bar. Smaller than the other screens' 24sp because mode
+            // names can be long.
             ScreenHeader(
                 title = mode.name.uppercase(),
                 onBack = onBack,
-                titleFontSize = TextUnit.Unspecified
+                titleFontSize = 18.sp
             ) {
                 // FIX #5: Disable SAVE when no apps selected
                 Button(
@@ -573,72 +574,78 @@ fun TagLimitItem(
         color = if (isSelected) Color.White else Color.Black,
         modifier = Modifier.fillMaxWidth().testTag(TestTags.ModeEditor.tagRow(tagId))
     ) {
-        Row(
+        // The limit chip drops under the name on a narrow screen instead of
+        // squeezing "ANY OTHER NFC TAG" to one word per line.
+        AdaptiveRow(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Left part: Check + Name (Toggles selection)
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onToggle() }
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    if (isSelected) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
-                    contentDescription = null,
-                    tint = if (isSelected) Color.Black else Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        name,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isSelected) Color.Black else Color.White,
-                        letterSpacing = 1.sp
+            minMainWidth = 160.dp,
+            spacing = 0.dp,
+            stackedIndent = 44.dp,
+            main = {
+                // Left part: Check + Name (Toggles selection)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onToggle() }
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        if (isSelected) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
+                        contentDescription = null,
+                        tint = if (isSelected) Color.Black else Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
-                    if (usageCount > 0) {
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            pluralStringResource(R.plurals.editor_used_by_other_modes, usageCount, usageCount),
+                            name,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSelected) Color.Black else Color.White,
+                            letterSpacing = 1.sp
+                        )
+                        if (usageCount > 0) {
+                            Text(
+                                pluralStringResource(R.plurals.editor_used_by_other_modes, usageCount, usageCount),
+                                fontSize = 9.sp,
+                                color = if (isSelected) GuardianTheme.HighlightAccentEmphasized else GuardianTheme.HighlightAccent,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                }
+            },
+            trailing = {
+                // Right part: Duration (Configure max limit)
+                Surface(
+                    onClick = onConfigureLimit,
+                    modifier = Modifier.testTag(TestTags.ModeEditor.tagLimit(tagId)),
+                    color = Color.Black,
+                    shape = RoundedCornerShape(0.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Timer,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = Color.White
+                        )
+                        Text(
+                            if (limitMinutes == null) stringResource(R.string.modes_permanent) else formatDuration(limitMinutes),
                             fontSize = 9.sp,
-                            color = if (isSelected) GuardianTheme.HighlightAccentEmphasized else GuardianTheme.HighlightAccent,
-                            letterSpacing = 0.5.sp
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            letterSpacing = 1.sp
                         )
                     }
                 }
             }
-
-            // Right part: Duration (Configure max limit)
-            Surface(
-                onClick = onConfigureLimit,
-                modifier = Modifier.testTag(TestTags.ModeEditor.tagLimit(tagId)),
-                color = Color.Black,
-                shape = RoundedCornerShape(0.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Timer,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = Color.White
-                    )
-                    Text(
-                        if (limitMinutes == null) stringResource(R.string.modes_permanent) else formatDuration(limitMinutes),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        letterSpacing = 1.sp
-                    )
-                }
-            }
-        }
+        )
     }
 }
 
@@ -717,7 +724,7 @@ private fun LimitField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, style = GuardianType.Meta) },
+        label = { FitText(label, style = GuardianType.Meta, maxLines = 1) },
         modifier = modifier,
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(

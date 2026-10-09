@@ -14,9 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.RestartAlt
@@ -52,8 +50,11 @@ import com.andebugulin.nfcguard.ui.components.GuardianButton
 import com.andebugulin.nfcguard.ui.components.GuardianDialog
 import com.andebugulin.nfcguard.ui.components.GuardianType
 import com.andebugulin.nfcguard.ui.components.InfoDisclosure
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
+import com.andebugulin.nfcguard.ui.components.AdaptiveRow
+import com.andebugulin.nfcguard.ui.components.FitText
 
 /**
  * Every permission on one page, in one list, reporting the truth.
@@ -77,14 +78,12 @@ import androidx.compose.foundation.layout.Box
  * Settings shows this same composable rather than a second list of its own.
  * It used to keep a parallel copy — its own `canDrawOverlays` call, its own
  * `isIgnoringBatteryOptimizations` call, its own row widget — which is exactly
- * the drift [Permissions] exists to prevent. [scrollable] is the one thing the
- * two call sites genuinely disagree about: the onboarding page is the only
- * thing on screen and scrolls itself, while in the Settings dialog the
- * surrounding column already scrolls and a second scroller nested inside it
- * would be measured with infinite height.
+ * the drift [Permissions] exists to prevent. It never scrolls itself: both
+ * hosts already sit in a scrolling column, and a second scroller nested inside
+ * one would be measured with infinite height.
  */
 @Composable
-fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
+fun PermissionsPage(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -123,9 +122,7 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
     var showAccessibilityConsent by remember { mutableStateOf(false) }
 
     Column(
-        modifier
-            .fillMaxWidth()
-            .then(if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+        modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         PermissionRow(
@@ -255,7 +252,7 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
 private fun Context.launch(intent: Intent): Boolean =
     runCatching { startActivity(intent) }.isSuccess
 
-/** Every row's trailing status occupies exactly this box, granted or not. */
+/** Every row's trailing status occupies at least this box, granted or not. */
 private val STATUS_WIDTH = 92.dp
 private val STATUS_HEIGHT = 36.dp
 
@@ -274,55 +271,65 @@ private fun PermissionRow(
         shape = RoundedCornerShape(0.dp),
         color = GuardianTheme.BackgroundSurface
     ) {
-        Row(
-            Modifier
+        // Status beside the text where there is room, under it where there
+        // is not: a fixed-width column on a narrow phone squeezed the name to
+        // a sliver and clipped GRANT to "GRAN".
+        AdaptiveRow(
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = if (granted) GuardianTheme.Success else GuardianTheme.IconSecondary,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(Modifier.size(12.dp))
-
-            InfoDisclosure(detail = detail, modifier = Modifier.weight(1f)) {
-                Text(name, style = GuardianType.Label, color = GuardianTheme.TextPrimary)
-                Text(why, style = GuardianType.Meta, color = GuardianTheme.TextTertiary)
-            }
-
-            Spacer(Modifier.size(8.dp))
-            // Fixed box for the status, whichever state the row is in. The
-            // GRANTED tick and the GRANT button are different heights, so
-            // without this every row sat at a slightly different height and
-            // the (i) icons stopped lining up down the column.
-            Box(
-                modifier = Modifier.size(width = STATUS_WIDTH, height = STATUS_HEIGHT),
-                contentAlignment = Alignment.Center
-            ) {
-                if (granted) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = stringResource(R.string.onb_granted),
-                            tint = GuardianTheme.Success,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(Modifier.size(5.dp))
-                        Text(stringResource(R.string.onb_granted_2), style = GuardianType.Meta, color = GuardianTheme.Success)
-                    }
-                } else {
-                    GuardianButton(
-                        label = grantLabel,
-                        onClick = onGrant,
-                        kind = ButtonKind.Secondary,
-                        modifier = Modifier.fillMaxSize()
+            minMainWidth = 172.dp,
+            spacing = 8.dp,
+            // Icon (20dp) plus its gap, so a wrapped button sits under the name.
+            stackedIndent = 32.dp,
+            main = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = if (granted) GuardianTheme.Success else GuardianTheme.IconSecondary,
+                        modifier = Modifier.size(20.dp)
                     )
+                    Spacer(Modifier.size(12.dp))
+                    InfoDisclosure(detail = detail, modifier = Modifier.weight(1f)) {
+                        FitText(name, style = GuardianType.Label, color = GuardianTheme.TextPrimary)
+                        Text(why, style = GuardianType.Meta, color = GuardianTheme.TextTertiary)
+                    }
+                }
+            },
+            trailing = {
+                // Same minimum box whichever state the row is in. The GRANTED
+                // tick and the GRANT button are different heights, so without
+                // this every row sat at a slightly different height and the
+                // (i) icons stopped lining up down the column. Minimum, not
+                // fixed: a longer translation grows the button instead of
+                // being cut off.
+                Box(
+                    modifier = Modifier.widthIn(min = STATUS_WIDTH).height(STATUS_HEIGHT),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (granted) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = stringResource(R.string.onb_granted),
+                                tint = GuardianTheme.Success,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(Modifier.size(5.dp))
+                            Text(stringResource(R.string.onb_granted_2), style = GuardianType.Meta, color = GuardianTheme.Success)
+                        }
+                    } else {
+                        GuardianButton(
+                            label = grantLabel,
+                            onClick = onGrant,
+                            kind = ButtonKind.Secondary,
+                            modifier = Modifier.widthIn(min = STATUS_WIDTH).height(STATUS_HEIGHT)
+                        )
+                    }
                 }
             }
-        }
+        )
     }
 }
 

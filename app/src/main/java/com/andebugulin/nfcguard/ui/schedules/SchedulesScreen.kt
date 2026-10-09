@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.andebugulin.nfcguard.ui.components.FitText
 import kotlinx.coroutines.launch
 import com.andebugulin.nfcguard.ui.components.ScreenHeader
 import com.andebugulin.nfcguard.ui.components.EmptyState
@@ -489,12 +490,10 @@ fun ScheduleCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                FitText(
                     schedule.name.uppercase(),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
                     color = GuardianTheme.TextPrimary,
-                    letterSpacing = 1.sp,
                     modifier = Modifier.weight(1f)
                 )
 

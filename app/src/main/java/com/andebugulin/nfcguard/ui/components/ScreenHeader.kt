@@ -9,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,10 +30,11 @@ import com.andebugulin.nfcguard.ui.GuardianTheme
  * unchanged.
  *
  * [titleFontSize] defaults to the 24sp four of the five screens use. The mode
- * editor passes [TextUnit.Unspecified] so its title keeps inheriting the
- * ambient text style exactly as it does today, and the About screen passes an
- * empty [contentPadding] because it sits inside a `LazyColumn` that already
- * pads its content.
+ * editor passes a smaller size because its title is a user-chosen mode name,
+ * which can be long; the title is capped at two lines either way, so on a
+ * narrow screen a long name ends in an ellipsis instead of pushing the screen
+ * down one word per line. The About screen passes an empty [contentPadding]
+ * because it sits inside a `LazyColumn` that already pads its content.
  */
 @Composable
 fun ScreenHeader(
@@ -55,11 +55,11 @@ fun ScreenHeader(
         IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = GuardianTheme.IconPrimary)
         }
-        Text(
+        FitText(
             title,
-            style = GuardianType.ScreenTitle,
-            fontSize = titleFontSize,
+            style = GuardianType.ScreenTitle.copy(fontSize = titleFontSize),
             color = GuardianTheme.TextPrimary,
+            maxLines = 2,
             modifier = if (fillTitleWidth) Modifier.weight(1f) else Modifier
         )
         actions()

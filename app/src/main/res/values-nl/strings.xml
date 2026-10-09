@@ -176,7 +176,12 @@
     <string name="onb_grant">VERLENEN</string>
     <string name="onb_granted">Verleend</string>
     <string name="onb_granted_2">VERLEEND</string>
-    <string name="onb_hold_the_tag_to_the">HOUD DE TAG TEGEN DE TELEFOON</string>
+    <string name="onb_any_nfc_tag_works">De meeste NFC-tags werken: stickers, sleutelhangers en kaarten zoals een ov- of toegangspas.</string>
+    <string name="onb_hold_back_of_phone">HOUD DE ACHTERKANT VAN JE TELEFOON TEGEN DE TAG</string>
+    <string name="onb_tag_card">KAART</string>
+    <string name="onb_tag_key_fob">SLEUTELHANGER</string>
+    <string name="onb_tag_sticker">STICKER</string>
+    <string name="onb_tour_intro">We laten je elke functie zien, één voor één.\nTik op %1$s om verder te gaan.</string>
     <string name="onb_it_behind_a_physical_tag">ze achter een echte tag</string>
     <string name="onb_keep_running_in_the_background">Op de achtergrond blijven werken.</string>
     <string name="onb_keep_schedules_on_time">Schema\'s op tijd.</string>

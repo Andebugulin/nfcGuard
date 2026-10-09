@@ -176,7 +176,12 @@
     <string name="onb_grant">НАДАТИ</string>
     <string name="onb_granted">Надано</string>
     <string name="onb_granted_2">НАДАНО</string>
-    <string name="onb_hold_the_tag_to_the">ПРИКЛАДІТЬ МІТКУ ДО ТЕЛЕФОНУ</string>
+    <string name="onb_any_nfc_tag_works">Підійде майже будь-яка NFC-мітка: наліпка, брелок або картка, як-от транспортна чи перепустка.</string>
+    <string name="onb_hold_back_of_phone">ПРИКЛАДІТЬ ЗАДНЮ ЧАСТИНУ ТЕЛЕФОНУ ДО МІТКИ</string>
+    <string name="onb_tag_card">КАРТКА</string>
+    <string name="onb_tag_key_fob">БРЕЛОК</string>
+    <string name="onb_tag_sticker">НАЛІПКА</string>
+    <string name="onb_tour_intro">Ми покажемо всі функції, одну за одною.\nНатисніть %1$s, щоб продовжити.</string>
     <string name="onb_it_behind_a_physical_tag">їх за фізичною міткою</string>
     <string name="onb_keep_running_in_the_background">Робота у фоні.</string>
     <string name="onb_keep_schedules_on_time">Розклади вчасно.</string>

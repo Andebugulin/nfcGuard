@@ -176,7 +176,12 @@
     <string name="onb_grant">İZİN VER</string>
     <string name="onb_granted">Verildi</string>
     <string name="onb_granted_2">VERİLDİ</string>
-    <string name="onb_hold_the_tag_to_the">ETİKETİ TELEFONA YAKLAŞTIRIN</string>
+    <string name="onb_any_nfc_tag_works">Çoğu NFC etiketi çalışır: çıkartmalar, anahtarlıklar ve ulaşım kartı ya da iş yeri kartı gibi kartlar.</string>
+    <string name="onb_hold_back_of_phone">TELEFONUN ARKASINI ETİKETE DOKUNDURUN</string>
+    <string name="onb_tag_card">KART</string>
+    <string name="onb_tag_key_fob">ANAHTARLIK</string>
+    <string name="onb_tag_sticker">ÇIKARTMA</string>
+    <string name="onb_tour_intro">Tüm özellikleri tek tek göstereceğiz.\nDevam etmek için %1$s düğmesine dokunun.</string>
     <string name="onb_it_behind_a_physical_tag">onları fiziksel bir etiketin arkasına</string>
     <string name="onb_keep_running_in_the_background">Arka planda çalışmaya devam et.</string>
     <string name="onb_keep_schedules_on_time">Programlar zamanında.</string>

@@ -176,7 +176,12 @@
     <string name="onb_grant">CONCEDI</string>
     <string name="onb_granted">Concessa</string>
     <string name="onb_granted_2">CONCESSA</string>
-    <string name="onb_hold_the_tag_to_the">AVVICINA IL TAG AL TELEFONO</string>
+    <string name="onb_any_nfc_tag_works">Funziona quasi ogni tag NFC: adesivi, portachiavi e tessere come quella dei trasporti o dell\'ufficio.</string>
+    <string name="onb_hold_back_of_phone">APPOGGIA IL RETRO DEL TELEFONO AL TAG</string>
+    <string name="onb_tag_card">TESSERA</string>
+    <string name="onb_tag_key_fob">PORTACHIAVI</string>
+    <string name="onb_tag_sticker">ADESIVO</string>
+    <string name="onb_tour_intro">Ti mostreremo ogni funzione, una alla volta.\nTocca %1$s per continuare.</string>
     <string name="onb_it_behind_a_physical_tag">dietro un tag fisico</string>
     <string name="onb_keep_running_in_the_background">Restare attivo in background.</string>
     <string name="onb_keep_schedules_on_time">Programmi puntuali.</string>

@@ -2,43 +2,26 @@ package com.andebugulin.nfcguard.ui.onboarding
 
 import com.andebugulin.nfcguard.R
 import androidx.compose.ui.res.stringResource
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.andebugulin.nfcguard.ui.GuardianTheme
 import com.andebugulin.nfcguard.ui.components.GuardianType
-import kotlinx.coroutines.delay
 import com.andebugulin.nfcguard.ui.schedules.ScheduleState
 import com.andebugulin.nfcguard.ui.schedules.ScheduleCard
 import com.andebugulin.nfcguard.ui.modes.ModeCard
@@ -69,8 +52,8 @@ private const val CARD_SCALE = 0.74f
  * height, so the page heading visibly jumped on each swap, and continuous
  * animation is a poor bet on the low-end phones this app is most useful on.
  *
- * The one place motion earns its keep is [NfcPreview], where the *gesture* is
- * the thing being explained and no still image conveys it.
+ * The one place motion earns its keep is [NfcPreview] (its own file), where
+ * the *gesture* is the thing being explained and no still image conveys it.
  */
 
 /**
@@ -191,86 +174,6 @@ fun SchedulesPreview(modifier: Modifier = Modifier) {
             scheduleState = ScheduleState.ACTIVE,
             isInTimeRange = true,
             onActivate = {}, onEdit = {}, onDelete = {}
-        )
-    }
-}
-
-/**
- * The tap itself.
- *
- * Tag and phone start apart with the phone locked, meet in the middle, and the
- * phone opens. No counter: an earlier version ticked a duration down here,
- * which drew the eye away from the gesture and explained a detail nobody needs
- * before their first unlock.
- */
-@Composable
-fun NfcPreview(modifier: Modifier = Modifier) {
-    var together by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(1400)
-            together = 1 - together
-        }
-    }
-
-    val progress by animateFloatAsState(
-        targetValue = together.toFloat(),
-        animationSpec = tween(800),
-        label = "approach"
-    )
-    val gap by animateDpAsState(
-        targetValue = if (together == 1) 0.dp else 56.dp,
-        animationSpec = tween(800),
-        label = "gap"
-    )
-    val unlocked = progress > 0.9f
-
-    Column(
-        modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(28.dp)
-    ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Default.Nfc,
-                contentDescription = null,
-                tint = GuardianTheme.NfcIcon,
-                modifier = Modifier
-                    .size(44.dp)
-                    .offset(x = -gap)
-            )
-            Spacer(Modifier.width(24.dp))
-            Box(
-                Modifier
-                    .offset(x = gap)
-                    .width(72.dp)
-                    .height(116.dp)
-                    .border(
-                        2.dp,
-                        if (unlocked) GuardianTheme.Success else GuardianTheme.TextPrimary,
-                        RoundedCornerShape(0.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    if (unlocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                    contentDescription = null,
-                    tint = if (unlocked) GuardianTheme.Success else GuardianTheme.TextSecondary,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-        }
-
-        Text(
-            if (unlocked) stringResource(R.string.onb_unlocked) else stringResource(R.string.onb_hold_the_tag_to_the),
-            style = GuardianType.Meta,
-            color = if (unlocked) GuardianTheme.Success else GuardianTheme.TextTertiary,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center
         )
     }
 }

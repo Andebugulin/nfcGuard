@@ -176,7 +176,12 @@
     <string name="onb_grant">許可する</string>
     <string name="onb_granted">許可済み</string>
     <string name="onb_granted_2">許可済み</string>
-    <string name="onb_hold_the_tag_to_the">タグをスマホにかざしてください</string>
+    <string name="onb_any_nfc_tag_works">ほとんどの NFC タグが使えます: ステッカー、キーホルダー、交通系 IC カードや社員証など。</string>
+    <string name="onb_hold_back_of_phone">スマホの背面をタグに当ててください</string>
+    <string name="onb_tag_card">カード</string>
+    <string name="onb_tag_key_fob">キーホルダー</string>
+    <string name="onb_tag_sticker">ステッカー</string>
+    <string name="onb_tour_intro">すべての機能をひとつずつ紹介します。\n「%1$s」をタップして進んでください。</string>
     <string name="onb_it_behind_a_physical_tag">物理タグで閉じ込める</string>
     <string name="onb_keep_running_in_the_background">バックグラウンドで動作を続けます。</string>
     <string name="onb_keep_schedules_on_time">スケジュールを時間どおりに。</string>

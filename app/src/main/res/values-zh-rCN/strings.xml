@@ -176,7 +176,12 @@
     <string name="onb_grant">授予</string>
     <string name="onb_granted">已授予</string>
     <string name="onb_granted_2">已授予</string>
-    <string name="onb_hold_the_tag_to_the">将标签靠近手机</string>
+    <string name="onb_any_nfc_tag_works">大多数 NFC 标签都可以用：贴纸、钥匙扣，以及公交卡或门禁卡之类的卡片。</string>
+    <string name="onb_hold_back_of_phone">把手机背面贴近标签</string>
+    <string name="onb_tag_card">卡片</string>
+    <string name="onb_tag_key_fob">钥匙扣</string>
+    <string name="onb_tag_sticker">贴纸</string>
+    <string name="onb_tour_intro">我们会逐一介绍所有功能。\n点按“%1$s”继续。</string>
     <string name="onb_it_behind_a_physical_tag">用实体标签锁住它们</string>
     <string name="onb_keep_running_in_the_background">在后台持续运行。</string>
     <string name="onb_keep_schedules_on_time">让计划准时运行。</string>

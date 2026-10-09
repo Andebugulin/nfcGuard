@@ -33,6 +33,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.TextStyle
+import com.andebugulin.nfcguard.ui.components.AdaptiveRow
+import com.andebugulin.nfcguard.ui.components.FitText
 import kotlinx.coroutines.launch
 import com.andebugulin.nfcguard.ui.components.ScreenHeader
 import com.andebugulin.nfcguard.ui.components.EmptyState
@@ -379,14 +382,14 @@ fun ModeCard(
         }
     ) {
         Column(Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(
+            // ACTIVATE / ACTIVE / PAUSED moves under the text on a narrow
+            // screen rather than squeezing the name to one word per line.
+            AdaptiveRow(main = {
+                Column {
+                    FitText(
                         mode.name.uppercase(),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isActive || isPaused) Color.Black else Color.White,
-                        letterSpacing = 1.sp
+                        style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                        color = if (isActive || isPaused) Color.Black else Color.White
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
@@ -482,7 +485,7 @@ fun ModeCard(
                         }
                     }
                 }
-
+            }, trailing = {
                 if (!isActive && !isPaused) {
                     Button(
                         onClick = onActivate,
@@ -513,7 +516,7 @@ fun ModeCard(
                         letterSpacing = 1.sp
                     )
                 }
-            }
+            })
 
             if (!isActive) {
                 Spacer(Modifier.height(16.dp))

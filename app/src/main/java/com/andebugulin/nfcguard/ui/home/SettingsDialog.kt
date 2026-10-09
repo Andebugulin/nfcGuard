@@ -26,6 +26,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.TextStyle
+import com.andebugulin.nfcguard.ui.components.FitText
 import androidx.compose.material.icons.outlined.Info
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -134,16 +142,28 @@ fun SettingsDialog(
         }
     }
 
+    val heightBetweenBars = heightBetweenSystemBars()
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = GuardianTheme.ButtonSecondary,
         tonalElevation = 0.dp,
         shape = RoundedCornerShape(0.dp),
-        modifier = Modifier.border(
-            width = GuardianTheme.DialogBorderWidth,
-            color = GuardianTheme.DialogBorderInfo,
-            shape = RoundedCornerShape(0.dp)
-        ),
+        // Nearly the full screen width rather than the platform's dialog
+        // width: this is a whole screen of rows with a button on each, and at
+        // the narrow default they ran out of room on all but wide phones.
+        // Off the platform width, Compose measures the dialog against the whole
+        // display, bars included, while the window itself sits between them,
+        // so a tall dialog overflowed under the navigation bar. Cap it.
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .heightIn(max = heightBetweenBars - 32.dp)
+            .border(
+                width = GuardianTheme.DialogBorderWidth,
+                color = GuardianTheme.DialogBorderInfo,
+                shape = RoundedCornerShape(0.dp)
+            ),
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -184,7 +204,7 @@ fun SettingsDialog(
                 // two had already drifted: Settings never mentioned autostart
                 // and called `canDrawOverlays` directly instead of going
                 // through `Permissions`.
-                PermissionsPage(scrollable = false)
+                PermissionsPage()
 
                 Spacer(Modifier.height(8.dp))
 
@@ -763,7 +783,7 @@ private fun ChallengeDurationDialog(
                     OutlinedTextField(
                         value = mins,
                         onValueChange = { mins = it.filter { c -> c.isDigit() }.take(2) },
-                        label = { Text(stringResource(R.string.home_min), fontSize = 9.sp, letterSpacing = 1.sp) },
+                        label = { FitText(stringResource(R.string.home_min), style = TextStyle(fontSize = 9.sp, letterSpacing = 1.sp), maxLines = 1) },
                         singleLine = true,
                         modifier = Modifier.weight(1f).testTag(TestTags.Settings.DURATION_MINUTES),
                         colors = fieldColors,
@@ -773,7 +793,7 @@ private fun ChallengeDurationDialog(
                     OutlinedTextField(
                         value = secs,
                         onValueChange = { secs = it.filter { c -> c.isDigit() }.take(2) },
-                        label = { Text(stringResource(R.string.home_sec), fontSize = 9.sp, letterSpacing = 1.sp) },
+                        label = { FitText(stringResource(R.string.home_sec), style = TextStyle(fontSize = 9.sp, letterSpacing = 1.sp), maxLines = 1) },
                         singleLine = true,
                         modifier = Modifier.weight(1f).testTag(TestTags.Settings.DURATION_SECONDS),
                         colors = fieldColors,
@@ -808,4 +828,14 @@ private fun ChallengeDurationDialog(
             }
         }
     )
+}
+
+/** The height of the screen between the status and navigation bars. */
+@Composable
+private fun heightBetweenSystemBars(): Dp {
+    val view = LocalView.current
+    val bars = ViewCompat.getRootWindowInsets(view)
+        ?.getInsets(WindowInsetsCompat.Type.systemBars())
+    val px = view.rootView.height - (bars?.top ?: 0) - (bars?.bottom ?: 0)
+    return with(LocalDensity.current) { px.toDp() }
 }

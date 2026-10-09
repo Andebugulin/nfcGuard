@@ -176,7 +176,12 @@
     <string name="onb_grant">PRZYZNAJ</string>
     <string name="onb_granted">Przyznano</string>
     <string name="onb_granted_2">PRZYZNANO</string>
-    <string name="onb_hold_the_tag_to_the">PRZYŁÓŻ TAG DO TELEFONU</string>
+    <string name="onb_any_nfc_tag_works">Działa większość tagów NFC: naklejki, breloki i karty, np. miejska lub firmowa.</string>
+    <string name="onb_hold_back_of_phone">PRZYŁÓŻ TYŁ TELEFONU DO TAGU</string>
+    <string name="onb_tag_card">KARTA</string>
+    <string name="onb_tag_key_fob">BRELOK</string>
+    <string name="onb_tag_sticker">NAKLEJKA</string>
+    <string name="onb_tour_intro">Pokażemy Ci każdą funkcję, jedną po drugiej.\nStuknij %1$s, aby kontynuować.</string>
     <string name="onb_it_behind_a_physical_tag">je za fizycznym tagiem</string>
     <string name="onb_keep_running_in_the_background">Działanie w tle.</string>
     <string name="onb_keep_schedules_on_time">Harmonogramy na czas.</string>

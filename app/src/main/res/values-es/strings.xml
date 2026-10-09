@@ -176,7 +176,12 @@
     <string name="onb_grant">CONCEDER</string>
     <string name="onb_granted">Concedido</string>
     <string name="onb_granted_2">CONCEDIDO</string>
-    <string name="onb_hold_the_tag_to_the">ACERCA LA ETIQUETA AL MÓVIL</string>
+    <string name="onb_any_nfc_tag_works">Funcionan casi todas las etiquetas NFC: pegatinas, llaveros y tarjetas como la del transporte o la de la oficina.</string>
+    <string name="onb_hold_back_of_phone">APOYA LA PARTE TRASERA DEL MÓVIL EN LA ETIQUETA</string>
+    <string name="onb_tag_card">TARJETA</string>
+    <string name="onb_tag_key_fob">LLAVERO</string>
+    <string name="onb_tag_sticker">PEGATINA</string>
+    <string name="onb_tour_intro">Te mostraremos cada función, una por una.\nPulsa %1$s para continuar.</string>
     <string name="onb_it_behind_a_physical_tag">tras una etiqueta física</string>
     <string name="onb_keep_running_in_the_background">Seguir funcionando en segundo plano.</string>
     <string name="onb_keep_schedules_on_time">Horarios puntuales.</string>

@@ -27,6 +27,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.TextStyle
+import com.andebugulin.nfcguard.ui.components.FitText
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -404,12 +406,10 @@ fun NfcTagCard(
                         tint = iconColor,
                         modifier = Modifier.size(24.dp)
                     )
-                    Text(
+                    FitText(
                         tag.name.uppercase(),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = textColor,
-                        letterSpacing = 1.sp
+                        style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                        color = textColor
                     )
                 }
 

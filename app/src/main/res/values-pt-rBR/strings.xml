@@ -176,7 +176,12 @@
     <string name="onb_grant">CONCEDER</string>
     <string name="onb_granted">Concedida</string>
     <string name="onb_granted_2">CONCEDIDA</string>
-    <string name="onb_hold_the_tag_to_the">ENCOSTE A ETIQUETA NO CELULAR</string>
+    <string name="onb_any_nfc_tag_works">A maioria das etiquetas NFC funciona: adesivos, chaveiros e cartões como o do transporte ou o crachá do trabalho.</string>
+    <string name="onb_hold_back_of_phone">ENCOSTE A TRASEIRA DO CELULAR NA ETIQUETA</string>
+    <string name="onb_tag_card">CARTÃO</string>
+    <string name="onb_tag_key_fob">CHAVEIRO</string>
+    <string name="onb_tag_sticker">ADESIVO</string>
+    <string name="onb_tour_intro">Vamos mostrar cada recurso, um de cada vez.\nToque em %1$s para continuar.</string>
     <string name="onb_it_behind_a_physical_tag">atrás de uma etiqueta física</string>
     <string name="onb_keep_running_in_the_background">Continuar em segundo plano.</string>
     <string name="onb_keep_schedules_on_time">Agendas no horário.</string>
