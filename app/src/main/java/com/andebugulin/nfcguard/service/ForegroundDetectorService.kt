@@ -11,6 +11,8 @@ import android.content.Context
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.accessibility.AccessibilityEvent
+import android.widget.Toast
+import com.andebugulin.nfcguard.R
 
 /**
  * Lightweight AccessibilityService that only listens for TYPE_WINDOW_STATE_CHANGED
@@ -77,8 +79,31 @@ class ForegroundDetectorService : AccessibilityService() {
             // is moot: when accessibility is ON, we use force-close mode (no overlay).
             lastDetectedPackage = pkg
             lastDetectedTime = System.currentTimeMillis()
+            guardUninstall(pkg, event.className?.toString())
             healIfDue(lastDetectedTime)
         }
+    }
+
+    /**
+     * Uninstall protection: while a mode is active, close the uninstall
+     * confirmation and the device-admin deactivation screen the moment they
+     * appear. BACK finishes the dialog-style activity (so it cannot be
+     * brought back from recents), HOME then leaves Settings entirely.
+     */
+    private fun guardUninstall(pkg: String, className: String?) {
+        if (!UninstallGuard.isProtectedScreen(pkg, className)) return
+        val blockingActive = try {
+            AppStateRepository.getInstance(this).current.activeModes.isNotEmpty()
+        } catch (_: Exception) {
+            false
+        }
+        if (!UninstallGuard.shouldBlock(pkg, className, blockingActive)) return
+        AppLogger.log("SERVICE", "Uninstall path blocked: $pkg/$className")
+        performGlobalAction(GLOBAL_ACTION_BACK)
+        performGlobalAction(GLOBAL_ACTION_HOME)
+        try {
+            Toast.makeText(this, R.string.uninstall_blocked_toast, Toast.LENGTH_LONG).show()
+        } catch (_: Exception) {}
     }
 
     /**

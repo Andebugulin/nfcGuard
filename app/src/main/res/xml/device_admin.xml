@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    nfcGuard asks for no device policy at all. Being an active device admin is
+    the whole point: Android refuses to uninstall an active admin until it is
+    deactivated, and the deactivate screen is guarded while a mode is on.
+-->
+<device-admin>
+    <uses-policies />
+</device-admin>

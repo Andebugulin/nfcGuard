@@ -2,6 +2,7 @@ package com.andebugulin.nfcguard.data
 
 import android.Manifest
 import android.app.AppOpsManager
+import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -12,6 +13,7 @@ import android.os.PowerManager
 import android.os.Process
 import android.provider.Settings
 import androidx.core.content.ContextCompat
+import com.andebugulin.nfcguard.receiver.GuardianDeviceAdminReceiver
 import com.andebugulin.nfcguard.service.ForegroundDetectorService
 
 /**
@@ -113,6 +115,21 @@ object Permissions {
         Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
 
     fun accessibilityIntent(): Intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+
+    /** The component Android knows nfcGuard's device admin by. */
+    fun deviceAdminComponent(context: Context): ComponentName =
+        ComponentName(context, GuardianDeviceAdminReceiver::class.java)
+
+    /** True when uninstall protection (device admin) is switched on. */
+    fun hasDeviceAdmin(context: Context): Boolean = runCatching {
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        dpm.isAdminActive(deviceAdminComponent(context))
+    }.getOrDefault(false)
+
+    fun deviceAdminIntent(context: Context, explanation: String): Intent =
+        Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+            .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, deviceAdminComponent(context))
+            .putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, explanation)
 
     /**
      * OEM "autostart" / "auto-launch" allow-lists, in the order we try them.
