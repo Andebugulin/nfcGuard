@@ -489,4 +489,11 @@
     <string name="widget_mode_placeholder">MODE</string>
     <string name="modes_unlock_mode">DÉVERROUILLER LE MODE</string>
     <string name="modes_unlock_modes">DÉVERROUILLER LES MODES</string>
+    <string name="admin_description">Empêche la désinstallation de nfcGuard. Pendant qu\'un mode est actif, nfcGuard ferme aussi cet écran de désactivation. Hors blocage, vous pouvez la désactiver ici normalement.</string>
+    <string name="admin_disable_warning">Désactiver ceci permet de désinstaller nfcGuard.</string>
+    <string name="admin_disable_warning_active">Un mode est actif : la protection anti-désinstallation ne peut pas être désactivée avant sa fin.</string>
+    <string name="uninstall_blocked_toast">nfcGuard : désinstallation bloquée pendant qu\'un mode est actif</string>
+    <string name="onb_uninstall_protection">ANTI-DÉSINSTALLATION</string>
+    <string name="onb_uninstall_protection_why">Impossible à désinstaller pendant un blocage</string>
+    <string name="onb_uninstall_protection_detail">Fait de nfcGuard un administrateur de l\'appareil, qu\'Android doit désactiver avant toute désinstallation. Pendant qu\'un mode est actif, nfcGuard ferme les écrans de désactivation et de désinstallation : impossible de le supprimer pour contourner un blocage.\n\nAucune règle d\'administration n\'est utilisée : nfcGuard ne peut ni verrouiller, ni effacer, ni surveiller le téléphone.</string>
 </resources>

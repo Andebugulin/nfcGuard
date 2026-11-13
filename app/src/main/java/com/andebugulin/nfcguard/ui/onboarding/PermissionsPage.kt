@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Visibility
@@ -104,6 +105,7 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
     val battery = remember(probe) { Permissions.hasBatteryExemption(context) }
     val accessibility = remember(probe) { Permissions.hasAccessibility(context) }
     val notifications = remember(probe) { Permissions.hasNotifications(context) }
+    val deviceAdmin = remember(probe) { Permissions.hasDeviceAdmin(context) }
     val accessibilityRequired = remember { Permissions.accessibilityIsRequired() }
     // Null on stock Android, so the row below simply does not exist there.
     val autostart = remember { Permissions.autostartIntent(context) }
@@ -212,6 +214,20 @@ fun PermissionsPage(modifier: Modifier = Modifier, scrollable: Boolean = true) {
             granted = notifications,
             onGrant = {
                 notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        )
+
+        // Uninstall protection. Optional: it changes nothing about blocking,
+        // it only stops nfcGuard being removed while a mode is active.
+        val adminExplanation = stringResource(R.string.admin_description)
+        PermissionRow(
+            icon = Icons.Default.Lock,
+            name = stringResource(R.string.onb_uninstall_protection),
+            why = stringResource(R.string.onb_uninstall_protection_why),
+            detail = stringResource(R.string.onb_uninstall_protection_detail),
+            granted = deviceAdmin,
+            onGrant = {
+                context.launch(Permissions.deviceAdminIntent(context, adminExplanation))
             }
         )
 

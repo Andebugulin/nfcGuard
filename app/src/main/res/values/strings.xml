@@ -466,4 +466,11 @@
     <string name="widget_mode_placeholder">MODE</string>
     <string name="modes_unlock_mode">UNLOCK MODE</string>
     <string name="modes_unlock_modes">UNLOCK MODES</string>
+    <string name="admin_description">Prevents nfcGuard from being uninstalled. While a mode is active, nfcGuard also closes this deactivation screen. Outside of a blocking session you can turn it off here as usual.</string>
+    <string name="admin_disable_warning">Turning this off lets nfcGuard be uninstalled.</string>
+    <string name="admin_disable_warning_active">A mode is active: uninstall protection cannot be turned off until it ends.</string>
+    <string name="uninstall_blocked_toast">nfcGuard: uninstalling is blocked while a mode is active</string>
+    <string name="onb_uninstall_protection">UNINSTALL PROTECTION</string>
+    <string name="onb_uninstall_protection_why">Can\'t be uninstalled while blocking</string>
+    <string name="onb_uninstall_protection_detail">Makes nfcGuard a device admin, which Android must deactivate before any uninstall. While a mode is active, nfcGuard closes the deactivate and uninstall screens, so it cannot be removed to dodge a block.\n\nNo device policy is used: nfcGuard cannot lock, wipe or watch the phone.</string>
 </resources>
