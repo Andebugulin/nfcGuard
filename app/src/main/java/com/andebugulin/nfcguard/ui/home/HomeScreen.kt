@@ -16,6 +16,8 @@ import com.andebugulin.nfcguard.ui.TestTags
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -49,6 +51,7 @@ fun HomeScreen(
     onNavigate: (Screen) -> Unit
 ) {
     val appState by viewModel.appState.collectAsState()
+    val statsLog by viewModel.statsLog.collectAsState()
     val challengeDuration by viewModel.challengeDurationSeconds.collectAsState()
     val context = LocalContext.current
 
@@ -85,11 +88,19 @@ fun HomeScreen(
         Permissions.allEssentialGranted(context)
     }
 
-    Column(
-        modifier = Modifier
+    // Scrolls when it does not fit (a short screen with an active mode),
+    // and otherwise fills the screen exactly: the min height lets the
+    // weighted spacer below still push the active panels to the bottom.
+    BoxWithConstraints(
+        Modifier
             .fillMaxSize()
             .background(GuardianTheme.BackgroundPrimary)
             .windowInsetsPadding(WindowInsets.systemBars)
+    ) {
+    Column(
+        modifier = Modifier
+            .verticalScroll(rememberScrollState())
+            .heightIn(min = maxHeight)
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -269,6 +280,17 @@ fun HomeScreen(
             onClick = { onNavigate(Screen.NFC_TAGS) }
         )
 
+        NavigationCard(
+            title = stringResource(R.string.stats_title),
+            subtitle = stringResource(
+                R.string.home_stats_today,
+                statsLog.days[java.time.LocalDate.now().toString()]?.attemptCount ?: 0
+            ),
+            icon = Icons.Default.BarChart,
+            testTag = TestTags.Home.NAV_STATS,
+            onClick = { onNavigate(Screen.STATS) }
+        )
+
         Spacer(Modifier.weight(1f))
 
         // Active Modes Summary
@@ -444,6 +466,7 @@ fun HomeScreen(
                 }
             }
         }
+    }
     }
 
     if (showBlockedApps && appState.activeModes.isNotEmpty()) {

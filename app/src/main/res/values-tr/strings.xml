@@ -217,6 +217,7 @@
     <string name="onb_usage_access">KULLANIM ERİŞİMİ</string>
     <string name="onb_work_hours">Mesai saatleri</string>
     <string name="onb_you_can_still_get_back">YİNE DE GERİ GİREBİLİRSİNİZ</string>
+    <string name="onb_see_it_working">İŞE YARADIĞINI GÖRÜN</string>
     <string name="onb_your_device_has_a_detection">Cihazınızda, bu olmadan engellemeyi güvenilmez kılan bir algılama hatası var. nfcGuard yalnızca öndeki uygulamayı okur - asla ekran içeriğini değil.</string>
     <string name="onb_your_phone_gives_no_way">Telefonunuz bu listeyi okumaya izin vermiyor, bu yüzden bu satır işe yarayıp yaramadığını gösteremez.</string>
     <string name="onb_your_phone_keeps_a_list">Telefonunuz kendi kendine başlayabilen uygulamaların bir listesini tutar. nfcGuard varsayılan olarak bu listede değildir, bu yüzden telefon onu kapatabilir: programlar geç başlar ve yeniden başlatmadan sonra engelleme durur.</string>
@@ -467,4 +468,20 @@
     <string name="widget_mode_placeholder">MOD</string>
     <string name="modes_unlock_mode">MODUN KİLİDİNİ AÇ</string>
     <string name="modes_unlock_modes">MODLARIN KİLİDİNİ AÇ</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">İSTATİSTİKLER</string>
+    <plurals name="stats_label">
+        <item quantity="one">KEZ NFCGUARD BU HAFTA SİZİ ENGELLEDİ</item>
+        <item quantity="other">KEZ NFCGUARD BU HAFTA SİZİ ENGELLEDİ</item>
+    </plurals>
+    <string name="stats_trend_down">↓ GEÇEN HAFTAYA GÖRE %d</string>
+    <string name="stats_trend_up">↑ GEÇEN HAFTAYA GÖRE %d</string>
+    <string name="stats_trend_same">GEÇEN HAFTAYLA AYNI</string>
+    <string name="stats_this_week">BU HAFTA</string>
+    <string name="stats_last_week">GEÇEN HAFTA</string>
+    <string name="stats_legend_stopped">DURDURULAN</string>
+    <string name="stats_legend_tag">ETİKETLE</string>
+    <string name="stats_legend_emergency">ACİL</string>
+    <string name="home_stats_today">BUGÜN %d ENGELLENDİ</string>
 </resources>

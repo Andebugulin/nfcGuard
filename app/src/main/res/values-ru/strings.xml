@@ -217,6 +217,7 @@
     <string name="onb_usage_access">ДОСТУП К ИСТОРИИ</string>
     <string name="onb_work_hours">Рабочее время</string>
     <string name="onb_you_can_still_get_back">ВЫ ВСЁ РАВНО СМОЖЕТЕ ВЕРНУТЬСЯ</string>
+    <string name="onb_see_it_working">ВИДНО, ЧТО РАБОТАЕТ</string>
     <string name="onb_your_device_has_a_detection">На вашем устройстве есть ошибка определения, из-за которой без этого блокировка ненадёжна. nfcGuard видит только, какое приложение на экране, - никогда не его содержимое.</string>
     <string name="onb_your_phone_gives_no_way">Ваш телефон не позволяет прочитать этот список, поэтому здесь не видно, сработало ли.</string>
     <string name="onb_your_phone_keeps_a_list">Телефон хранит список приложений, которым можно запускаться самим. nfcGuard по умолчанию не в нём, поэтому телефон может его выключать: расписания запускаются с опозданием, а после перезагрузки блокировка перестаёт работать.</string>
@@ -521,4 +522,22 @@
     <string name="widget_mode_placeholder">РЕЖИМ</string>
     <string name="modes_unlock_mode">РАЗБЛОКИРОВАТЬ РЕЖИМ</string>
     <string name="modes_unlock_modes">РАЗБЛОКИРОВАТЬ РЕЖИМЫ</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">СТАТИСТИКА</string>
+    <plurals name="stats_label">
+        <item quantity="one">РАЗ NFCGUARD ЗАБЛОКИРОВАЛ ВАС НА ЭТОЙ НЕДЕЛЕ</item>
+        <item quantity="few">РАЗА NFCGUARD ЗАБЛОКИРОВАЛ ВАС НА ЭТОЙ НЕДЕЛЕ</item>
+        <item quantity="many">РАЗ NFCGUARD ЗАБЛОКИРОВАЛ ВАС НА ЭТОЙ НЕДЕЛЕ</item>
+        <item quantity="other">РАЗА NFCGUARD ЗАБЛОКИРОВАЛ ВАС НА ЭТОЙ НЕДЕЛЕ</item>
+    </plurals>
+    <string name="stats_trend_down">↓ %d К ПРОШЛОЙ НЕДЕЛЕ</string>
+    <string name="stats_trend_up">↑ %d К ПРОШЛОЙ НЕДЕЛЕ</string>
+    <string name="stats_trend_same">КАК НА ПРОШЛОЙ НЕДЕЛЕ</string>
+    <string name="stats_this_week">ЭТА НЕДЕЛЯ</string>
+    <string name="stats_last_week">ПРОШЛАЯ НЕДЕЛЯ</string>
+    <string name="stats_legend_stopped">ОСТАНОВЛЕНО</string>
+    <string name="stats_legend_tag">МЕТКОЙ</string>
+    <string name="stats_legend_emergency">ЭКСТРЕННО</string>
+    <string name="home_stats_today">ЗАБЛОКИРОВАНО СЕГОДНЯ: %d</string>
 </resources>

@@ -217,6 +217,7 @@
     <string name="onb_usage_access">使用情况访问权限</string>
     <string name="onb_work_hours">工作时间</string>
     <string name="onb_you_can_still_get_back">你仍然可以恢复</string>
+    <string name="onb_see_it_working">亲眼看到效果</string>
     <string name="onb_your_device_has_a_detection">你的设备存在检测缺陷，没有此项屏蔽会不可靠。nfcGuard 只读取哪个应用在前台 - 从不读取屏幕内容。</string>
     <string name="onb_your_phone_gives_no_way">你的手机无法读取此列表，因此这里无法显示是否已生效。</string>
     <string name="onb_your_phone_keeps_a_list">手机会维护一份允许自动启动的应用列表。nfcGuard 默认不在其中，因此可能被手机关闭：计划会延迟开始，重启后屏蔽也会停止。</string>
@@ -440,4 +441,19 @@
     <string name="widget_mode_placeholder">模式</string>
     <string name="modes_unlock_mode">解锁模式</string>
     <string name="modes_unlock_modes">解锁模式</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">统计</string>
+    <plurals name="stats_label">
+        <item quantity="other">本周 nfcGuard 拦截你的次数</item>
+    </plurals>
+    <string name="stats_trend_down">↓ 比上周少 %d</string>
+    <string name="stats_trend_up">↑ 比上周多 %d</string>
+    <string name="stats_trend_same">与上周持平</string>
+    <string name="stats_this_week">本周</string>
+    <string name="stats_last_week">上周</string>
+    <string name="stats_legend_stopped">拦截</string>
+    <string name="stats_legend_tag">标签解锁</string>
+    <string name="stats_legend_emergency">紧急</string>
+    <string name="home_stats_today">今日拦截 %d 次</string>
 </resources>

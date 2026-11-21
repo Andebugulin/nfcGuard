@@ -217,6 +217,7 @@
     <string name="onb_usage_access">GEBRUIKSTOEGANG</string>
     <string name="onb_work_hours">Werktijd</string>
     <string name="onb_you_can_still_get_back">JE KOMT ER ALTIJD NOG IN</string>
+    <string name="onb_see_it_working">ZIE DAT HET WERKT</string>
     <string name="onb_your_device_has_a_detection">Je toestel heeft een herkenningsfout waardoor blokkeren zonder dit onbetrouwbaar is. nfcGuard leest alleen welke app vooraan staat - nooit scherminhoud.</string>
     <string name="onb_your_phone_gives_no_way">Je telefoon biedt geen manier om deze lijst te lezen, dus deze regel kan niet tonen of het gelukt is.</string>
     <string name="onb_your_phone_keeps_a_list">Je telefoon houdt een lijst bij van apps die zelf mogen starten. nfcGuard staat daar standaard niet op, dus je telefoon kan het stoppen: schema\'s starten te laat en na een herstart blokkeert niets meer.</string>
@@ -467,4 +468,20 @@
     <string name="widget_mode_placeholder">MODUS</string>
     <string name="modes_unlock_mode">MODUS ONTGRENDELEN</string>
     <string name="modes_unlock_modes">MODI ONTGRENDELEN</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">STATISTIEKEN</string>
+    <plurals name="stats_label">
+        <item quantity="one">KEER DAT NFCGUARD JE DEZE WEEK BLOKKEERDE</item>
+        <item quantity="other">KEER DAT NFCGUARD JE DEZE WEEK BLOKKEERDE</item>
+    </plurals>
+    <string name="stats_trend_down">↓ %d T.O.V. VORIGE WEEK</string>
+    <string name="stats_trend_up">↑ %d T.O.V. VORIGE WEEK</string>
+    <string name="stats_trend_same">GELIJK AAN VORIGE WEEK</string>
+    <string name="stats_this_week">DEZE WEEK</string>
+    <string name="stats_last_week">VORIGE WEEK</string>
+    <string name="stats_legend_stopped">GESTOPT</string>
+    <string name="stats_legend_tag">TAG</string>
+    <string name="stats_legend_emergency">NOOD</string>
+    <string name="home_stats_today">%d VANDAAG GEBLOKKEERD</string>
 </resources>

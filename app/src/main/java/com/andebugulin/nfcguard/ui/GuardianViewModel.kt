@@ -6,6 +6,8 @@ import com.andebugulin.nfcguard.BlockMode
 import com.andebugulin.nfcguard.data.AppLogger
 import com.andebugulin.nfcguard.data.AppStateRepository
 import com.andebugulin.nfcguard.data.ConfigManager
+import com.andebugulin.nfcguard.data.StatsRepository
+import com.andebugulin.nfcguard.StatsLog
 import com.andebugulin.nfcguard.Mode
 import com.andebugulin.nfcguard.ModeActivationLogic
 import com.andebugulin.nfcguard.NfcTag
@@ -35,6 +37,11 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     private val repo: AppStateRepository = AppStateRepository.getInstance(application)
 
     val appState: StateFlow<AppState> = repo.state
+
+    private val stats: StatsRepository = StatsRepository.getInstance(application)
+
+    /** On-device usage stats for the stats screen. Not part of [AppState]. */
+    val statsLog: StateFlow<StatsLog> = stats.log
 
     /** Safe Regime — stored separately from AppState to prevent bypass via config import */
     private val _safeRegimeEnabled = MutableStateFlow(true)
@@ -376,10 +383,14 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
             }
 
             mutate { result.newState }
+            if (result.unlockedModeIds.isNotEmpty()) stats.recordNfcUnlock()
             // Per-mode alarms (cancel deactivations for the unlocked modes,
             // schedule reactivations if temporary) are diffed by StateSyncer.
         }
     }
+
+    /** The lost-tag recovery switched active modes off. Counted on the stats screen. */
+    fun recordRecovery() = stats.recordRecovery()
 
     /** User dismissed the unlock dialog — do nothing, modes stay active */
     fun dismissUnlock() {

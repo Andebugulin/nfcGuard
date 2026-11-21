@@ -65,6 +65,9 @@ object GuardianTheme {
     val SuccessBackground = Color(0xFF001A00)     // Dark green - success backgrounds
     val HighlightAccent = Color(0xFFFF9800)       // Orange - in-card warning accent (default)
     val HighlightAccentEmphasized = Color(0xFFE65100) // Deeper orange - same accent when selected
+    val TerminalGreen = Color(0xFF2FB52F)         // Dim phosphor green - stats: fewer than last week
+    val TerminalYellow = Color(0xFFC8A830)        // Dim terminal yellow - stats: tag unlocks, about the same
+    val TerminalRed = Color(0xFFD63A3A)           // Dim terminal red - stats: more than last week, emergencies
 
     // ============ LIGHT-SURFACE PALETTE ============
     // Used when a toggle/option flips its surface to white for emphasis

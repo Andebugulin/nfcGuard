@@ -217,6 +217,7 @@
     <string name="onb_usage_access">사용 기록 접근</string>
     <string name="onb_work_hours">근무 시간</string>
     <string name="onb_you_can_still_get_back">그래도 다시 들어갈 수 있습니다</string>
+    <string name="onb_see_it_working">효과를 직접 확인</string>
     <string name="onb_your_device_has_a_detection">이 기기에는 감지 문제가 있어 이 권한 없이는 차단이 불안정합니다. nfcGuard는 어떤 앱이 앞에 있는지만 읽으며, 화면 내용은 절대 읽지 않습니다.</string>
     <string name="onb_your_phone_gives_no_way">이 휴대폰에서는 이 목록을 읽을 수 없어 적용됐는지 여기서 보여줄 수 없습니다.</string>
     <string name="onb_your_phone_keeps_a_list">휴대폰에는 스스로 시작할 수 있는 앱 목록이 있습니다. nfcGuard는 기본적으로 이 목록에 없어 휴대폰이 앱을 종료할 수 있습니다. 그러면 일정이 늦게 시작되고 재부팅 후에는 차단이 멈춥니다.</string>
@@ -440,4 +441,19 @@
     <string name="widget_mode_placeholder">모드</string>
     <string name="modes_unlock_mode">모드 해제</string>
     <string name="modes_unlock_modes">모드 해제</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">통계</string>
+    <plurals name="stats_label">
+        <item quantity="other">이번 주 nfcGuard가 차단한 횟수</item>
+    </plurals>
+    <string name="stats_trend_down">↓ 지난주보다 %d</string>
+    <string name="stats_trend_up">↑ 지난주보다 %d</string>
+    <string name="stats_trend_same">지난주와 같음</string>
+    <string name="stats_this_week">이번 주</string>
+    <string name="stats_last_week">지난주</string>
+    <string name="stats_legend_stopped">차단</string>
+    <string name="stats_legend_tag">태그 해제</string>
+    <string name="stats_legend_emergency">긴급</string>
+    <string name="home_stats_today">오늘 %d회 차단</string>
 </resources>

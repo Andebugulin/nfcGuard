@@ -138,6 +138,7 @@ fun OnboardingFlow(
             Page(context.getString(R.string.onb_lost_your_tag), context.getString(R.string.onb_you_can_still_get_back)) {
                 SafetyPreview(modifier = it, seconds = challengeSeconds)
             },
+            Page(context.getString(R.string.stats_title), context.getString(R.string.onb_see_it_working)) { StatsPreview(it) },
             Page(context.getString(R.string.home_permissions), context.getString(R.string.onb_let_it_work)) { PermissionsPage(it) }
         )
     }

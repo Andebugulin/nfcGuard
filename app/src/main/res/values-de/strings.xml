@@ -217,6 +217,7 @@
     <string name="onb_usage_access">NUTZUNGSZUGRIFF</string>
     <string name="onb_work_hours">Arbeitszeit</string>
     <string name="onb_you_can_still_get_back">DU KOMMST TROTZDEM WIEDER REIN</string>
+    <string name="onb_see_it_working">SIEH, DASS ES WIRKT</string>
     <string name="onb_your_device_has_a_detection">Dein Gerät hat einen Erkennungsfehler, der die Sperre ohne dies unzuverlässig macht. nfcGuard liest nur, welche App vorne ist - nie Bildschirminhalte.</string>
     <string name="onb_your_phone_gives_no_way">Dein Handy bietet keine Möglichkeit, diese Liste zu lesen, daher kann diese Zeile nicht anzeigen, ob es geklappt hat.</string>
     <string name="onb_your_phone_keeps_a_list">Dein Handy führt eine Liste von Apps, die selbst starten dürfen. nfcGuard steht standardmäßig nicht darauf, daher kann dein Handy es beenden - Zeitpläne starten dann verspätet und nach einem Neustart sperrt nichts mehr.</string>
@@ -467,4 +468,20 @@
     <string name="widget_mode_placeholder">MODUS</string>
     <string name="modes_unlock_mode">MODUS ENTSPERREN</string>
     <string name="modes_unlock_modes">MODI ENTSPERREN</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">STATISTIK</string>
+    <plurals name="stats_label">
+        <item quantity="one">MAL HAT DICH NFCGUARD DIESE WOCHE BLOCKIERT</item>
+        <item quantity="other">MAL HAT DICH NFCGUARD DIESE WOCHE BLOCKIERT</item>
+    </plurals>
+    <string name="stats_trend_down">↓ %d GEGENÜBER LETZTER WOCHE</string>
+    <string name="stats_trend_up">↑ %d GEGENÜBER LETZTER WOCHE</string>
+    <string name="stats_trend_same">GLEICH WIE LETZTE WOCHE</string>
+    <string name="stats_this_week">DIESE WOCHE</string>
+    <string name="stats_last_week">LETZTE WOCHE</string>
+    <string name="stats_legend_stopped">GESTOPPT</string>
+    <string name="stats_legend_tag">TAG-ENTSPERRUNGEN</string>
+    <string name="stats_legend_emergency">NOTFALL</string>
+    <string name="home_stats_today">%d HEUTE BLOCKIERT</string>
 </resources>

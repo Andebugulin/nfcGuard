@@ -217,6 +217,7 @@
     <string name="onb_usage_access">ACCÈS À L\'UTILISATION</string>
     <string name="onb_work_hours">Heures de travail</string>
     <string name="onb_you_can_still_get_back">VOUS POUVEZ TOUJOURS REVENIR</string>
+    <string name="onb_see_it_working">VOYEZ QUE ÇA MARCHE</string>
     <string name="onb_your_device_has_a_detection">Votre appareil a un défaut de détection qui rend le blocage peu fiable sans cela. nfcGuard lit uniquement quelle appli est au premier plan - jamais le contenu de l\'écran.</string>
     <string name="onb_your_phone_gives_no_way">Votre téléphone ne permet pas de lire cette liste, donc cette ligne ne peut pas indiquer si ça a marché.</string>
     <string name="onb_your_phone_keeps_a_list">Votre téléphone tient une liste d\'applis autorisées à démarrer seules. nfcGuard n\'y figure pas par défaut, donc le téléphone peut l\'arrêter : les plannings démarrent en retard et le blocage s\'arrête après un redémarrage.</string>
@@ -494,4 +495,21 @@
     <string name="widget_mode_placeholder">MODE</string>
     <string name="modes_unlock_mode">DÉVERROUILLER LE MODE</string>
     <string name="modes_unlock_modes">DÉVERROUILLER LES MODES</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">STATISTIQUES</string>
+    <plurals name="stats_label">
+        <item quantity="one">FOIS OÙ NFCGUARD VOUS A BLOQUÉ CETTE SEMAINE</item>
+        <item quantity="many">DE FOIS OÙ NFCGUARD VOUS A BLOQUÉ CETTE SEMAINE</item>
+        <item quantity="other">FOIS OÙ NFCGUARD VOUS A BLOQUÉ CETTE SEMAINE</item>
+    </plurals>
+    <string name="stats_trend_down">↓ %d PAR RAPPORT À LA SEMAINE DERNIÈRE</string>
+    <string name="stats_trend_up">↑ %d PAR RAPPORT À LA SEMAINE DERNIÈRE</string>
+    <string name="stats_trend_same">COMME LA SEMAINE DERNIÈRE</string>
+    <string name="stats_this_week">CETTE SEMAINE</string>
+    <string name="stats_last_week">SEMAINE DERNIÈRE</string>
+    <string name="stats_legend_stopped">BLOQUÉS</string>
+    <string name="stats_legend_tag">PAR TAG</string>
+    <string name="stats_legend_emergency">URGENCE</string>
+    <string name="home_stats_today">BLOQUÉES AUJOURD’HUI : %d</string>
 </resources>

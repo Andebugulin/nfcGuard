@@ -217,6 +217,7 @@
     <string name="onb_usage_access">ACCESO DE USO</string>
     <string name="onb_work_hours">Horario laboral</string>
     <string name="onb_you_can_still_get_back">AÚN PUEDES VOLVER A ENTRAR</string>
+    <string name="onb_see_it_working">MIRA CÓMO FUNCIONA</string>
     <string name="onb_your_device_has_a_detection">Tu dispositivo tiene un fallo de detección que hace el bloqueo poco fiable sin esto. nfcGuard solo lee qué app está delante - nunca el contenido de la pantalla.</string>
     <string name="onb_your_phone_gives_no_way">Tu móvil no permite leer esta lista, así que esta fila no puede mostrar si ha funcionado.</string>
     <string name="onb_your_phone_keeps_a_list">Tu móvil guarda una lista de apps que pueden iniciarse solas. nfcGuard no está en ella por defecto, así que el móvil puede cerrarlo: los horarios empiezan tarde y el bloqueo se detiene tras reiniciar.</string>
@@ -494,4 +495,21 @@
     <string name="widget_mode_placeholder">MODO</string>
     <string name="modes_unlock_mode">DESBLOQUEAR MODO</string>
     <string name="modes_unlock_modes">DESBLOQUEAR MODOS</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">ESTADÍSTICAS</string>
+    <plurals name="stats_label">
+        <item quantity="one">VEZ QUE NFCGUARD TE BLOQUEÓ ESTA SEMANA</item>
+        <item quantity="many">DE VECES QUE NFCGUARD TE BLOQUEÓ ESTA SEMANA</item>
+        <item quantity="other">VECES QUE NFCGUARD TE BLOQUEÓ ESTA SEMANA</item>
+    </plurals>
+    <string name="stats_trend_down">↓ %d RESPECTO A LA SEMANA PASADA</string>
+    <string name="stats_trend_up">↑ %d RESPECTO A LA SEMANA PASADA</string>
+    <string name="stats_trend_same">IGUAL QUE LA SEMANA PASADA</string>
+    <string name="stats_this_week">ESTA SEMANA</string>
+    <string name="stats_last_week">SEMANA PASADA</string>
+    <string name="stats_legend_stopped">DETENIDOS</string>
+    <string name="stats_legend_tag">CON ETIQUETA</string>
+    <string name="stats_legend_emergency">EMERGENCIA</string>
+    <string name="home_stats_today">BLOQUEADOS HOY: %d</string>
 </resources>

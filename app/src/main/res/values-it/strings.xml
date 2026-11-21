@@ -217,6 +217,7 @@
     <string name="onb_usage_access">ACCESSO ALL\'UTILIZZO</string>
     <string name="onb_work_hours">Orario di lavoro</string>
     <string name="onb_you_can_still_get_back">PUOI SEMPRE RIENTRARE</string>
+    <string name="onb_see_it_working">GUARDA CHE FUNZIONA</string>
     <string name="onb_your_device_has_a_detection">Il tuo dispositivo ha un difetto di rilevamento che rende il blocco inaffidabile senza questo. nfcGuard legge solo quale app è in primo piano - mai il contenuto dello schermo.</string>
     <string name="onb_your_phone_gives_no_way">Il tuo telefono non permette di leggere questo elenco, quindi questa riga non può mostrare se ha funzionato.</string>
     <string name="onb_your_phone_keeps_a_list">Il telefono tiene un elenco di app che possono avviarsi da sole. nfcGuard non c\'è per impostazione predefinita, quindi il telefono può chiuderlo: i programmi partono in ritardo e il blocco si ferma dopo un riavvio.</string>
@@ -494,4 +495,21 @@
     <string name="widget_mode_placeholder">MODALITÀ</string>
     <string name="modes_unlock_mode">SBLOCCA MODALITÀ</string>
     <string name="modes_unlock_modes">SBLOCCA MODALITÀ</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">STATISTICHE</string>
+    <plurals name="stats_label">
+        <item quantity="one">VOLTA CHE NFCGUARD TI HA BLOCCATO QUESTA SETTIMANA</item>
+        <item quantity="many">DI VOLTE CHE NFCGUARD TI HA BLOCCATO QUESTA SETTIMANA</item>
+        <item quantity="other">VOLTE CHE NFCGUARD TI HA BLOCCATO QUESTA SETTIMANA</item>
+    </plurals>
+    <string name="stats_trend_down">↓ %d RISPETTO ALLA SETTIMANA SCORSA</string>
+    <string name="stats_trend_up">↑ %d RISPETTO ALLA SETTIMANA SCORSA</string>
+    <string name="stats_trend_same">COME LA SETTIMANA SCORSA</string>
+    <string name="stats_this_week">QUESTA SETTIMANA</string>
+    <string name="stats_last_week">SETTIMANA SCORSA</string>
+    <string name="stats_legend_stopped">BLOCCATI</string>
+    <string name="stats_legend_tag">CON TAG</string>
+    <string name="stats_legend_emergency">EMERGENZA</string>
+    <string name="home_stats_today">BLOCCATI OGGI: %d</string>
 </resources>

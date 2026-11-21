@@ -348,7 +348,7 @@ class OnboardingRobot(compose: ComposeTestRule) : Robot(compose) {
         assertVisible("GRANTED")
     }
 
-    private companion object { const val TOUR_PAGES = 5 }
+    private companion object { const val TOUR_PAGES = 6 }
 }
 
 class SchedulesRobot(compose: ComposeTestRule) : Robot(compose) {

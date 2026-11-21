@@ -217,6 +217,7 @@
     <string name="onb_usage_access">ДОСТУП ДО ВИКОРИСТАННЯ</string>
     <string name="onb_work_hours">Робочий час</string>
     <string name="onb_you_can_still_get_back">ВИ ВСЕ ОДНО ЗМОЖЕТЕ ПОВЕРНУТИСЯ</string>
+    <string name="onb_see_it_working">ВИДНО, ЩО ПРАЦЮЄ</string>
     <string name="onb_your_device_has_a_detection">На вашому пристрої є помилка визначення, через яку без цього блокування ненадійне. nfcGuard бачить лише, який застосунок на екрані, - ніколи не його вміст.</string>
     <string name="onb_your_phone_gives_no_way">Ваш телефон не дає прочитати цей список, тож тут не видно, чи спрацювало.</string>
     <string name="onb_your_phone_keeps_a_list">Телефон зберігає список застосунків, яким можна запускатися самостійно. nfcGuard за замовчуванням не в ньому, тож телефон може його вимикати: розклади запускаються із запізненням, а після перезавантаження блокування перестає працювати.</string>
@@ -521,4 +522,22 @@
     <string name="widget_mode_placeholder">РЕЖИМ</string>
     <string name="modes_unlock_mode">РОЗБЛОКУВАТИ РЕЖИМ</string>
     <string name="modes_unlock_modes">РОЗБЛОКУВАТИ РЕЖИМИ</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">СТАТИСТИКА</string>
+    <plurals name="stats_label">
+        <item quantity="one">РАЗ NFCGUARD ЗАБЛОКУВАВ ВАС ЦЬОГО ТИЖНЯ</item>
+        <item quantity="few">РАЗИ NFCGUARD ЗАБЛОКУВАВ ВАС ЦЬОГО ТИЖНЯ</item>
+        <item quantity="many">РАЗІВ NFCGUARD ЗАБЛОКУВАВ ВАС ЦЬОГО ТИЖНЯ</item>
+        <item quantity="other">РАЗУ NFCGUARD ЗАБЛОКУВАВ ВАС ЦЬОГО ТИЖНЯ</item>
+    </plurals>
+    <string name="stats_trend_down">↓ %d ДО МИНУЛОГО ТИЖНЯ</string>
+    <string name="stats_trend_up">↑ %d ДО МИНУЛОГО ТИЖНЯ</string>
+    <string name="stats_trend_same">ЯК МИНУЛОГО ТИЖНЯ</string>
+    <string name="stats_this_week">ЦЕЙ ТИЖДЕНЬ</string>
+    <string name="stats_last_week">МИНУЛИЙ ТИЖДЕНЬ</string>
+    <string name="stats_legend_stopped">ЗУПИНЕНО</string>
+    <string name="stats_legend_tag">МІТКОЮ</string>
+    <string name="stats_legend_emergency">ЕКСТРЕНО</string>
+    <string name="home_stats_today">ЗАБЛОКОВАНО СЬОГОДНІ: %d</string>
 </resources>

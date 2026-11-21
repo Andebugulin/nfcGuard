@@ -32,6 +32,15 @@ import com.andebugulin.nfcguard.NfcTag
 import com.andebugulin.nfcguard.Mode
 import com.andebugulin.nfcguard.DayTime
 import com.andebugulin.nfcguard.BlockMode
+import com.andebugulin.nfcguard.AppTrend
+import com.andebugulin.nfcguard.DayStats
+import com.andebugulin.nfcguard.StatsSummary
+import com.andebugulin.nfcguard.ui.stats.Apps
+import com.andebugulin.nfcguard.ui.stats.Headline
+import com.andebugulin.nfcguard.ui.stats.Legend
+import com.andebugulin.nfcguard.ui.stats.WeekChart
+import com.andebugulin.nfcguard.ui.stats.total
+import androidx.compose.foundation.layout.height
 
 /** How much smaller the real cards render here than on their own screens. */
 private const val CARD_SCALE = 0.74f
@@ -175,5 +184,50 @@ fun SchedulesPreview(modifier: Modifier = Modifier) {
             isInTimeRange = true,
             onActivate = {}, onEdit = {}, onDelete = {}
         )
+    }
+}
+
+/**
+ * The real stats pieces, shrunk, over a made-up Thursday: the headline,
+ * this week's chart with its legend, and the apps compared week on week.
+ * Last week's chart is left out to keep the page short; the app rows
+ * already carry the comparison.
+ *
+ * The app "package names" are display names: [InstalledApps] falls back to
+ * the package name for anything not installed, so they render as written.
+ */
+@Composable
+fun StatsPreview(modifier: Modifier = Modifier) {
+    val summary = remember {
+        fun day(stops: Int, tags: Int = 0) = DayStats(blockedAttempts = mapOf("x" to stops), nfcUnlocks = tags)
+        StatsSummary(
+            thisWeek = listOf(day(4), day(3, tags = 1), day(3), day(1), DayStats(), DayStats(), DayStats()),
+            lastWeek = List(7) { DayStats() },
+            todayIndex = 3,
+            attemptsThisWeek = 11,
+            attemptsLastWeekSoFar = 16,
+            apps = listOf(
+                AppTrend("YouTube", lastWeek = 12, thisWeek = 5),
+                AppTrend("Instagram", lastWeek = 4, thisWeek = 4),
+                AppTrend("Reddit", lastWeek = 0, thisWeek = 2)
+            )
+        )
+    }
+
+    ScaledDown(scale = CARD_SCALE, modifier = modifier.fillMaxWidth()) {
+        Column {
+            Headline(summary)
+            Spacer(Modifier.height(32.dp))
+            WeekChart(
+                stringResource(R.string.stats_this_week),
+                summary.thisWeek,
+                max = summary.thisWeek.maxOf { it.total },
+                todayIndex = summary.todayIndex
+            )
+            Spacer(Modifier.height(16.dp))
+            Legend(summary.thisWeek)
+            Spacer(Modifier.height(32.dp))
+            Apps(summary.apps)
+        }
     }
 }

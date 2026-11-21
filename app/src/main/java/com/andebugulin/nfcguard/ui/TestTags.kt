@@ -30,6 +30,7 @@ object TestTags {
         const val NAV_MODES = "home:nav:modes"
         const val NAV_SCHEDULES = "home:nav:schedules"
         const val NAV_NFC_TAGS = "home:nav:nfcTags"
+        const val NAV_STATS = "home:nav:stats"
         const val EMERGENCY_RESET = "home:emergencyReset"
         const val SETTINGS = "home:settings"
     }

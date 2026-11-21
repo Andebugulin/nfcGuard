@@ -217,6 +217,7 @@
     <string name="onb_usage_access">DOSTĘP DO UŻYCIA</string>
     <string name="onb_work_hours">Godziny pracy</string>
     <string name="onb_you_can_still_get_back">NADAL MOŻESZ WRÓCIĆ</string>
+    <string name="onb_see_it_working">ZOBACZ, ŻE DZIAŁA</string>
     <string name="onb_your_device_has_a_detection">Twoje urządzenie ma błąd wykrywania, przez który bez tego blokada jest zawodna. nfcGuard odczytuje tylko, która aplikacja jest na wierzchu - nigdy zawartości ekranu.</string>
     <string name="onb_your_phone_gives_no_way">Twój telefon nie pozwala odczytać tej listy, więc ten wiersz nie pokaże, czy się udało.</string>
     <string name="onb_your_phone_keeps_a_list">Telefon prowadzi listę aplikacji, które mogą uruchamiać się same. nfcGuard domyślnie na niej nie ma, więc telefon może go wyłączać: harmonogramy startują z opóźnieniem, a po restarcie blokada przestaje działać.</string>
@@ -521,4 +522,22 @@
     <string name="widget_mode_placeholder">TRYB</string>
     <string name="modes_unlock_mode">ODBLOKUJ TRYB</string>
     <string name="modes_unlock_modes">ODBLOKUJ TRYBY</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">STATYSTYKI</string>
+    <plurals name="stats_label">
+        <item quantity="one">RAZ NFCGUARD ZABLOKOWAŁ CIĘ W TYM TYGODNIU</item>
+        <item quantity="few">RAZY NFCGUARD ZABLOKOWAŁ CIĘ W TYM TYGODNIU</item>
+        <item quantity="many">RAZY NFCGUARD ZABLOKOWAŁ CIĘ W TYM TYGODNIU</item>
+        <item quantity="other">RAZA NFCGUARD ZABLOKOWAŁ CIĘ W TYM TYGODNIU</item>
+    </plurals>
+    <string name="stats_trend_down">↓ %d WZGLĘDEM ZESZŁEGO TYGODNIA</string>
+    <string name="stats_trend_up">↑ %d WZGLĘDEM ZESZŁEGO TYGODNIA</string>
+    <string name="stats_trend_same">TYLE SAMO CO W ZESZŁYM TYGODNIU</string>
+    <string name="stats_this_week">TEN TYDZIEŃ</string>
+    <string name="stats_last_week">ZESZŁY TYDZIEŃ</string>
+    <string name="stats_legend_stopped">ZATRZYMANE</string>
+    <string name="stats_legend_tag">TAGIEM</string>
+    <string name="stats_legend_emergency">AWARYJNE</string>
+    <string name="home_stats_today">ZABLOKOWANO DZIŚ: %d</string>
 </resources>

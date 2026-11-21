@@ -131,6 +131,7 @@ class OnboardingFlowTest {
         tap("NEXT"); compose.onNodeWithText("SCHEDULES").assertIsDisplayed()
         tap("NEXT"); compose.onNodeWithText("NFC TAGS").assertIsDisplayed()
         tap("NEXT"); compose.onNodeWithText("LOST YOUR TAG?").assertIsDisplayed()
+        tap("NEXT"); compose.onNodeWithText("SEE IT WORKING").assertIsDisplayed()
         tap("NEXT"); compose.onNodeWithText("PERMISSIONS").assertIsDisplayed()
         compose.onNodeWithText("GET STARTED").assertIsDisplayed()
     }

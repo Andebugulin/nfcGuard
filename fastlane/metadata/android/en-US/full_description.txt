@@ -19,6 +19,7 @@ Features:
 * Per-day schedules that activate and deactivate on their own
 * Multiple modes, each with its own NFC tag
 * Timed unlocks, capped by a limit you set in advance
+* Weekly stats: how often it blocked you, and whether that is going down
 * Home screen widget for switching modes without opening the app
 * Emergency reset with a configurable cooldown
 * Config export and import in JSON or YAML

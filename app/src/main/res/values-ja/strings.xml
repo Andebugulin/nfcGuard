@@ -217,6 +217,7 @@
     <string name="onb_usage_access">使用状況へのアクセス</string>
     <string name="onb_work_hours">勤務時間</string>
     <string name="onb_you_can_still_get_back">それでも元に戻せます</string>
+    <string name="onb_see_it_working">効いているのがわかる</string>
     <string name="onb_your_device_has_a_detection">お使いの端末には検出の不具合があり、これがないとブロックが不安定になります。nfcGuard が読み取るのは前面のアプリだけで、画面の内容は読み取りません。</string>
     <string name="onb_your_phone_gives_no_way">お使いのスマホではこの一覧を読み取れないため、ここで設定できたかどうかは表示できません。</string>
     <string name="onb_your_phone_keeps_a_list">スマホには自動で起動してよいアプリの一覧があります。nfcGuard は初期状態で含まれていないため、スマホに停止されることがあります。その場合スケジュールの開始が遅れ、再起動後はブロックが止まります。</string>
@@ -440,4 +441,19 @@
     <string name="widget_mode_placeholder">モード</string>
     <string name="modes_unlock_mode">モードを解除</string>
     <string name="modes_unlock_modes">モードを解除</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">統計</string>
+    <plurals name="stats_label">
+        <item quantity="other">今週 nfcGuard がブロックした回数</item>
+    </plurals>
+    <string name="stats_trend_down">↓ 先週比 %d</string>
+    <string name="stats_trend_up">↑ 先週比 %d</string>
+    <string name="stats_trend_same">先週と同じ</string>
+    <string name="stats_this_week">今週</string>
+    <string name="stats_last_week">先週</string>
+    <string name="stats_legend_stopped">ブロック</string>
+    <string name="stats_legend_tag">タグ解除</string>
+    <string name="stats_legend_emergency">緊急</string>
+    <string name="home_stats_today">今日 %d 件ブロック</string>
 </resources>

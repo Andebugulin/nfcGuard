@@ -8,6 +8,7 @@ import com.andebugulin.nfcguard.BlockMode
 import com.andebugulin.nfcguard.data.AppLogger
 import com.andebugulin.nfcguard.data.AppStateRepository
 import com.andebugulin.nfcguard.data.InstalledApps
+import com.andebugulin.nfcguard.data.StatsRepository
 import com.andebugulin.nfcguard.receiver.ScheduleAlarmReceiver
 import com.andebugulin.nfcguard.receiver.ServiceRestartReceiver
 import com.andebugulin.nfcguard.ui.MainActivity
@@ -39,6 +40,8 @@ class BlockerService : Service() {
     private var timedModeReactivations = mapOf<String, Long>()
     private var modeNames = mapOf<String, String>()
     private var lastCheckedApp: String? = null
+    private var lastBlockedApp: String? = null
+    private var lastBlockedSeenAt = 0L
 
     // CRITICAL: Prevent multiple monitoring loops
     private var monitoringJob: Job? = null
@@ -136,6 +139,8 @@ class BlockerService : Service() {
         private const val CHANNEL_ID = "guardian_channel"
         /** Most app names the notification lists before switching to a count. */
         private const val NOTIFICATION_APP_LIMIT = 7
+        /** Gap after which seeing the same blocked app again is a new attempt. */
+        private const val ATTEMPT_GAP_MS = 5_000L
         private var isRunning = false
 
         fun start(
@@ -262,6 +267,7 @@ class BlockerService : Service() {
             //   Accessibility OFF → overlay. Force-close needs accessibility
             //                       for the HOME action.
             val useForceClose = ForegroundDetectorService.isRunning
+            recordAttemptIfNew(currentApp)
             AppLogger.log("SERVICE", "BLOCKING: $currentApp (mode=$blockMode, inList=${blockedApps.contains(currentApp)}, forceClose=$useForceClose)")
             if (useForceClose) {
                 forceCloseEnforcer.block(currentApp)
@@ -275,6 +281,21 @@ class BlockerService : Service() {
             forceCloseEnforcer.onAllowed(currentApp, isLauncher)
             overlayEnforcer.onAllowed(currentApp, isLauncher)
         }
+    }
+
+    /**
+     * Count one stats attempt per visit to a blocked app, not one per tick.
+     * The same app seen again within [ATTEMPT_GAP_MS] is the same attempt:
+     * that covers the overlay sitting over the app, and the few seconds of
+     * stale detection after force-close sends the user HOME.
+     */
+    private fun recordAttemptIfNew(packageName: String) {
+        val now = System.currentTimeMillis()
+        if (packageName != lastBlockedApp || now - lastBlockedSeenAt > ATTEMPT_GAP_MS) {
+            StatsRepository.getInstance(this).recordBlockedAttempt(packageName)
+        }
+        lastBlockedApp = packageName
+        lastBlockedSeenAt = now
     }
 
     private fun isSystemLauncher(packageName: String): Boolean {

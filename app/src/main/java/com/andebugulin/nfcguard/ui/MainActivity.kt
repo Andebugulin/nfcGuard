@@ -13,6 +13,7 @@ import com.andebugulin.nfcguard.ui.modes.UnlockDurationDialog
 import com.andebugulin.nfcguard.ui.modes.UnlockModeInfo
 import com.andebugulin.nfcguard.ui.nfc.NfcTagsScreen
 import com.andebugulin.nfcguard.ui.schedules.SchedulesScreen
+import com.andebugulin.nfcguard.ui.stats.StatsScreen
 
 import android.app.PendingIntent
 import android.content.Context
@@ -54,7 +55,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.saveable.rememberSaveable
 
 enum class Screen {
-    HOME, MODES, SCHEDULES, NFC_TAGS, INFO
+    HOME, MODES, SCHEDULES, NFC_TAGS, STATS, INFO
 }
 
 class MainActivity : ComponentActivity() {
@@ -254,6 +255,10 @@ fun MainNavigation(
                     viewModel = viewModel,
                     scannedNfcTagId = scannedNfcTagId,
                     nfcRegistrationMode = nfcRegistrationMode,
+                    onBack = { currentScreen = Screen.HOME }
+                )
+                Screen.STATS -> StatsScreen(
+                    viewModel = viewModel,
                     onBack = { currentScreen = Screen.HOME }
                 )
                 Screen.INFO -> InfoScreen(

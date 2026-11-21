@@ -48,6 +48,7 @@ internal fun applyRecovery(
     activeModes: Set<String>,
     lostTags: Set<String>
 ) {
+    if (activeModes.isNotEmpty()) viewModel.recordRecovery()
     activeModes.forEach { viewModel.deactivateMode(it) }
     lostTags.forEach { viewModel.deleteNfcTag(it) }
 }

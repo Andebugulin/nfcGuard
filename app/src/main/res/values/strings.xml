@@ -220,6 +220,7 @@
     <string name="onb_usage_access">USAGE ACCESS</string>
     <string name="onb_work_hours">Work hours</string>
     <string name="onb_you_can_still_get_back">YOU CAN STILL GET BACK IN</string>
+    <string name="onb_see_it_working">SEE IT WORKING</string>
     <string name="onb_your_device_has_a_detection">Your device has a detection bug that makes blocking unreliable without this. nfcGuard only reads which app is in front - never screen content.</string>
     <string name="onb_your_phone_gives_no_way">Your phone gives no way to read this list, so this row cannot show whether it worked.</string>
     <string name="onb_your_phone_keeps_a_list">Your phone keeps a list of apps allowed to start on their own. nfcGuard is off it by default, so your phone can shut it down, which makes schedules start late and stops blocking after a restart.</string>
@@ -471,4 +472,20 @@
     <string name="widget_mode_placeholder">MODE</string>
     <string name="modes_unlock_mode">UNLOCK MODE</string>
     <string name="modes_unlock_modes">UNLOCK MODES</string>
+
+    <!-- Stats screen -->
+    <string name="stats_title">STATS</string>
+    <plurals name="stats_label">
+        <item quantity="one">TIME NFCGUARD BLOCKED YOU THIS WEEK</item>
+        <item quantity="other">TIMES NFCGUARD BLOCKED YOU THIS WEEK</item>
+    </plurals>
+    <string name="stats_trend_down">↓ %d FROM LAST WEEK</string>
+    <string name="stats_trend_up">↑ %d FROM LAST WEEK</string>
+    <string name="stats_trend_same">SAME AS LAST WEEK</string>
+    <string name="stats_this_week">THIS WEEK</string>
+    <string name="stats_last_week">LAST WEEK</string>
+    <string name="stats_legend_stopped">STOPPED</string>
+    <string name="stats_legend_tag">TAG UNLOCKS</string>
+    <string name="stats_legend_emergency">EMERGENCY</string>
+    <string name="home_stats_today">%d BLOCKED TODAY</string>
 </resources>

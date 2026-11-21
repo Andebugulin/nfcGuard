@@ -32,7 +32,13 @@ A mode with no tag linked accepts any NFC object, such as a transit card or a pa
   <img src="./assets/nfcGuard_home_screen.png" width="230" alt="Home"/>
 </p>
 
-**Lost your tag?** The delete icon on Home starts a recovery flow: a timed attention challenge, then you choose which tags are gone. Modes switch off and those tags are removed. Your configuration stays.
+**Lost your tag?** The unlock icon on Home starts a recovery flow: a timed attention challenge, then you choose which tags are gone. Modes switch off and those tags are removed. Your configuration stays.
+
+**See it working.** The Stats page counts how many times nfcGuard blocked you this week and compares it with the same days last week. Each day shows blocks, tag unlocks and emergency unlocks, and every app you reached for gets a before and after, green when it went down and red when it went up. The numbers never leave the phone, and only the last two weeks are kept.
+
+<p align="center">
+  <img src="./assets/nfcGuard_stats_screen.png" width="230" alt="Stats"/>
+</p>
 
 ## Requirements
 
