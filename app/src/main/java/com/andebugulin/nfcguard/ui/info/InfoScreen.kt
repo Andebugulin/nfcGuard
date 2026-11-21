@@ -643,4 +643,4 @@ fun GitHubOctocat(modifier: Modifier = Modifier) {
  * nfcGuard makes no network requests and holds no INTERNET permission, so
  * it does not fetch the live number.
  */
-private const val GITHUB_STARS_LABEL = "20+"
+private const val GITHUB_STARS_LABEL = "30+"
