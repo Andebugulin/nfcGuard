@@ -1,0 +1,4 @@
+* New Stats page: how many times nfcGuard blocked you this week, compared with the same days last week.
+* Each day shows blocks, tag unlocks and emergency unlocks. Each app shows last week next to this week.
+* Stats stay on your phone. Only the last two weeks are kept.
+* Cleaner layout on narrow screens, and a clearer first-run tour.
