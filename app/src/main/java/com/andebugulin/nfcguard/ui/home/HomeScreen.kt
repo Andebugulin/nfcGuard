@@ -110,14 +110,73 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    stringResource(R.string.home_nfcguard),
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Black,
-                    color = GuardianTheme.TextPrimary,
-                    letterSpacing = 2.sp
-                )
+            Column(Modifier.fillMaxWidth()) {
+                // The icons share the title's row so they stay level with it;
+                // centred against the whole column they sank whenever the
+                // active-mode lines appeared underneath.
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.home_nfcguard),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Black,
+                        color = GuardianTheme.TextPrimary,
+                        letterSpacing = 2.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Was a trash icon labelled "Emergency Reset" — which reads as
+                    // "delete everything". This flow turns blocking off when you
+                    // have lost your tag; nothing of yours is destroyed unless you
+                    // tick a tag to forget.
+                    Icon(
+                        imageVector = Icons.Default.LockOpen,
+                        contentDescription = stringResource(R.string.home_recover_access),
+                        tint = GuardianTheme.IconPrimary,
+                        modifier = Modifier
+                            .testTag(TestTags.Home.EMERGENCY_RESET)
+                            .size(20.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                showEmergencyDialog = true
+                            }
+                    )
+
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = stringResource(R.string.home_settings_permissions),
+                        tint = if (permissionsGranted) GuardianTheme.IconPrimary else GuardianTheme.Error,
+                        modifier = Modifier
+                            .testTag(TestTags.Home.SETTINGS)
+                            .size(20.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                permissionCheckTrigger++
+                                showSettingsDialog = true
+                            }
+                    )
+
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = stringResource(R.string.home_info),
+                        tint = GuardianTheme.IconPrimary,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                onNavigate(Screen.INFO)
+                            }
+                    )
+                }
+                }
                 if (appState.activeModes.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
                     val manualCount = appState.activeModes.count { appState.manuallyActivatedModes.contains(it) }
@@ -197,59 +256,6 @@ fun HomeScreen(
                 }
             }
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Was a trash icon labelled "Emergency Reset" — which reads as
-                // "delete everything". This flow turns blocking off when you
-                // have lost your tag; nothing of yours is destroyed unless you
-                // tick a tag to forget.
-                Icon(
-                    imageVector = Icons.Default.LockOpen,
-                    contentDescription = stringResource(R.string.home_recover_access),
-                    tint = GuardianTheme.IconPrimary,
-                    modifier = Modifier
-                        .testTag(TestTags.Home.EMERGENCY_RESET)
-                        .size(20.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            showEmergencyDialog = true
-                        }
-                )
-
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = stringResource(R.string.home_settings_permissions),
-                    tint = if (permissionsGranted) GuardianTheme.IconPrimary else GuardianTheme.Error,
-                    modifier = Modifier
-                        .testTag(TestTags.Home.SETTINGS)
-                        .size(20.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            permissionCheckTrigger++
-                            showSettingsDialog = true
-                        }
-                )
-
-                Icon(
-                    imageVector = Icons.Outlined.Info,
-                    contentDescription = stringResource(R.string.home_info),
-                    tint = GuardianTheme.IconPrimary,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            onNavigate(Screen.INFO)
-                        }
-                )
-            }
 
         }
 
